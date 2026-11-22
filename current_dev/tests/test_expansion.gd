@@ -162,6 +162,7 @@ func verify_worlds() -> void:
 		check(game.heat_vents.is_empty() and game.frost_fields.is_empty() and game.flight.duration == 90, "The new world has its own environment rather than inherited volcanic/frost hazards: " + sector)
 		if sector == "thalassa":
 			check(game.lightning_fields.size() == 10 and game.ocean_material != null, "Thalassa has animated water, offshore geometry and ten warned storm strikes")
+			verify_ocean_tiles()
 			var age: float = game.ocean_age
 			game.pause_flight()
 			game._physics_process(3)
@@ -191,6 +192,30 @@ func verify_worlds() -> void:
 		game._open_sector_map(false)
 		await shot("six-world-map")
 		check(root.get_visible_rect().encloses(game.hud.menu.get_global_rect()), "All six world-selection cards fit the viewport")
+
+func verify_ocean_tiles() -> void:
+	var previous := PackedVector2Array()
+	var joined := true
+	var oily := 0
+	var clean := 0
+	var width := FrontierArt.SEA_COLUMNS + 1
+	for chunk in game.ground_chunks:
+		var surface: MeshInstance3D = chunk.get_child(0)
+		var masks: PackedVector2Array = surface.mesh.surface_get_arrays(0)[Mesh.ARRAY_TEX_UV]
+		if not previous.is_empty():
+			for x in range(width):
+				joined = joined and previous[x].distance_to(masks[x]) < 0.002
+		previous = masks.slice(masks.size() - width)
+		for mask in masks:
+			oily += int(mask.x > 0.6)
+			clean += int(mask.x < 0.01)
+	check(joined and oily > 0 and clean > oily, "Oil plumes cross streamed boundaries continuously and leave most water clear")
+	game.settings["reduced_effects"] = true
+	game._apply_settings()
+	check(game.ocean_material.shader == FrontierArt.WATER, "Reduced effects keeps waves with a single-pass ocean")
+	game.settings["reduced_effects"] = false
+	game._apply_settings()
+	check(game.ocean_material.shader == FrontierArt.WATER_REFLECTION, "Full effects restores reflections on already streamed water")
 
 func verify_boss_radars() -> void:
 	for sector in SectorCatalog.AVAILABLE:

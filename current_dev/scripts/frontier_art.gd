@@ -2,9 +2,18 @@ class_name FrontierArt
 extends RefCounted
 
 const WATER: Shader = preload("res://shaders/storm_water.gdshader")
+const WATER_REFLECTION: Shader = preload("res://shaders/storm_water_reflection.gdshader")
 const WATER_ARRIVAL: Shader = preload("res://shaders/storm_water_arrival.gdshader")
 const OCEAN := Color("#72d8ff")
 const SAND := Color("#e8bf65")
+const SEA_LEVEL := -1.8
+const SEA_COLUMNS := 96
+const SEA_ROWS := 24
+static var sea_indices := PackedInt32Array()
+
+static func _static_init() -> void:
+	for shader: Shader in [WATER, WATER_REFLECTION, WATER_ARRIVAL]:
+		shader.set_default_texture_parameter(&"sea_detail", preload("res://assets/ground/sea_detail.png"))
 
 static func is_frontier(sector: String) -> bool:
 	return sector in ["thalassa", "kharon"]
@@ -48,26 +57,12 @@ static func terrain_chunk(start: float, sector: String, branching: bool) -> Node
 	var layout := RandomNumberGenerator.new()
 	layout.seed = hash(Vector2i(roundi(start / VectorArt.CHUNK_LENGTH), sector.hash()))
 	if sector == "thalassa":
-		for row in range(16):
-			for column in range(24):
-				var points := PackedVector3Array()
-				for corner in [Vector2(0, 0), Vector2(1, 0), Vector2(1, 1), Vector2(0, 1)]:
-					points.append(Vector3((column - 12 + corner.x) * 24, -4, -start - (row + corner.y) * 8))
-				batch.surface(points, PackedInt32Array([0, 1, 2, 0, 2, 3]), Color("#145165"))
-		var result: Node3D = batch.build()
-		var water := ShaderMaterial.new()
-		water.shader = WATER
-		result.get_child(0).material_override = water
-		for side in [-1.0, 1.0]:
-			var travel := start + layout.randf_range(22.0, 106.0)
-			var lateral: float = side * layout.randf_range(46.0, 96.0)
-			var at: Vector3 = floor_point(lateral, travel)
-			if branching and absf(lateral - GroundRoute.lateral_offset(travel)) < 40:
-				at.x += side * 75
-			if layout.randf() > 0.19:
-				var footprint := layout.randf_range(0.87, 1.23)
-				scenery.append(GroundArt.placement(at, Vector3(footprint, layout.randf_range(0.8, 1.18), footprint), layout.randf_range(-0.6, 0.6) + (PI if side > 0 else 0.0)))
-		terrain.box(floor_point(0, start + 64) + Vector3(0, -0.5, 0), Vector3(24, 0.6, 128), OCEAN, Color.WHITE)
+		scenery = _rigs(start, branching)
+		var nearby := _rigs(start - VectorArt.CHUNK_LENGTH, branching)
+		nearby.append_array(scenery)
+		nearby.append_array(_rigs(start + VectorArt.CHUNK_LENGTH, branching))
+		var result := Node3D.new()
+		result.add_child(_sea_surface(start, nearby))
 		GroundArt.finish_chunk(result, terrain, scenery, sector)
 		return VectorArt.remember_model(key, result) if start < VectorArt.TERRAIN_CACHE_CHUNKS * 128 else result
 	var arches: Array[Transform3D] = []
@@ -95,6 +90,75 @@ static func terrain_chunk(start: float, sector: String, branching: bool) -> Node
 	var chunk := GroundArt.finish_chunk(batch.build(), terrain, scenery, sector)
 	GroundArt.add_landmarks(chunk, "ruin_arch", arches)
 	return VectorArt.remember_model(key, chunk) if start < VectorArt.TERRAIN_CACHE_CHUNKS * 128 else chunk
+
+static func _rigs(start: float, branching: bool) -> Array[Transform3D]:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(Vector2i(roundi(start / VectorArt.CHUNK_LENGTH), "thalassa".hash()))
+	var rigs: Array[Transform3D] = []
+	for side in [-1.0, 1.0]:
+		var travel := start + rng.randf_range(22.0, 106.0)
+		var lateral: float = side * rng.randf_range(46.0, 96.0)
+		var at := floor_point(lateral, travel)
+		if branching and absf(lateral - GroundRoute.lateral_offset(travel)) < 40:
+			at.x += side * 75
+		if rng.randf() > 0.19:
+			var width := rng.randf_range(0.87, 1.23)
+			rigs.append(GroundArt.placement(at, Vector3(width, rng.randf_range(0.8, 1.18), width), rng.randf_range(-0.6, 0.6) + (PI if side > 0 else 0.0)))
+	return rigs
+
+static func _sea_surface(start: float, rigs: Array[Transform3D]) -> MeshInstance3D:
+	var vertices := PackedVector3Array()
+	var rig_masks := PackedVector2Array()
+	var stride := SEA_COLUMNS + 1
+	vertices.resize(stride * (SEA_ROWS + 1))
+	rig_masks.resize(vertices.size())
+	for row in range(SEA_ROWS + 1):
+		var z := -start - VectorArt.CHUNK_LENGTH * row / SEA_ROWS
+		for column in range(stride):
+			var index := row * stride + column
+			vertices[index] = Vector3((column - SEA_COLUMNS * 0.5) * 6.0, SEA_LEVEL, z)
+	# UV.x follows the oil plume down-current. UV.y marks disturbed water by the rig.
+	# Include adjacent chunks so both edges agree when a plume crosses the seam.
+	for rig in rigs:
+		var center := Vector2(rig.origin.x, rig.origin.z)
+		for row in range(SEA_ROWS + 1):
+			var dz := vertices[row * stride].z - center.y
+			if absf(dz) > 55.0:
+				continue
+			for column in range(stride):
+				var index := row * stride + column
+				var dx := vertices[index].x - center.x
+				if absf(dx) > 86.0:
+					continue
+				var oil := 1.0 - Vector2((dx - 30.0) / 56.0, (dz - 0.24 * dx) / 22.0).length()
+				var wash := 1.0 - Vector2(dx / 23.0, dz / 31.0).length()
+				var mask := rig_masks[index]
+				rig_masks[index] = Vector2(maxf(mask.x, oil), maxf(mask.y, wash))
+	if sea_indices.is_empty():
+		for row in range(SEA_ROWS):
+			for column in range(SEA_COLUMNS):
+				var a := row * stride + column
+				sea_indices.append_array(PackedInt32Array([a, a + 1, a + stride, a + 1, a + stride + 1, a + stride]))
+	var arrays := []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = vertices
+	arrays[Mesh.ARRAY_TEX_UV] = rig_masks
+	arrays[Mesh.ARRAY_INDEX] = sea_indices
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	# Missiles and the swept flight probe only need the mean waterline.
+	var cover := ConcavePolygonShape3D.new()
+	cover.backface_collision = true
+	cover.set_faces(PackedVector3Array([vertices[0], vertices[SEA_COLUMNS], vertices[-1], vertices[0], vertices[-1], vertices[-stride]]))
+	mesh.set_meta("ground_cover", cover)
+	var surface := MeshInstance3D.new()
+	surface.mesh = mesh
+	var water := ShaderMaterial.new()
+	water.shader = WATER
+	surface.material_override = water
+	surface.extra_cull_margin = 3.0
+	surface.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	return surface
 
 static func fighter(sector: String, heavy: bool = false) -> Node3D:
 	var id := "tide" if sector == "thalassa" else "scarab"

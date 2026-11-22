@@ -22,14 +22,17 @@ static func placement(at: Vector3, size: Vector3, heading: float = 0.0) -> Trans
 # The flight surface follows the course mesh exactly. Repeated Blender scenery
 # shares one GPU instance batch per chunk, including on cached return trips.
 static func finish_chunk(model: Node3D, floor_mesh: GeometryBatch, props: Array[Transform3D], sector: String) -> Node3D:
-	if not materials.has(sector):
+	if not floor_mesh.vertices.is_empty() and not materials.has(sector):
 		var material := ShaderMaterial.new()
 		material.shader = SURFACE
 		material.set_shader_parameter("swatch", load("res://assets/ground/%s_surface.png" % sector))
+		material.set_shader_parameter("deposits_map", preload("res://assets/ground/sea_detail.png"))
+		material.set_shader_parameter("surface_id", SectorCatalog.AVAILABLE.find(sector))
 		materials[sector] = material
-	var floor_surface := VectorArt.solid(floor_mesh.vertices, floor_mesh.indices, Color.WHITE, floor_mesh.face_colors)
-	floor_surface.material_override = materials[sector]
-	model.add_child(floor_surface)
+	if not floor_mesh.vertices.is_empty():
+		var floor_surface := VectorArt.solid(floor_mesh.vertices, floor_mesh.indices, Color.WHITE, floor_mesh.face_colors)
+		floor_surface.material_override = materials[sector]
+		model.add_child(floor_surface)
 	var familiar: Array[Transform3D] = []
 	var landmarks: Array[Transform3D] = []
 	for pose in props:

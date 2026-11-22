@@ -63,9 +63,35 @@ func run() -> void:
 	weather.configure("cryo", false, false)
 	var space := await snapshot("")
 	check(different(bare, space) == 0, "Particles clear immediately on the transition to space")
+	await verify_water_reflection(scene, camera)
 	scene.free()
 	print("SURFACE_WEATHER_RENDER_FAILURES=", failures)
 	quit(failures)
+
+func verify_water_reflection(scene: Node3D, camera: Camera3D) -> void:
+	camera.position = Vector3(0, 4, 0)
+	camera.look_at(Vector3(0, 0, -30))
+	var surface := FrontierArt._sea_surface(0, [])
+	scene.add_child(surface)
+	var test_rig := MeshInstance3D.new()
+	var hull := BoxMesh.new()
+	hull.size = Vector3(12, 8, 10)
+	test_rig.mesh = hull
+	var red := StandardMaterial3D.new()
+	red.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	red.albedo_color = Color(0.9, 0.09, 0.05)
+	test_rig.material_override = red
+	test_rig.position = Vector3(0, 2.1, -27)
+	scene.add_child(test_rig)
+	var bare := await snapshot("")
+	surface.material_override.shader = FrontierArt.WATER_REFLECTION
+	var reflected := await snapshot("")
+	var pixels := 0
+	for y in range(roundi(bare.get_height() * 0.55), bare.get_height(), 2):
+		for x in range(bare.get_width() / 3, 2 * bare.get_width() / 3, 2):
+			var delta := reflected.get_pixel(x, y) - bare.get_pixel(x, y)
+			pixels += int(delta.r > 0.055 and delta.r > delta.g * 2.0)
+	check(pixels > 30, "Actual rig color appears on nearby waves when reflections are enabled (%d samples)" % pixels)
 
 func snapshot(filename: String) -> Image:
 	await process_frame

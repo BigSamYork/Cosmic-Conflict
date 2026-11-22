@@ -386,7 +386,7 @@ func _build_world(training: bool = true) -> void:
 	add_child(world)
 	if sector == "thalassa":
 		ocean_material = ShaderMaterial.new()
-		ocean_material.shader = FrontierArt.WATER
+		ocean_material.shader = FrontierArt.WATER if settings["reduced_effects"] else FrontierArt.WATER_REFLECTION
 		ocean_age = 0
 	if not training:
 		ground_horizon = FrontierArt.horizon(sector) if FrontierArt.is_frontier(sector) else XyloArt.horizon() if sector == "xylo" else VesperaArt.horizon() if sector == "vespera" else VectorArt.ground_horizon(icy)
@@ -1933,6 +1933,9 @@ func _apply_settings() -> void:
 		flight.response *= float(CampaignState.SHIPS[campaign.ship]["response"])
 	VectorArt.set_reduced_effects(bool(settings["reduced_effects"]))
 	combat_lights.reduced = settings["reduced_effects"]
+	if ocean_material != null:
+		ocean_material.shader = FrontierArt.WATER if combat_lights.reduced else FrontierArt.WATER_REFLECTION
+		ocean_material.set_shader_parameter("wave_time", ocean_age)
 	if combat_lights.reduced:
 		combat_lights.clear()
 	if get_world_3d().environment != null:

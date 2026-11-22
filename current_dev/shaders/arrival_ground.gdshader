@@ -16,6 +16,7 @@ void vertex() {
 }
 
 void fragment() {
-	ALBEDO = use_swatch ? ground_color(position_on_course) * COLOR.rgb : base_color.rgb * (use_vertex_color ? COLOR.rgb : vec3(1.0));
+	vec3 eye = normalize(transpose(mat3(MODEL_MATRIX)) * mat3(INV_VIEW_MATRIX) * VIEW);
+	ALBEDO = use_swatch ? ground_color(position_on_course, eye) * COLOR.rgb : base_color.rgb * (use_vertex_color ? COLOR.rgb : vec3(1.0));
 	ALPHA = base_color.a * (use_vertex_color ? COLOR.a : 1.0) * effect_opacity;
 }

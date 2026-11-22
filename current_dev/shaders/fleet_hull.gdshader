@@ -65,6 +65,16 @@ void fragment() {
     vec3 color = paint * (0.34 + 0.76 * max(0.0, dot(n, key)) + 0.14 * max(n.y, 0.0));
     color += vec3(0.66, 0.82, 0.97) * (shine * (0.13 + 0.38 * metal) + rim * (0.035 + 0.12 * glass));
     color += sky_band * (vec3(0.08, 0.34, 0.47) * glass + paint * metal * 0.23);
+    // Lubricant gathers in frame recesses and on bare steel. Local coordinates
+    // keep leaks attached to moving turrets, parked ships and station equipment.
+    bool frame = abs(finish - 0.18) < 0.008;
+    if (!living_shell && (frame || abs(finish - 0.29) < 0.008)) {
+        float residue = surface_grain(local_position * vec3(1.3, 0.27, 1.3));
+        float grains = surface_grain(local_position * 0.38);
+        float film = smoothstep(0.59, 0.74, residue * 0.66 + grains * 0.34);
+        vec3 interference = 0.5 + 0.5 * cos(6.283 * (residue * 1.9 + facing * 0.46 + vec3(0.07, 0.40, 0.73)));
+        color = mix(color, color * 0.52 + (interference * 0.074 + vec3(0.011)) * (0.25 + rim + 0.6 * sky_band) + shine * 0.31, film);
+    }
     if (finish > 0.69 && finish < 0.78) {
         if (parked) {
             discard;
