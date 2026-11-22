@@ -1,7 +1,8 @@
 name: Build
 
 on:
-  pull_request:
+  # Fork pull_request tokens are read-only, even after merge.
+  pull_request_target:
     types: [closed]
     branches: [main]
   workflow_dispatch:
@@ -18,6 +19,8 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
     runs-on: windows-latest
     timeout-minutes: 120
+    env:
+      BUILD_SHA: ${{ github.event_name == 'workflow_dispatch' && github.sha || github.event.pull_request.merge_commit_sha }}
     defaults:
       run:
         shell: pwsh
@@ -28,7 +31,17 @@ jobs:
 
       - uses: actions/checkout@v7
         with:
-          ref: ${{ github.event.pull_request.merge_commit_sha || github.sha }}
+          # On merge, fetch the base branch, never the PR head or a synthetic merge ref.
+          ref: ${{ github.event.pull_request.base.ref || github.sha }}
+          fetch-depth: ${{ github.event.pull_request.merged && '0' || '1' }}
+
+      - name: Select merged commit from main history
+        if: github.event_name == 'pull_request_target'
+        run: |
+          git merge-base --is-ancestor $env:BUILD_SHA HEAD
+          if ($LASTEXITCODE -ne 0) { throw "Merge commit $env:BUILD_SHA is not in main history." }
+          git switch --detach $env:BUILD_SHA
+          if ($LASTEXITCODE -ne 0) { throw "Could not check out merge commit $env:BUILD_SHA." }
 
       - name: Read toolchain
         id: toolchain
@@ -78,23 +91,22 @@ jobs:
       - name: Upload installer
         uses: actions/upload-artifact@v7
         with:
-          name: CosmicConflict-${{ steps.version.outputs.version }}-Setup-${{ github.sha }}
+          name: CosmicConflict-${{ steps.version.outputs.version }}-Setup-${{ env.BUILD_SHA }}
           path: releases/${{ steps.version.outputs.version }}/CosmicConflict-${{ steps.version.outputs.version }}-Setup.exe
           if-no-files-found: error
 
       - name: Upload game files
         uses: actions/upload-artifact@v7
         with:
-          name: CosmicConflict-${{ steps.version.outputs.version }}-app-${{ github.sha }}
+          name: CosmicConflict-${{ steps.version.outputs.version }}-app-${{ env.BUILD_SHA }}
           path: releases/${{ steps.version.outputs.version }}/app/
           if-no-files-found: error
 
       - name: Create tag and release
-        if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+        if: github.event.pull_request.merged == true || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.version.outputs.version }}
-          TARGET: ${{ github.event.pull_request.merge_commit_sha || github.sha }}
         run: |
           $folder = "releases/$env:VERSION"
           $installer = "$folder/CosmicConflict-$env:VERSION-Setup.exe"
@@ -105,5 +117,5 @@ jobs:
             '| --- | --- |'
             foreach ($file in $installer, $portable) { "| $(Split-Path $file -Leaf) | ``$((Get-FileHash $file -Algorithm SHA256).Hash)`` |" }
           ) -join "`n"
-          gh release create "v$env:VERSION" $installer $portable --target $env:TARGET --title "Cosmic Conflict $env:VERSION" --notes $notes --generate-notes
+          gh release create "v$env:VERSION" $installer $portable --target $env:BUILD_SHA --title "Cosmic Conflict $env:VERSION" --notes $notes --generate-notes
           if ($LASTEXITCODE -ne 0) { throw 'Release creation failed.' }
