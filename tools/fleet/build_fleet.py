@@ -1097,7 +1097,7 @@ def author_material(kind, hexcode):
     return mat
 
 
-def bake(s, scene, game_material):
+def bake(s, scene, game_material, output=OUTPUT):
     mesh = bpy.data.meshes.new(s.name)
     mesh.from_pydata(s.vertices, [], s.faces)
     mesh.update()
@@ -1127,7 +1127,7 @@ def bake(s, scene, game_material):
     obj.select_set(True)
     bpy.context.view_layer.objects.active = obj
     bpy.ops.export_scene.gltf(
-        filepath=str(OUTPUT / (s.name + ".glb")),
+        filepath=str(output / (s.name + ".glb")),
         export_format="GLB",
         use_selection=True,
         use_active_scene=True,

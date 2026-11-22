@@ -43,6 +43,8 @@ static func terrain_chunk(start: float, sector: String, branching: bool) -> Node
 	if cached != null:
 		return cached
 	var batch := GeometryBatch.new()
+	var terrain := GeometryBatch.new()
+	var scenery: Array[Transform3D] = []
 	if sector == "thalassa":
 		for row in range(16):
 			for column in range(24):
@@ -54,29 +56,15 @@ static func terrain_chunk(start: float, sector: String, branching: bool) -> Node
 		var water := ShaderMaterial.new()
 		water.shader = WATER
 		result.get_child(0).material_override = water
-		var platforms := GeometryBatch.new()
 		for side in [-1.0, 1.0]:
 			var at: Vector3 = floor_point(side * 57, start + 64)
 			if branching and absf(side * 57 - GroundRoute.lateral_offset(start + 64)) < 40:
 				at.x += side * 75
-			platforms.box(at + Vector3(0, 3, 0), Vector3(26, 3, 45), OCEAN, Color("#243641"))
-			for x in [-9.0, 9.0]:
-				for z in [-17.0, 17.0]:
-					platforms.limb(at + Vector3(x, -10, z), at + Vector3(x, 2, z), 1.5, 1.2, OCEAN)
-			platforms.box(at + Vector3(0, 10, -5), Vector3(14, 11, 18), Color("#e1b466"), Color("#293f4c"))
-			platforms.box(at + Vector3(0, 16, -5), Vector3(17, 1.5, 21), OCEAN)
-			for i in range(5):
-				platforms.box(at + Vector3((i - 2) * 2.4, 12, 4.1), Vector3(1.4, 2, 0.3), OCEAN)
-			platforms.truss(at + Vector3(side * 8, 4, -12), at + Vector3(side * 8, 37, -12), 2, OCEAN)
-			platforms.truss(at + Vector3(side * 8, 37, -12), at + Vector3(side * 24, 37, -12), 1.5, OCEAN)
-			platforms.line(at + Vector3(side * 24, 37, -12), at + Vector3(side * 24, 8, -12), Color("#e1b466"))
-		platforms.box(floor_point(0, start + 64) + Vector3(0, -0.5, 0), Vector3(24, 0.6, 128), OCEAN.darkened(0.55), Color("#102b37"))
-		var platform_model: Node3D = platforms.build()
-		for child in platform_model.get_children():
-			platform_model.remove_child(child)
-			result.add_child(child)
-		platform_model.free()
+			scenery.append(GroundArt.placement(at, Vector3.ONE, PI if side > 0 else 0.0))
+		terrain.box(floor_point(0, start + 64) + Vector3(0, -0.5, 0), Vector3(24, 0.6, 128), OCEAN, Color.WHITE)
+		GroundArt.finish_chunk(result, terrain, scenery, sector)
 		return VectorArt.remember_model(key, result) if start < VectorArt.TERRAIN_CACHE_CHUNKS * 128 else result
+	var arches: Array[Transform3D] = []
 	for row in range(16):
 		var travel: float = start + row * 8
 		for column in range(32):
@@ -87,50 +75,28 @@ static func terrain_chunk(start: float, sector: String, branching: bool) -> Node
 				if branching and absf(x + corner.x - GroundRoute.lateral_offset(travel + corner.y)) < 15:
 					p.y = -1
 				points.append(p)
-			batch.surface(points, PackedInt32Array([0, 1, 2, 0, 2, 3]), Color("#6a4b30") if (row + column) % 3 == 0 else Color("#503923"))
-			if row % 3 == 0:
-				batch.line(points[0], points[1], SAND.darkened(0.35))
+			terrain.surface(points, PackedInt32Array([0, 1, 2, 0, 2, 3]), Color.WHITE)
 	for side in [-1.0, 1.0]:
 		for i in range(3):
 			var at: Vector3 = floor_point(side * (44 + i * 27), start + 20 + i * 38, sector)
 			if branching and absf(side * (44 + i * 27) - GroundRoute.lateral_offset(start + 20 + i * 38)) < 35:
 				continue
-			batch.box(at + Vector3(0, 5, 0), Vector3(18, 10, 18), SAND, Color("#493b32"))
-			batch.crystal(at + Vector3(0, 10, 0), 5, 35 + i * 8, SAND)
-			for mark in range(4):
-				batch.line(at + Vector3(-3, 16 + mark * 5, 4), at + Vector3(3, 19 + mark * 5, 4), Color("#68c3c6"))
+			scenery.append(GroundArt.placement(at, Vector3(1, 1 + i * 0.18, 1), side * i * 0.25))
 			if i == 0:
-				for pillar in [-1.0, 1.0]:
-					batch.box(at + Vector3(pillar * 12, 18, 30), Vector3(5, 36, 7), SAND)
-				batch.box(at + Vector3(-5, 36, 30), Vector3(22, 6, 8), SAND)
-	return VectorArt.remember_model(key, batch.build()) if start < VectorArt.TERRAIN_CACHE_CHUNKS * 128 else batch.build()
+				arches.append(GroundArt.placement(at + Vector3(0, 0, 30), Vector3.ONE))
+	var chunk := GroundArt.finish_chunk(batch.build(), terrain, scenery, sector)
+	GroundArt.add_landmarks(chunk, "ruin_arch", arches)
+	return VectorArt.remember_model(key, chunk) if start < VectorArt.TERRAIN_CACHE_CHUNKS * 128 else chunk
 
 static func fighter(sector: String, heavy: bool = false) -> Node3D:
 	var id := "tide" if sector == "thalassa" else "scarab"
 	return FleetArt.model(id + "_heavy" if heavy else id)
 
 static func pylon(sector: String) -> Node3D:
-	var batch := GeometryBatch.new()
-	var tint: Color = OCEAN if sector == "thalassa" else SAND
-	batch.box(Vector3(0, -4.8, 0), Vector3(3.2, 1.3, 4), VectorArt.AMBER)
-	if sector == "thalassa":
-		batch.box(Vector3(0, -0.2, 0), Vector3(2.6, 8, 3), tint)
-		for i in range(4):
-			batch.ring(Vector3(0, -2 + i * 1.5, 1.6), 0.85, tint)
-	else:
-		batch.crystal(Vector3(0, -4, 0), 1.5, 9, tint)
-	return batch.build()
+	return GroundArt.tower(sector)
 
 static func turret_base(sector: String) -> Node3D:
-	var batch := GeometryBatch.new()
-	var tint: Color = OCEAN if sector == "thalassa" else SAND
-	batch.box(Vector3(0, -0.5, 0), Vector3(7, 1.5, 7), tint)
-	if sector == "thalassa":
-		for side in [-1.0, 1.0]:
-			batch.tube(Vector3(side * 2.7, 0, 0), 0.9, 6, tint)
-	else:
-		batch.crystal(Vector3(0, -0.5, 0), 2.5, 2.7, tint)
-	return batch.build()
+	return FleetArt.model("mount_" + sector, "ground")
 
 static func boss(sector: String, orbital: bool) -> Node3D:
 	if orbital:

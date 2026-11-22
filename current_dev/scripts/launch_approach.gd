@@ -84,6 +84,11 @@ func attach_ground(ground: Node3D, horizon: Node3D = null) -> void:
 				material = ShaderMaterial.new()
 				material.shader = GROUND_SHADER
 				material.set_shader_parameter("use_vertex_color", true)
+			elif original is ShaderMaterial and original.shader == GroundArt.SURFACE:
+				material = ShaderMaterial.new()
+				material.shader = GROUND_SHADER
+				material.set_shader_parameter("use_swatch", true)
+				material.set_shader_parameter("swatch", original.get_shader_parameter("swatch"))
 			elif original is StandardMaterial3D:
 				assert(original.shading_mode == BaseMaterial3D.SHADING_MODE_UNSHADED)
 				material = ShaderMaterial.new()
