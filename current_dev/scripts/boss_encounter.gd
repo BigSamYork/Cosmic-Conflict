@@ -174,24 +174,25 @@ func _ready() -> void:
 
 func radar_mount(side: float) -> Vector3:
 	var x: float = side * (5 if sector == "xylo" and not orbital else 8)
-	var start := Vector3(x, 140, 0)
-	var end := Vector3(x, -80, 0)
-	var highest: float = -INF
+	var mount := _hull_surface(Vector3(x, 140, 0), Vector3(x, -80, 0))
+	assert(mount.is_finite(), "Boss radar must be attached to a real hull surface: " + sector)
+	return mount
+
+# Both endpoints and the result are in hull-local coordinates, including while
+# the wreck is rolling. Cast against the visible armor, not the combat hitbox.
+func _hull_surface(start: Vector3, end: Vector3) -> Vector3:
+	var closest := Vector3.INF
 	for node in model.get_children():
-		if not node is MeshInstance3D:
+		if not node is MeshInstance3D or not node.mesh.has_meta("fragment_vertices"):
 			continue
-		var mesh: Mesh = node.mesh
-		if not mesh.has_meta("fragment_vertices"):
-			continue
-		var vertices: PackedVector3Array = mesh.get_meta("fragment_vertices")
-		var indices: PackedInt32Array = mesh.get_meta("fragment_indices")
-		var transform: Transform3D = model.transform * node.transform
-		for i in range(0, indices.size(), 3):
-			var hit: Variant = Geometry3D.segment_intersects_triangle(start, end, transform * vertices[indices[i]], transform * vertices[indices[i + 1]], transform * vertices[indices[i + 2]])
-			if hit != null:
-				highest = maxf(highest, hit.y)
-	assert(is_finite(highest), "Boss radar must be attached to a real hull surface: " + sector)
-	return Vector3(x, highest, 0)
+		var local: Transform3D = node.transform.affine_inverse()
+		var triangles: TriangleMesh = node.mesh.generate_triangle_mesh()
+		var hit := triangles.intersect_segment(local * start, local * end)
+		if not hit.is_empty():
+			var point: Vector3 = node.transform * hit.position
+			if start.distance_squared_to(point) < start.distance_squared_to(closest):
+				closest = point
+	return closest
 
 func radar_interval_multiplier() -> float:
 	var destroyed: int = 0
@@ -206,7 +207,14 @@ func advance_visuals(delta: float) -> void:
 			continue
 		if not breaches.has(part):
 			_open_breach(part)
-		breaches[part].set_instance_shader_parameter(&"breach_time", visual_age)
+		var plume := breaches[part]
+		if part.destroyed and plume.get_parent() == part:
+			var mount := _exposed_mount(part)
+			plume.reparent(model, false)
+			plume.visible = mount.is_finite()
+			if plume.visible:
+				plume.position = mount
+		plume.set_instance_shader_parameter(&"breach_time", visual_age + part.get_index() * 0.37)
 	for reactor in [parts[0], parts[1], core]:
 		reactor.animate_reactor(visual_age)
 	for i in range(core_rings.size()):
@@ -231,6 +239,17 @@ func advance_visuals(delta: float) -> void:
 	for radar in radars:
 		radar.advance_scanner(visual_age)
 
+func _exposed_mount(part: BossPart) -> Vector3:
+	if part is BossRadar:
+		return model.to_local(part.global_position) # Foot of the removed mast.
+	var outward := Vector3.BACK # Reactor nacelles mount on the aft-facing armor.
+	if part is BossTurret:
+		outward = Vector3.UP
+	elif part is DroneBay or part is ThermalEmitter:
+		outward = (Vector3.UP + Vector3.BACK).normalized()
+	var face := model.to_local(part.aim_point())
+	return _hull_surface(face + outward * 12, face - outward * 140)
+
 func _open_breach(part: BossPart) -> void:
 	if breach_mesh == null:
 		breach_material.shader = preload("res://shaders/boss_breach.gdshader")
@@ -248,7 +267,7 @@ func _open_breach(part: BossPart) -> void:
 	plume.material_override = breach_material
 	plume.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	plume.set_instance_shader_parameter(&"organic", part.biological)
-	model.add_child(plume)
+	part.add_child(plume)
 	plume.global_position = part.aim_point()
 	breaches[part] = plume
 

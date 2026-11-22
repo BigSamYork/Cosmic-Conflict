@@ -31,7 +31,7 @@ func run() -> void:
 	for argument in OS.get_cmdline_user_args():
 		if argument.begins_with("--capture-dir="):
 			game.screenshot_directory = argument.trim_prefix("--capture-dir=")
-	for encounter in [["ignis", false], ["ignis", true], ["thalassa", false], ["xylo", false], ["cryo", false], ["vespera", false], ["kharon", false]]:
+	for encounter in [["ignis", false], ["ignis", true], ["thalassa", false], ["thalassa", true], ["xylo", false], ["cryo", false], ["vespera", false], ["kharon", false]]:
 		var orbital: bool = encounter[1]
 		var boss := BossEncounter.new()
 		boss.sector = encounter[0]
@@ -61,7 +61,10 @@ func run() -> void:
 			label = boss.sector + "-" + label
 		await game._capture(label + "-boss-intact.png")
 		game._clear_missiles()
-		for part in [boss.turrets[0], boss.parts[0], boss.radars[0]]:
+		var sections: Array = [boss.turrets[0], boss.parts[0], boss.radars[0]]
+		if boss.sector == "thalassa" and orbital:
+			sections = boss.parts.filter(func(part: BossPart) -> bool: return part != boss.core)
+		for part in sections:
 			game.cursor = game.camera.unproject_position(part.aim_point())
 			for _shot in range(part.maximum_armor):
 				if part.destroyed:
@@ -75,6 +78,13 @@ func run() -> void:
 		game._advance_explosions(4.0)
 		game._advance_debris(3.0)
 		game._update_beams(1.0)
+		boss.advance_visuals(3.0)
+		if boss.sector == "thalassa" and orbital:
+			game.camera.position = Vector3(0, 1.5, 112.5)
+			boss.advance(0.01, game.camera.global_position, Vector3.ZERO)
+			game.hud.objective = boss.objective()
+			game._update_contacts()
+			check(boss.breaches.size() == sections.size(), "The Storm Ark retains all ten breaches on the stripped ship")
 		await game._capture(label + "-boss-sections-removed.png")
 		boss.queue_free()
 		game.boss = null

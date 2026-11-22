@@ -19,6 +19,7 @@ func run() -> void:
 	for sector in SectorCatalog.AVAILABLE:
 		for orbital in [false, true]:
 			verify_contract(sector, orbital)
+			verify_breach_mounts(sector, orbital)
 		await verify_tower(sector)
 	verify_turret()
 	await process_frame
@@ -90,6 +91,41 @@ func verify_contract(sector: String, orbital: bool) -> void:
 	boss.begin_destruction()
 	boss.advance(0.7, PILOT, Vector3.ZERO)
 	check(boss.model.position.y < 0, "Disabled hull settles on its final trajectory")
+	boss.free()
+
+func verify_breach_mounts(sector: String, orbital: bool) -> void:
+	var boss := BossEncounter.new()
+	boss.sector = sector
+	boss.orbital = orbital
+	boss.transform = Transform3D(Basis.from_euler(Vector3(0.2, 0.7, -0.35)), Vector3(84, -12, 310))
+	root.add_child(boss)
+	var dish: BossPart = boss.radars[0]
+	dish.receive_hit(dish.armor - 1)
+	boss.advance_visuals(0.1)
+	var plume := boss.breaches[dish]
+	check(plume.global_position.is_equal_approx(dish.aim_point()), "Damaged dish vents at the live scanner")
+	for part in boss.parts:
+		part.unlocked = true
+		part.receive_hit(part.armor)
+	boss.advance_visuals(0.1)
+	check(boss.breaches[dish] == plume and plume.global_position.distance_to(dish.global_position) < 0.002, "Destroying a smoking dish moves its emitter to the mast foot")
+	var shell: MeshInstance3D = boss.model.get_child(0)
+	var mesh := shell.mesh.generate_triangle_mesh()
+	for part in boss.parts:
+		plume = boss.breaches[part]
+		var p := shell.to_local(plume.global_position)
+		var touches := false
+		for axis: Vector3 in [Vector3.UP, Vector3.BACK, Vector3.RIGHT]:
+			if not mesh.intersect_segment(p + axis * 0.05, p - axis * 0.05).is_empty():
+				touches = true
+				break
+		check(plume.is_visible_in_tree() and plume.get_parent() == boss.model and touches, "%s %s breach touches surviving armor" % [sector, boss.part_label(part)])
+	var local_mount: Vector3 = boss.breaches[dish].position
+	boss.begin_destruction()
+	boss.advance(0.7, PILOT, Vector3.ZERO)
+	check(boss.breaches[dish].global_position.distance_to(boss.model.to_global(local_mount)) < 0.002, "Smoke follows the rolling wreck")
+	boss.advance(0.9, PILOT, Vector3.ZERO)
+	check(not boss.breaches[dish].is_visible_in_tree(), "No emitter outlives the wreck")
 	boss.free()
 
 func verify_tower(sector: String) -> void:
