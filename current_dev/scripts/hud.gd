@@ -4,6 +4,7 @@ extends Control
 signal launch_requested
 signal resume_requested
 signal title_requested
+signal opening_requested
 signal quit_requested
 signal setting_changed(key: String, value: Variant)
 signal mission_requested
@@ -222,14 +223,17 @@ func show_menu(next_mode: String, current_settings: Dictionary) -> void:
 		_add_button(stack, "BACK", func() -> void: title_requested.emit())
 		return
 	if mode == "title":
-		_add_label(stack, "SIX WORLDS / ONE PILOT", 18, CYAN)
-		_add_label(stack, "FIND YOUR FLIGHT LINE.", 34, WHITE)
-		_add_label(stack, "Ground assault. Orbital blockade. Asteroid escape.\nEarn credits, improve your ship, and return to Astra.", 21, MUTED)
+		_add_label(stack, "CAPTAIN TOMAS VALE  /  FLIGHT COMPUTER LARK", 18, CYAN)
+		_add_label(stack, "TWO KNOCKS HOME", 34, WHITE)
+		_add_label(stack, "Six convoys lift at dawn. Clear the ground lanes,\nbreak the blockades, and bring them home to Astra.", 21, MUTED)
 		_add_button(stack, "NEW OPERATION / CHOOSE SECTOR", func() -> void: mission_requested.emit())
 		if can_resume:
 			_add_button(stack, "CONTINUE SAVED OPERATION / MARKET", func() -> void: continue_requested.emit())
 		_add_button(stack, "LAUNCH TRAINING FLIGHT", func() -> void: launch_requested.emit())
-		_add_button(stack, "HALL OF FAME", func() -> void: hall_requested.emit())
+		var extras := HBoxContainer.new()
+		stack.add_child(extras)
+		_add_button(extras, "HALL OF FAME", func() -> void: hall_requested.emit())
+		_add_button(extras, "REPLAY OPENING", func() -> void: opening_requested.emit())
 	elif mode == "pause":
 		_add_label(stack, "TACTICAL STATUS / SIMULATION HELD", 18, CYAN)
 		_add_label(stack, "TAKE A BREATH, PILOT.", 32, WHITE)
@@ -283,6 +287,9 @@ func show_market(state: CampaignState, error: String = "") -> void:
 	_add_label(stack, "%s     |     %d CREDITS     |     PRIMARY LV %d" % [ship_name, state.credits, state.primary_level], 22, WHITE)
 	var result: String = SectorCatalog.name_for(state.sector).to_upper() + " COMPLETE" if state.last_result == "completed" else "PILOT RECOVERED" if state.last_result == "ejected" else "DOCKED"
 	_add_label(stack, "%s / Ships and shields are fully repaired here, free of charge.\nHull purchases transfer fitted upgrades. Ejection loses the ship and its equipment." % result, 18, MUTED)
+	if state.last_result == "completed":
+		var dispatch := _add_label(stack, "LARK   /   " + SectorCatalog.DISPATCH[state.sector], 18, CYAN)
+		dispatch.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	if not error.is_empty():
 		_add_label(stack, error, 19, VectorArt.HOSTILE)
 	if state.ship.is_empty() and state.credits < state.price("rook"):
@@ -381,7 +388,7 @@ func show_sector_map(state: CampaignState = null) -> void:
 	mode = "sector"
 	var stack: VBoxContainer = _menu_stack(1100, 145)
 	_add_label(stack, "SECTOR NAVIGATION / CHOOSE YOUR DESTINATION", 28, CYAN)
-	_add_label(stack, "Station departure, hyperspace and arrival remain one continuous flight.", 20, WHITE)
+	_add_label(stack, "Lark has the distress traffic. Choose the next convoy to reach.", 20, WHITE)
 	var grid := GridContainer.new()
 	grid.columns = 2
 	grid.add_theme_constant_override("h_separation", 20)
@@ -407,6 +414,9 @@ func show_sector_map(state: CampaignState = null) -> void:
 		var description: Label = _add_label(labels, SectorCatalog.DESCRIPTIONS[id], 16, MUTED)
 		description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		description.custom_minimum_size.x = 380
+		var request := _add_label(labels, SectorCatalog.DISTRESS[id], 16, WHITE)
+		request.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		request.custom_minimum_size.x = 380
 		var available: bool = SectorCatalog.AVAILABLE.has(id)
 		var cleared: bool = state != null and state.cleared_sectors.has(id)
 		var permitted: bool = available and (state == null or state.can_visit(id))
@@ -417,7 +427,7 @@ func show_sector_map(state: CampaignState = null) -> void:
 		_add_label(stack, "TOUR %d / REPLAYS UNLOCKED / ENEMY HEALTH %.0f%%\nClear all %d required worlds for this tour's debrief." % [state.tour, state.health_multiplier() * 100, state.required_sectors.size()], 18, MUTED)
 	_add_button(stack, "BACK", func() -> void: sector_cancelled.emit())
 
-func show_campaign_result(record: Dictionary, actions: Array[Dictionary]) -> void:
+func show_campaign_result(record: Dictionary, actions: Array[Dictionary], final_sector: String = "") -> void:
 	mode = "campaign_result"
 	var stack: VBoxContainer = _menu_stack(1450, 145)
 	stack.add_theme_constant_override("separation", 10)
@@ -435,6 +445,10 @@ func show_campaign_result(record: Dictionary, actions: Array[Dictionary]) -> voi
 	_add_label(title, CampaignHonors.RANKS[record["rank"]], 34, WHITE)
 	_add_label(title, "%s MEDAL / RATING %d OF 1000" % [CampaignHonors.MEDALS[record["rank"]].to_upper(), record["rating"]], 24, AMBER)
 	_add_label(title, "%s / %s" % ["DEVELOPER-ASSISTED / SEPARATE RECORDS" if record["assisted"] else "UNASSISTED", record["completed_at"]], 17, MUTED)
+	if CampaignHonors.record_sectors(record).size() == SectorCatalog.AVAILABLE.size() and record["tour"] == 1:
+		var last_arrival: String = SectorCatalog.DISPATCH.get(final_sector, "")
+		var epilogue := _add_label(stack, ("LARK   /   " + last_arrival + "\n" if not last_arrival.is_empty() else "") + "I read the arrivals aloud, Tomas. Every name. When I finished, someone knocked twice on the hangar wall.", 19, CYAN)
+		epilogue.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_add_label(stack, CampaignHonors.loadout_text(record["loadout"]), 19, WHITE)
 	var scroll := ScrollContainer.new()
 	scroll.name = "CampaignStatistics"
@@ -658,7 +672,7 @@ func _add_settings(stack: VBoxContainer) -> void:
 	options.selected = int(settings.get("response", 1))
 	options.item_selected.connect(func(index: int) -> void: setting_changed.emit("response", index))
 	response_row.add_child(options)
-	for entry in [["voice_volume", "Computer voice (0 = off)  ", 70], ["music_volume", "Ambient music (0 = off)    ", AmbientMusic.DEFAULT_VOLUME]]:
+	for entry in [["voice_volume", "Voices / Lark & Vale  ", 70], ["music_volume", "Ambient music (0 = off)    ", AmbientMusic.DEFAULT_VOLUME]]:
 		var volume_row := HBoxContainer.new()
 		stack.add_child(volume_row)
 		_add_label(volume_row, entry[1], 18, MUTED)

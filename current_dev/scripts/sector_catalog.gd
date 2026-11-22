@@ -23,6 +23,23 @@ const DESCRIPTIONS: Dictionary = {
 	"kharon": "Desert ruins / broken arches / falling pillars / scarab fighters"
 }
 
+const DISTRESS := {
+	"ignis": "Open a launch lane for the night shift making ferry heat shields.",
+	"cryo": "Get the greenhouse ward and its newborns through the blockade.",
+	"vespera": "Reach the families keeping candles in the hotel windows.",
+	"xylo": "Bring the clinic patients and their air reeds aboard together.",
+	"thalassa": "Free the lighthouse channel so a tug can reach the Lantern.",
+	"kharon": "Escort the pilots carrying the last paper charts to Astra."
+}
+const DISPATCH := {
+	"ignis": "Foundry tug aboard. The last worker down the ramp was still wearing his pouring gloves.",
+	"cryo": "Ward aboard. A nurse asked us to log one more passenger. He was born on the way up.",
+	"vespera": "Hotel ferry aboard. The porter turned out the last light himself.",
+	"xylo": "Clinic aboard. There's mud on the deck and every last patient is breathing.",
+	"thalassa": "Lantern under tow. Your sister wants her wrench back, Tomas. She says you know which one.",
+	"kharon": "Chart pilots aboard. The keeper kept one ration card. She'd like you both to sign it."
+}
+
 static func name_for(sector: String) -> String:
 	assert(NAMES.has(sector), "Unknown sector: " + sector)
 	return NAMES[sector]

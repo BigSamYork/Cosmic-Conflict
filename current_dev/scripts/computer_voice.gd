@@ -68,10 +68,17 @@ func _ready() -> void:
 	if not error.is_empty():
 		_fail(error)
 		return
-	bus_name = "ComputerVoice-%d" % get_instance_id()
+	bus_name = create_radio_bus("ComputerVoice-%d" % get_instance_id())
+	player = AudioStreamPlayer.new()
+	player.bus = bus_name
+	add_child(player)
+	player.finished.connect(_finished)
+	set_level(volume_percent, suppressed)
+
+static func create_radio_bus(label: String) -> String:
 	var index: int = AudioServer.bus_count
 	AudioServer.add_bus()
-	AudioServer.set_bus_name(index, bus_name)
+	AudioServer.set_bus_name(index, label)
 	AudioServer.set_bus_send(index, "Master")
 	var high := AudioEffectHighPassFilter.new()
 	high.cutoff_hz = 200
@@ -92,11 +99,7 @@ func _ready() -> void:
 	chorus.set("voice/1/level_db", -4.0)
 	chorus.set("voice/1/pan", 0.0)
 	AudioServer.add_bus_effect(index, chorus)
-	player = AudioStreamPlayer.new()
-	player.bus = bus_name
-	add_child(player)
-	player.finished.connect(_finished)
-	set_level(volume_percent, suppressed)
+	return label
 
 func _load_catalog() -> String:
 	if catalog_path.is_empty():
@@ -218,7 +221,10 @@ func _fail(message: String) -> void:
 
 func _exit_tree() -> void:
 	stop_speech()
-	if not bus_name.is_empty():
-		var index: int = AudioServer.get_bus_index(bus_name)
+	release_radio_bus(bus_name)
+
+static func release_radio_bus(label: String) -> void:
+	if not label.is_empty():
+		var index: int = AudioServer.get_bus_index(label)
 		if index >= 0:
 			AudioServer.remove_bus(index)

@@ -198,6 +198,7 @@ func _ready() -> void:
 	hud.launch_requested.connect(start_flight)
 	hud.resume_requested.connect(resume_flight)
 	hud.title_requested.connect(show_title)
+	hud.opening_requested.connect(func() -> void: get_tree().change_scene_to_file("res://opening.tscn"))
 	hud.quit_requested.connect(func() -> void: get_tree().quit())
 	hud.setting_changed.connect(_change_setting)
 	hud.mission_requested.connect(_request_new_campaign)
@@ -250,6 +251,8 @@ func _define_inputs() -> void:
 		key.physical_keycode = pilot_keys[action]
 		bindings[action] = [key]
 	for action: String in bindings:
+		if InputMap.has_action(action):
+			continue
 		InputMap.add_action(action)
 		for event: InputEvent in bindings[action]:
 			InputMap.action_add_event(action, event)
@@ -257,6 +260,8 @@ func _define_inputs() -> void:
 		var key := InputEventKey.new()
 		key.physical_keycode = KEY_0 + i
 		var action: String = "power_" + CampaignState.POWER_MODES[i]
+		if InputMap.has_action(action):
+			continue
 		InputMap.add_action(action)
 		InputMap.action_add_event(action, key)
 
@@ -2953,7 +2958,7 @@ func _show_campaign_result() -> void:
 		{"label": "RETIRE / RECORD AND RETURN TO TITLE", "action": _retire_campaign},
 		{"label": "HALL OF FAME", "action": _show_hall_of_fame},
 		{"label": "HOW RANKS ARE CALCULATED", "action": _show_rank_rules}
-	])
+	], campaign.sector)
 
 func _show_rank_rules() -> void:
 	var ladder: Array[String] = []
@@ -3170,7 +3175,7 @@ func _debug_action(action: String) -> void:
 func _parse_automation() -> void:
 	var reduced: bool = false
 	for argument in OS.get_cmdline_user_args():
-		if argument in ["--smoke-test", "--benchmark", "--mission-test", "--campaign-test", "--belt-benchmark", "--mining-test", "--orbit-benchmark", "--boss-benchmark", "--entry-benchmark", "--launch-benchmark", "--branch-benchmark", "--ground-benchmark", "--voice-test", "--music-test"]:
+		if argument in preload("res://scripts/launch.gd").AUTOMATION:
 			automation = argument
 		elif argument.begins_with("--capture-dir="):
 			screenshot_directory = argument.trim_prefix("--capture-dir=")
