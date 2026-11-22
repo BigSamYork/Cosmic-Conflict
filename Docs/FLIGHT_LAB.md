@@ -29,7 +29,9 @@ station music continues. Asteroid artwork now takes less time to generate.
   canopy pillars, with bolted, worn steel faces and unchanged window openings.
   Quad Plasma adds two six-barrel clusters: hold fire to spin them up and
   release to watch them coast. Tachyon replaces the clusters with forked,
-  illuminated emitter rails. Weapon damage, heat and firing rates are unchanged.
+  illuminated emitter rails. Astra Market shows the fitted exterior beside
+  the shop. All five hulls carry the Twin Pulse pair and mount the equipped
+  upgrade outboard.
 - **Named games:** choose **Save / Load Game** while paused or in Astra Market.
   Enter a name and choose **Save As**, or select a saved name to load. A flight
   save restores the phase checkpoint, not mid-flight damage, kills or rewards.
@@ -641,7 +643,8 @@ Developer assistance remains marked for the entire operation, including later to
 ## Continuous-flight improvements from v0.3.0
 
 - Continuous first-person flight between combat stages: no sector-clear modal
-  or camera reset. Ground victory leads through an atmospheric climb, the orbital
+  or camera reset. After a ground-boss kill, autopilot brakes and watches the
+  four-second breakup from the cockpit before climbing into orbit. The orbital
   battle leads into the asteroid belt, and the station approach ends inside the
   hangar before Astra Market opens.
 - Detailed moving bosses with engine banks, cooling rings, trusses, weapons,

@@ -150,6 +150,9 @@ func verify_worlds() -> void:
 		configured.configure_campaign(game.campaign)
 		check(configured.max_hull == CampaignState.SHIPS[ship]["hull"] and configured.max_shields == CampaignState.SHIPS[ship]["shield"] and configured.collision_radius == CampaignState.SHIPS[ship]["radius"], "Actual flight config uses the heavy hull's protection and hitbox")
 		await shot("market-" + ship)
+		game._market_purchase("primary")
+		var installed: MeshInstance3D = game.display_ship.get_node("PrimaryGuns/PortOuter").get_child(0)
+		check(installed.mesh == FleetArt.mesh_for("tachyon_beam", "guns") and game.gun_level_displayed == 2, "Buying a primary on the same hull updates both the cockpit and exterior")
 		game.campaign.eject()
 		check(game.campaign.ship.is_empty() and game.campaign.primary_level == 0 and not game.campaign.secondary, "Ejection loses the heavy ship and its equipment, not its retained credit wallet")
 	for sector in ["thalassa", "kharon"]:
@@ -350,13 +353,31 @@ func verify_transitions() -> void:
 		await phase("ignis", "orbit_boss" if id == "orbital_victory" else "docking" if id in ["belt_climb", "station_approach", "docking"] else "ground_boss")
 		if id == "belt_transfer":
 			game.belt_entry = game.director.frame * Transform3D(Basis.IDENTITY, Vector3(0, 500, -1200))
-		game._begin_sequence(id)
-		var durations: Dictionary = {"ground_victory": 1, "ascent": 6, "orbital_victory": 1, "belt_transfer": 14, "belt_climb": 10, "station_approach": 4, "docking": 4}
+		if id == "ground_victory":
+			# Kill a boss at normal pursuit range through the weapon hit path.
+			game.flight.distance += FlightState.SPEED * 30
+			game.director.advance("ground_boss", 0, game.flight.distance, 30, game.targets)
+			game.boss.advance(30, game.director.frame.origin, Vector3.ZERO)
+			game._update_camera()
+			game.boss.core.unlocked = true
+			game._strike({"collider": game.boss.core, "position": game.boss.core.aim_point()}, game.boss.core.armor)
+			game._finish_phase()
+		else:
+			game._begin_sequence(id)
+		var durations: Dictionary = {"ground_victory": DestructionEffect.DURATION, "ascent": 6, "orbital_victory": 1, "belt_transfer": 14, "belt_climb": 10, "station_approach": 4, "docking": 4}
 		check(game.director.transition_duration == durations[id], "Actual autopilot director uses the exact requested duration for " + id)
 		var elapsed: float = 0
+		var saw_fracture := false
 		while game.sequence == id and elapsed <= durations[id] + 1:
 			game._physics_process(1.0 / 60)
 			elapsed += 1.0 / 60
+			if id == "ground_victory" and game.sequence == id and not game.explosions.is_empty():
+				var blast: DestructionEffect = game.explosions.back()
+				if blast.fired:
+					var view: Vector3 = -game.camera.global_basis.z
+					saw_fracture = saw_fracture or view.dot(game.camera.global_position.direction_to(blast.global_position)) > 0.98
+		if id == "ground_victory":
+			check(saw_fracture and game.sequence == "ascent" and game.explosions.is_empty(), "Autopilot watches the breakup and finishes the blast before pulling up")
 		check(absf(elapsed - durations[id]) <= 1.0 / 60 + 0.00001, "Measured simulation duration matches the handoff schedule for " + id)
 	await phase("ignis", "orbit")
 	game._begin_sequence("blockade_exit")

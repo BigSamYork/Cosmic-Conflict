@@ -2,6 +2,7 @@ class_name DestructionEffect
 extends Node3D
 
 signal fracture_requested
+const DURATION := 4.0
 var source: Node3D
 var age := 0.0
 var size := 20.0
@@ -47,4 +48,4 @@ func advance(delta: float) -> void:
 		fracture_requested.emit()
 
 func complete() -> bool:
-	return age >= 4.0
+	return age >= DURATION

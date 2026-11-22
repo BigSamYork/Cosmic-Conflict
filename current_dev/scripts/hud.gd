@@ -277,10 +277,44 @@ func show_notice(title: String, body: String, actions: Array[Dictionary]) -> voi
 	for action in actions:
 		_add_button(stack, action["label"], action["action"])
 
+func _show_equipped_ship(state: CampaignState) -> void:
+	# A separate render keeps the canopy rails from covering the fitted guns.
+	# The market refreshes on purchase, so a single frame per loadout suffices.
+	var mount := Node2D.new()
+	mount.position = Vector2(1160, 100)
+	menu.add_child(mount)
+	var viewport := SubViewport.new()
+	viewport.own_world_3d = true
+	viewport.size = Vector2i(480, 310)
+	viewport.msaa_3d = Viewport.MSAA_2X
+	viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
+	mount.add_child(viewport)
+	var ship := FrontierArt.player_ship(state.ship, state.primary_level)
+	viewport.add_child(ship)
+	ship.get_child(0).set_instance_shader_parameter("parked", true)
+	var bounds := FleetArt.mesh_for(state.ship).get_aabb()
+	var view := Camera3D.new()
+	view.projection = Camera3D.PROJECTION_ORTHOGONAL
+	view.size = maxf(bounds.size.x, bounds.size.z) * 0.91
+	viewport.add_child(view)
+	view.position = bounds.get_center() + Vector3(6, 8, -10)
+	view.look_at(bounds.get_center())
+	var screen := Sprite2D.new()
+	screen.centered = false
+	screen.texture = viewport.get_texture()
+	mount.add_child(screen)
+	var caption := Label.new()
+	caption.position = Vector2(16, 10)
+	caption.text = FlightState.PRIMARY_NAMES[state.primary_level].to_upper()
+	caption.add_theme_color_override("font_color", CYAN)
+	mount.add_child(caption)
+
 func show_market(state: CampaignState, error: String = "") -> void:
 	campaign = state
 	mode = "market"
 	var stack: VBoxContainer = _menu_stack(1140, 160)
+	if not state.ship.is_empty():
+		_show_equipped_ship(state)
 	_add_label(stack, "ASTRA MARKET / SAFE HARBOR", 28, CYAN)
 	var ship_name: String = "NO SHIP / EJECTION POD" if state.ship.is_empty() else CampaignState.SHIPS[state.ship]["name"]
 	_add_label(stack, "%s     |     %d CREDITS     |     PRIMARY LV %d" % [ship_name, state.credits, state.primary_level], 22, WHITE)

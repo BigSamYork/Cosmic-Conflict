@@ -175,7 +175,8 @@ static func boss(sector: String, orbital: bool) -> Node3D:
 		return FleetArt.model("ark" if sector == "thalassa" else "sovereign")
 	return FleetArt.model("tempest_walker" if sector == "thalassa" else "sunforge_colossus", "ground")
 
-static func player_ship(id: String) -> Node3D:
+static func player_ship(id: String, primary_level: int = 0) -> Node3D:
 	var model := FleetArt.model(id if CampaignState.SHIPS.has(id) else "rook")
 	model.set_meta("player_hull", id)
+	GunAppearance.fit_exterior(model, id, primary_level)
 	return model

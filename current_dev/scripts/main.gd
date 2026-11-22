@@ -67,7 +67,7 @@ var sequence_time: float = 0.0
 const TRANSIT_LEGS := {
 	"station_departure": FlightDirector.UNDOCK_DURATION, "warp_alignment": FlightDirector.ALIGN_DURATION,
 	"hyperspace": LaunchApproach.HYPERSPACE_DURATION, "planet_descent": FlightDirector.DESCENT_DURATION,
-	"ground_victory": FlightDirector.VICTORY_DURATION, "ascent": FlightDirector.ASCENT_DURATION,
+	"ground_victory": DestructionEffect.DURATION, "ascent": FlightDirector.ASCENT_DURATION,
 	"blockade_exit": FlightDirector.BOSS_TURN_DURATION,
 	"orbital_victory": FlightDirector.VICTORY_DURATION, "belt_transfer": FlightDirector.BELT_TRANSFER_DURATION,
 	"belt_exit": FlightDirector.BELT_COAST_DURATION, "belt_climb": FlightDirector.BELT_CLIMB_DURATION,
@@ -415,10 +415,12 @@ func _set_cockpit(ship: String, primary_level: int = 0) -> void:
 		var pose: Transform3D = display_ship.global_transform
 		var shown: bool = display_ship.visible
 		display_ship.queue_free()
-		display_ship = FrontierArt.player_ship(ship)
+		display_ship = FrontierArt.player_ship(ship, equipped)
 		add_child(display_ship)
 		display_ship.global_transform = pose
 		display_ship.visible = shown
+	elif display_ship != null and display_ship.get_meta("primary_level") != equipped:
+		GunAppearance.fit_exterior(display_ship, ship, equipped)
 	muzzle_points = PackedVector2Array([Vector2(548, 480), Vector2(828, 480)]) if cockpit_skin.is_empty() else GunAppearance.muzzle_points(equipped)
 
 func _build_world(training: bool = true) -> void:
@@ -571,7 +573,7 @@ func _build_world(training: bool = true) -> void:
 			towers.append(tower)
 			targets.append(tower)
 	if display_ship == null:
-		display_ship = FrontierArt.player_ship("rook")
+		display_ship = FrontierArt.player_ship(cockpit_skin, gun_level_displayed)
 		add_child(display_ship)
 
 func start_flight() -> void:
@@ -2655,15 +2657,17 @@ func _begin_sequence(kind: String) -> void:
 			end = director.ground_course * FlightState.rail_frame(0)
 			director.begin_transition(end, duration, 180, FlightState.SPEED)
 			hud.objective = "ATMOSPHERIC DESCENT / CANYON APPROACH"
-		"ground_victory", "orbital_victory":
+		"ground_victory":
+			director.begin_transition(end, duration, 0, 0)
+			hud.objective = "HOLDING ON TARGET / CONFIRMING DESTRUCTION"
+		"orbital_victory":
 			end.origin -= end.basis.z * FlightState.SPEED * duration
 			director.begin_transition(end, duration, FlightState.SPEED, FlightState.SPEED)
 			hud.objective = "REACTOR CASCADE / CLEARING THE WRECKAGE"
-			if kind == "orbital_victory":
-				_prepare_belt(end)
+			_prepare_belt(end)
 		"ascent":
 			end.origin += -end.basis.z * 620.0 + Vector3.UP * 560.0
-			director.begin_transition(end, duration, FlightState.SPEED, FlightDirector.DOGFIGHT_SPEED)
+			director.begin_transition(end, duration, flight.speed, FlightDirector.DOGFIGHT_SPEED)
 			hud.objective = "CLIMBING THROUGH THE ATMOSPHERE / ORBIT AHEAD"
 		"blockade_exit":
 			mission_world.pending_webs = 0
@@ -2735,9 +2739,16 @@ func _advance_sequence(delta: float) -> void:
 	var previous: Vector3 = director.frame.origin
 	var previous_transition_time: float = director.transition_time
 	var finished: bool
-	if sequence in ["ground_victory", "belt_exit"]:
-		flight.distance += (FlightState.SPEED if sequence == "ground_victory" else FlightDirector.ASTEROID_SPEED) * delta
-		director.frame = director.ground_course * FlightState.rail_frame(flight.distance) if sequence == "ground_victory" else director.origin * FlightDirector.asteroid_frame(flight.distance)
+	if sequence == "ground_victory":
+		# Brake over the first second, leaving the wreck at a safe viewing distance.
+		var before := maxf(0.0, 1.0 - (sequence_time - delta))
+		var after := maxf(0.0, 1.0 - sequence_time)
+		flight.distance += 0.5 * FlightState.SPEED * (before * before - after * after)
+		director.frame = director.ground_course * FlightState.rail_frame(flight.distance)
+		finished = sequence_time >= duration
+	elif sequence == "belt_exit":
+		flight.distance += FlightDirector.ASTEROID_SPEED * delta
+		director.frame = director.origin * FlightDirector.asteroid_frame(flight.distance)
 		finished = sequence_time >= duration
 	else:
 		finished = director.advance_transition(delta)
@@ -2793,6 +2804,13 @@ func _advance_sequence(delta: float) -> void:
 	for tower in towers:
 		tower.advance(delta)
 	_update_camera()
+	if boss != null and not boss.orbital and boss.death_time >= 0 and sequence in ["ground_victory", "ascent"]:
+		var weight := smoothstep(0.0, 0.45, sequence_time) if sequence == "ground_victory" else 1.0 - smoothstep(0.0, 0.9, sequence_time)
+		if weight > 0:
+			var aim := camera.global_position.direction_to(boss.model.global_position)
+			if aim.length_squared() > 0.0 and absf(aim.dot(director.ground_course.basis.y)) < 0.999:
+				var toward_wreck := Basis.looking_at(aim, director.ground_course.basis.y)
+				camera.global_basis = camera.global_basis.slerp(toward_wreck, weight)
 	if launch_approach != null:
 		_advance_ocean(delta)
 		if xylo_rovers != null:

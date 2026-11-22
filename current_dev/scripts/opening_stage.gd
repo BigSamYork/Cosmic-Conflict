@@ -72,7 +72,7 @@ func stage(id: String) -> void:
 	advance(0)
 
 func _model(id: String, folder: String, at: Vector3, span: float, yaw: float = 0) -> Node3D:
-	var model := FleetArt.model(id, folder)
+	var model := FrontierArt.player_ship(id) if folder == "fleet" and CampaignState.SHIPS.has(id) else FleetArt.model(id, folder)
 	var size := FleetArt.mesh_for(id, folder).get_aabb().size
 	model.scale = Vector3.ONE * span / size[size.max_axis_index()]
 	model.rotation.y = yaw
