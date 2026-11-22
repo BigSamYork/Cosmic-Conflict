@@ -116,7 +116,8 @@ func verify_world() -> void:
 	game.store = CampaignStore.new(path)
 	await game._load_phase()
 	check(game.xylo_fields.size() == 14 and game.xylo_rovers != null and game.heat_vents.is_empty() and game.frost_fields.is_empty(), "Xylo has its own corrosive/spore fields and survey vehicles")
-	check(game.xylo_rovers.find_children("*", "CollisionObject3D", true, false).is_empty(), "Survey rovers are non-hostile scenery, not targets or collision traps")
+	var rover_hulls: Array[Node] = game.xylo_rovers.find_children("*", "CollisionObject3D", true, false)
+	check(not rover_hulls.is_empty() and rover_hulls.all(func(body): return body.collision_layer == FleetArt.PILOT_LAYER), "Survey rovers have solid bodies and remain outside every weapon layer")
 	game.pause_flight()
 	var age: float = game.xylo_fields[0].age
 	game._physics_process(3)
@@ -164,7 +165,7 @@ func verify_world() -> void:
 	game.campaign.stats["shots"] += 1
 	game._strike({"collider": cargo, "position": cargo.global_position}, cargo.armor)
 	game._strike({"collider": cargo, "position": cargo.global_position}, 10)
-	check(game.campaign.stats["eggs"] == 1 and game.campaign.credits == 8 and game.campaign.stats["asteroids"] == 0 and game.rock_fragments.is_empty() and game.mineral_pickups.size() == 1 and game.mineral_pickups[0].biological, "Egg cargo pays once and releases a biological pickup without stone fragments")
+	check(game.campaign.stats["eggs"] == 1 and game.campaign.credits == 0 and game.campaign.stats["asteroids"] == 0 and game.rock_fragments.is_empty() and game.mineral_pickups.size() == 1 and game.mineral_pickups[0].biological, "Egg cargo grants no cash and releases a biological pickup without stone fragments")
 	var brood: EggShip
 	for target in game.targets:
 		if target is EggShip and target.infested:

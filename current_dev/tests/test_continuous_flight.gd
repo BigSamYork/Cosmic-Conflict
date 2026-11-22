@@ -242,10 +242,11 @@ func _test_game_sequences() -> void:
 	game.campaign.phase = "ground_boss"
 	await game._load_phase()
 	game._finish_phase()
-	check(game.hud.transit_seconds == 7, "Ground victory includes clearance and ascent")
+	var ground_handoff := DestructionEffect.DURATION + FlightDirector.ASCENT_DURATION
+	check(game.hud.transit_seconds == ceili(ground_handoff), "Ground victory counts the full breakup and ascent")
 	for tick in range(100):
-		game._physics_process(0.07)
-	check(game.mode == game.Mode.FLIGHT and game.campaign.phase == "orbit" and game.flight.elapsed == 0, "Seven-second ground victory hands off to fresh orbital gameplay")
+		game._physics_process(ground_handoff / 100.0)
+	check(game.mode == game.Mode.FLIGHT and game.campaign.phase == "orbit" and game.flight.elapsed == 0, "Ground victory hands off to fresh orbital gameplay after the climb")
 	DirAccess.remove_absolute(save_path)
 	game.queue_free()
 	await process_frame

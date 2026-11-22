@@ -22,7 +22,7 @@ func run() -> void:
 		await scene_changed
 	var intro = current_scene
 	check(intro.scene_file_path == "res://opening.tscn", "Player boot opens the prologue")
-	check(intro.score.stream.resource_path.ends_with("/Fanfare for Space.ogg"), "The narrated prologue opens with Fanfare for Space")
+	check(intro.drone.stream.loop_mode == AudioStreamWAV.LOOP_FORWARD and intro.score.stream.resource_path.ends_with("/Fanfare for Space.ogg"), "A pulsing synth bed leads into the launch fanfare")
 	intro.set_process(false)
 	var seen := {}
 	var voices_heard := {}
@@ -32,7 +32,13 @@ func run() -> void:
 		if cue.id == "knock":
 			# Jumping time crosses both the hull taps and the first voice onset.
 			check(intro.next_knock == 3, "The distress signal has three knocks")
-		check(intro.get_node("Overlay/Caption").text == cue.text, "Speaker subtitles follow " + cue.id)
+		check(" ".join(intro.caption_pages) == cue.text and intro.get_node("Overlay/Caption").text == intro.caption_pages[0], "Legible subtitle pages preserve the entire line for " + cue.id)
+		for page in intro.caption_pages:
+			check(page.length() <= 84, "Subtitle page fits the cockpit view")
+		if cue.id == "beacon":
+			check(intro.dialogue.bus == intro.radio_bus and intro.get_node("Overlay/Speaker").text == "SPOOFED BEACON", "The false clearance uses Lark's radio voice")
+		if cue.shot in intro.stage.FEEDS:
+			check(intro.feed_views.size() == 4 and intro.get_node("Overlay/Feeds").visible, "Four live tactical feeds on the holo-table")
 		if native and intro.voice_on and not voices_heard.has(cue.speaker):
 			await create_timer(0.18).timeout
 			check(intro.dialogue.playing and intro.dialogue.get_playback_position() > 0, "Audio device plays " + cue.speaker)
@@ -46,15 +52,14 @@ func run() -> void:
 		intro.dialogue.stop()
 		if cue.id == "home":
 			intro._update_frame(intro.duration - intro.clock - 0.45)
-			check(intro.next_knock == 2 and intro.get_node("Overlay/Caption").text == "[Two knocks in reply]", "Vale answers the ferry's signal")
+			check(intro.next_knock == 2 and intro.get_node("Overlay/Caption").text == "[Two metallic pings in reply]", "Vale answers the Aegis-4's signal")
 		intro._process(intro.duration - intro.clock + 0.05)
-	for sector in SectorCatalog.AVAILABLE:
-		check(seen.has(sector) and SectorCatalog.DISTRESS.has(sector) and SectorCatalog.DISPATCH.has(sector), "Mission and rescue dispatch for " + sector)
+	check(seen.keys() == ["aegis", "blockade", "ignis", "cryo", "vespera", "kharon", "departure", "answer"], "All eight sets appear in script order")
 	await scene_changed
 	check(current_scene.scene_file_path == "res://main.tscn" and current_scene.hud.mode == "title", "Natural completion reaches the briefing")
 	current_scene.hud.opening_requested.emit()
 	await scene_changed
-	check(current_scene.index == 0, "Replay starts with the ferry")
+	check(current_scene.index == 0, "Replay starts aboard the Aegis-4")
 	var esc := InputEventKey.new()
 	esc.keycode = KEY_ESCAPE
 	esc.pressed = true

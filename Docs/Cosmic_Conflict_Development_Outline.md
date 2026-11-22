@@ -99,7 +99,7 @@ automatically resumes play. Existing settings include three flight responses,
 reduced glow, audio mute and camera-motion control. Disabling camera motion
 removes impact shake/evasive bank without removing dodge movement.
 Computer voice and ambient music have independent volume controls; zero disables
-the corresponding playback. Music defaults to 35% and ducks under speech.
+the corresponding playback. Music defaults to 60% and ducks under speech.
 The full-loadout pause overlay keeps its controls inside the 1080p viewport.
 Broader UI scaling, keyboard-focus and accessibility validation remain planned.
 
@@ -543,7 +543,7 @@ fully clears before the docking pull-up.
 The user supplied fifty lines across seven categories and requested three
 additional lines in each. The catalog contains those fifty plus twenty-one
 additions, and a further twelve route quips (six easy/six hard): **83 lines**.
-The selected voice is offline **Microsoft Zira**, with restrained electronic/
+Lark's current recordings use **Chatterbox-Turbo**, with restrained electronic/
 radio processing, occasional banter and urgent-warning priority.
 
 Route quips have a one-in-four random chance only after at least four seconds

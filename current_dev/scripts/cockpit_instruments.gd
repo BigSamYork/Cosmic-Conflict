@@ -22,6 +22,7 @@ var phase_title: String = ""
 var objective: String = ""
 var incoming_count: int = 0
 var boss_fraction: float = -1.0
+var show_target_ranges := false
 var radar_contacts: Array[Dictionary] = []
 var scope_range := 360.0
 var intercept_seconds := INF
@@ -218,7 +219,9 @@ func _radar() -> void:
 	var summary := "CLEAR"
 	if not radar_contacts.is_empty():
 		var first := radar_contacts[0]
-		summary = "%s %dm" % [String(first.get("kind", "TRACK")).to_upper(), roundi(first.get("distance", 0.0))]
+		summary = String(first.get("kind", "TRACK")).to_upper()
+		if show_target_ranges:
+			summary += " %dm" % roundi(first.get("distance", 0.0))
 	_text(Vector2(17, 211), summary, 15, WHITE)
 	_text(Vector2(192, 211), "%02d" % radar_contacts.size(), 16, CYAN)
 

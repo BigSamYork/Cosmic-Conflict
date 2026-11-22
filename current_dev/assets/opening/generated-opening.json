@@ -1,0 +1,136 @@
+{
+  "model": "ResembleAI/chatterbox-turbo",
+  "revision": "749d1c1a46eb10492095d68fbcf55691ccf137cd",
+  "voice": "opening cast",
+  "catalog_sha256": "a7d26661c1b9131d7d3b27c72e2465fea7ce71ffdeddcc6c124d8322fd99a3b9",
+  "rate": 24000,
+  "channels": 1,
+  "clips": [
+    {
+      "id": "knock",
+      "speaker": "vale",
+      "event": "",
+      "text_sha256": "e3c25a5936cb1ae3d4b2210d9c8d8680ef0c9888c576e477ecbec12e1b287c86",
+      "audio_sha256": "dd36c59154a6744b111fed41a3476ac1baf471c1d81a52fd27b3326d47d8c052",
+      "seconds": 6.98,
+      "bytes": 335062
+    },
+    {
+      "id": "school",
+      "speaker": "lark",
+      "event": "",
+      "text_sha256": "87b6ea12f57347d2662d6c5b2d7f2592dd024e1e28d26329956e03165d0ef7d7",
+      "audio_sha256": "485fe93dadcf884f187d8120c55b7e201c3d368574e6d5c3cfff3a71691cbb42",
+      "seconds": 7.226,
+      "bytes": 346872
+    },
+    {
+      "id": "awake",
+      "speaker": "vale",
+      "event": "",
+      "text_sha256": "332f7b6342ed6cccba864631ee70db2f478c70cdc111d2b9fa8a8dad73a33d33",
+      "audio_sha256": "853e6613cc435026cf154a6b7c5bfee5b638431a4363fe1ea54cc2f1582d4a91",
+      "seconds": 3.461,
+      "bytes": 166176
+    },
+    {
+      "id": "beacon",
+      "speaker": "lark",
+      "event": "",
+      "text_sha256": "d1ad15195db2d454a0af09f769e009521045e802f6ae6040f0d818680bae9f68",
+      "audio_sha256": "8643708f32ff198198cb10f411a1408fd973ec9661f19aea99079d2b65bf14ca",
+      "seconds": 5.459,
+      "bytes": 262060
+    },
+    {
+      "id": "clearance",
+      "speaker": "lark",
+      "event": "",
+      "text_sha256": "a590b2cb3b001da255d158cb2f529ca07691e7d1709600b13d96f8cdd0561fcf",
+      "audio_sha256": "2262faeaf2e4538a8d81dc610598f1c4377451a3955cec4e9d067d7c813343a7",
+      "seconds": 8.566,
+      "bytes": 411190
+    },
+    {
+      "id": "dawn",
+      "speaker": "lark",
+      "event": "",
+      "text_sha256": "ddb0372289a2460728c60c3a865f721360b6baaedf6ab5c9d52f36787083f1ec",
+      "audio_sha256": "d56f06437a03de23ed9cbc8266ae467fc4b426e41ab1782f7270df4709953bd8",
+      "seconds": 13.41,
+      "bytes": 643718
+    },
+    {
+      "id": "foundry",
+      "speaker": "vale",
+      "event": "",
+      "text_sha256": "cc6abd1e3099e1229f3f0cacdac66e418ed2bb9a7e68a726967b4c8f88ed8bab",
+      "audio_sha256": "9ca21f12c0d0fa5bd83c8b3c1a2e5ca2d0e4ec7747c499cc249e9b0336a4a04e",
+      "seconds": 9.153,
+      "bytes": 439406
+    },
+    {
+      "id": "ward",
+      "speaker": "lark",
+      "event": "",
+      "text_sha256": "f4e4daadda5dd20a3a3bbcd902811d3a51f3b385de100252d9390bd437708855",
+      "audio_sha256": "b431eaeb1a5cc3baefc9c19af1fa6a63e44cbdd395534a16172cb7377dfe2926",
+      "seconds": 8.354,
+      "bytes": 401052
+    },
+    {
+      "id": "hotel",
+      "speaker": "vale",
+      "event": "",
+      "text_sha256": "127ec001358c4f9de69d716c29a8ed4139120fdbcf651ce2b19114af91eba295",
+      "audio_sha256": "81c2e51853c9b83f8009c339f622545904aceda7b38a20f2ab3d5c16cd3cc993",
+      "seconds": 8.854,
+      "bytes": 425024
+    },
+    {
+      "id": "cards",
+      "speaker": "lark",
+      "event": "",
+      "text_sha256": "0b3a34ebc54d9309ea7678e9e38d1ed378249d657b537eaf8ed3895b7cb06942",
+      "audio_sha256": "4821982a177393a4d9ae565da6be52f5c5b3c1307cddaf1a2e5a7925bdd1a60d",
+      "seconds": 12.876,
+      "bytes": 618072
+    },
+    {
+      "id": "confession",
+      "speaker": "lark",
+      "event": "",
+      "text_sha256": "6563e7aee8f2441d145b0a788bbb0332384f6d36e852720bbf56344917d2f723",
+      "audio_sha256": "fadc0e3db325d1e610b8b588d4d76c3f9fb1611426046895ffa4f44c2b03a4a7",
+      "seconds": 11.16,
+      "bytes": 535746
+    },
+    {
+      "id": "order",
+      "speaker": "vale",
+      "event": "",
+      "text_sha256": "611ef538b0c2304e75848f1c4c3eecbb35a366a2bc578493323b1ed60d5a6da5",
+      "audio_sha256": "19f01660f4a8ed6b34ad8f96f846f11af6b93d0dfe6eb3327631c0a2e0729b0f",
+      "seconds": 12.329,
+      "bytes": 591816
+    },
+    {
+      "id": "answer",
+      "speaker": "lark",
+      "event": "",
+      "text_sha256": "b8d120ab4ff5bc4bfdfeefb1f82726866eabb6a490d28b29b5185fc812b791e8",
+      "audio_sha256": "2c04dc75e2366fde62046d1037336056bb468ed9828002c18ed77ff2392f6fed",
+      "seconds": 5.686,
+      "bytes": 272972
+    },
+    {
+      "id": "home",
+      "speaker": "vale",
+      "event": "",
+      "text_sha256": "cb8494f9e4e17f49cabcb0412b5e0c42cd4d9383852f44b2914d2e974e2509dc",
+      "audio_sha256": "f0bd78fca2489748ff18488381f333a1970735cb244a1055a73ab1ffe4102907",
+      "seconds": 4.42,
+      "bytes": 212184
+    }
+  ]
+}

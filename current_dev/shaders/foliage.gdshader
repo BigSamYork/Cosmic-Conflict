@@ -1,4 +1,5 @@
 shader_type spatial;
+global uniform vec3 sector_ambient;
 render_mode cull_disabled, ambient_light_disabled, specular_disabled;
 #include "sea_swell.gdshaderinc"
 
@@ -28,6 +29,7 @@ void fragment() {
 	leaf += pigment * vec3(0.40, 0.53, 0.23) * max(-front, 0.0);
 	leaf *= mix(0.86, 1.06, smoothstep(0.0, 3.0, canopy_height));
 	if (UV.x > 0.8) { leaf = pigment * 1.6; }
+	leaf *= sector_ambient;
 	EMISSION = OUTPUT_IS_SRGB ? pow(leaf, vec3(1.0 / 2.2)) : leaf;
 	ALBEDO = pigment;
 	ROUGHNESS = 0.86;

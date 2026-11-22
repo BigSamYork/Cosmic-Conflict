@@ -1,26 +1,23 @@
 {
   "title": "Two Knocks Home",
   "cast": {
-    "vale": {"name": "Captain Tomas Vale", "voice": "Microsoft David Desktop", "rate": 0},
-    "lark": {"name": "Lark", "voice": "Microsoft Zira Desktop", "rate": 1}
+    "vale": {"name": "Captain Tomas Vale", "voice": "Chatterbox-Turbo / Captain Tomas Vale"},
+    "lark": {"name": "Lark", "voice": "Chatterbox-Turbo / Lark"}
   },
   "cues": [
-    {"id":"knock","shot":"lantern","speaker":"vale","text":"Three knocks. My sister used to do that through the wall when the lights went out."},
-    {"id":"school","shot":"lantern","speaker":"lark","text":"You taught the whole ferry that one, Captain Vale. It could be anybody aboard."},
-    {"id":"awake","shot":"lantern","speaker":"vale","rate":-1,"lead":0.65,"text":"Good. Somebody's awake."},
-    {"id":"beacon","shot":"blockade","speaker":"lark","source":"Astra beacon  /  repeating","text":"Astra approach. Civilian traffic cleared to lift. Safe passage confirmed."},
-    {"id":"clearance","shot":"blockade","speaker":"lark","text":"That's the rescue channel. Look at the approach. There's a cruiser parked across it."},
-    {"id":"dawn","shot":"blockade","speaker":"lark","text":"Six worlds got that same clearance. At dawn the civilian convoys lift. The Lantern went early. Now she's drifting."},
-    {"id":"foundry","shot":"ignis","speaker":"vale","text":"That's the foundry on Ignis. They fired our first heat shield in that kiln. Now the night shift is making tiles for the ferries, and their own roofs are burning."},
-    {"id":"ward","shot":"cryo","speaker":"lark","text":"Cryo's maternity ward moved into the greenhouse. The nurses scratch little windows in the frost so the parents can see who's inside."},
-    {"id":"hotel","shot":"vespera","speaker":"vale","text":"Every lit room in that hotel on Vespera is a family waiting for a berth. Last night the power went out. Look. They found candles."},
-    {"id":"clinic","shot":"xylo","speaker":"lark","text":"The clinic on Xylo grows reeds that clean the air for its patients. The nurses want to know if roots count against the baggage allowance."},
-    {"id":"roots","shot":"xylo","speaker":"vale","text":"Tell them to bring the whole garden."},
-    {"id":"light","shot":"thalassa","speaker":"vale","text":"That lighthouse on Thalassa is where my sister learned to steer. Even with her engine dead, she'd know which way to point the bow."},
-    {"id":"cards","shot":"kharon","speaker":"lark","text":"Kharon's keeper still has the old approach to Astra. When the relay fell she drew it on ration cards. She gave one to every pilot."},
-    {"id":"confession","shot":"departure","speaker":"lark","rate":-1,"lead":1.0,"text":"Tomas. I know the voice on that beacon. It's mine. They copied the clearance I gave your sister. I told her it was safe."},
-    {"id":"order","shot":"departure","speaker":"vale","text":"Stay with me, Lark. We clear the ground lane, break the blockade above it, then bring them home. One world at a time."},
-    {"id":"answer","shot":"answer","speaker":"lark","text":"What do I send the Lantern?"},
-    {"id":"home","shot":"answer","speaker":"vale","rate":-1,"lead":0.55,"text":"Two knocks. She knows that means I'm coming."}
+    {"id":"knock","shot":"aegis","speaker":"vale","text":"Three carrier-wave pings on the maintenance hull. My sister used to tap that exact cadence on the bulkhead pipes when the station power tripped."},
+    {"id":"school","shot":"aegis","speaker":"lark","text":"You programmed that diagnostic pulse into the entire fleet's emergency transponders, Captain. It could be any survivor in the forward compartment."},
+    {"id":"awake","shot":"aegis","speaker":"vale","text":"Good. Means the auxiliary batteries are still holding life support."},
+    {"id":"beacon","shot":"blockade","speaker":"lark","source":"Spoofed Beacon","text":"Astra Control. Civilian evacuation corridors are clear. Proceed to jump-coordinates."},
+    {"id":"clearance","shot":"blockade","speaker":"lark","text":"They’re spoofing my voice-print on the emergency rescue frequency. Look at the vector—that cruiser has its railguns trained directly on the exit corridor."},
+    {"id":"dawn","shot":"blockade","speaker":"lark","text":"Six outer-rim colonies received that false clearance. At 0600, their evacuation transports will burn straight into a kill-box. The Aegis-4 launched ahead of schedule. She took a kinetic round to her main reactor before she could warn the others."},
+    {"id":"foundry","shot":"ignis","speaker":"vale","text":"That’s the foundry on Ignis. They forged our hull plating. Right now, the night shift is welding ablative shielding onto civilian freighters while their own dome pressures drop."},
+    {"id":"ward","shot":"cryo","speaker":"lark","text":"Cryo’s neonatal ward lost main heating. They’ve moved the incubators into the geothermal greenhouses to keep the ambient temperature above freezing."},
+    {"id":"hotel","shot":"vespera","speaker":"vale","text":"Every one of those chemical flares in the Vespera terminal is a family waiting for a boarding manifest. The grid failed three hours ago, and nobody’s leaving their spot in line."},
+    {"id":"cards","shot":"kharon","speaker":"lark","text":"When the comms array went down, Kharon’s flight director pulled the unindexed dark-space vectors from the local servers. She’s manually flashing the jump coordinates onto the pilots' flight-pads so they don't have to rely on the compromised network."},
+    {"id":"confession","shot":"departure","speaker":"lark","text":"Tomas. The acoustic signature on that spoofed beacon—it wasn't generated from scratch. They spliced it from the personal clearance I transmitted to your sister’s ship yesterday. I cleared her to launch."},
+    {"id":"order","shot":"departure","speaker":"vale","text":"They used your credentials, Lark, not your intent. Stay sharp. We breach the orbital perimeter, scramble their targeting array, and punch a hole through that blockade. Then we escort those transports out—one world at a time."},
+    {"id":"answer","shot":"answer","speaker":"lark","text":"We have a brief tight-beam window with the Aegis-4 before we hit plasma blackout. What should I transmit?"},
+    {"id":"home","shot":"answer","speaker":"vale","text":"Two carrier-wave pings. Short and sharp. She knows that means I'm inbound."}
   ]
 }

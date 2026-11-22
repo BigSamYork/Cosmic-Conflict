@@ -83,8 +83,10 @@ func run() -> void:
 	moving.fragment_velocity = Vector3(100, 0, 0)
 	game.mode = game.Mode.FLIGHT
 	var shield: float = game.flight.shields
+	var hull_before_impact: float = game.flight.hull
+	var offset_before_impact: Vector2 = game.flight.offset
 	game._advance_rock_fragments(0.2, Vector3.ZERO, Vector3.ZERO)
-	check(game.flight.shields < shield and not game.rock_fragments.has(moving), "A fast-moving rock fragment collides with the pilot using swept relative motion")
+	check(game.flight.hull < hull_before_impact and game.flight.shields == shield and game.flight.offset != offset_before_impact and not game.rock_fragments.has(moving), "A fast-moving fragment deflects the pilot and dents the hull through shields")
 	game.pause_flight()
 	var frozen: Vector3 = game.rock_fragments[0].global_position
 	game._physics_process(3.0)

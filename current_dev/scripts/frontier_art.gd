@@ -146,7 +146,7 @@ static func _sea_surface(start: float, rigs: Array[Transform3D]) -> MeshInstance
 	arrays[Mesh.ARRAY_INDEX] = sea_indices
 	var mesh := ArrayMesh.new()
 	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
-	# Missiles and the swept flight probe only need the mean waterline.
+	# Missiles and weapon cover rays only need the mean waterline.
 	var cover := ConcavePolygonShape3D.new()
 	cover.backface_collision = true
 	cover.set_faces(PackedVector3Array([vertices[0], vertices[SEA_COLUMNS], vertices[-1], vertices[0], vertices[-1], vertices[-stride]]))
@@ -175,7 +175,8 @@ static func boss(sector: String, orbital: bool) -> Node3D:
 		return FleetArt.model("ark" if sector == "thalassa" else "sovereign")
 	return FleetArt.model("tempest_walker" if sector == "thalassa" else "sunforge_colossus", "ground")
 
-static func player_ship(id: String) -> Node3D:
+static func player_ship(id: String, primary_level: int = 0) -> Node3D:
 	var model := FleetArt.model(id if CampaignState.SHIPS.has(id) else "rook")
 	model.set_meta("player_hull", id)
+	GunAppearance.fit_exterior(model, id, primary_level)
 	return model

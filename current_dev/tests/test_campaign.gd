@@ -13,16 +13,16 @@ func run() -> void:
 	var combo := CampaignState.new()
 	for _i in range(4):
 		combo.record_combat_kill(20)
-	check(combo.combo_multiplier() == 1 and combo.credits == 80, "First four kills pay the base reward")
+	check(combo.combo_multiplier() == 1 and combo.credits == 0 and combo.combat_score == 800, "First four kills award base score only")
 	combo.record_combat_kill(20)
-	check(combo.combo_multiplier() == 2 and combo.credits == 120, "Fifth consecutive kill starts the 2x bonus")
+	check(combo.combo_multiplier() == 2 and combo.credits == 0 and combo.combat_score == 1200, "Fifth consecutive kill doubles the score award")
 	for _i in range(5):
 		combo.record_combat_kill(20)
-	check(combo.combo_multiplier() == 4 and combo.credits == 360 and combo.combat_score == 3600 and combo.combo_bonus_credits == 160, "Tenth kill starts 4x with exact score and bonus accounting")
+	check(combo.combo_multiplier() == 4 and combo.credits == 0 and combo.combat_score == 3600 and combo.combo_bonus_credits == 0, "Tenth kill starts 4x with exact score and bonus accounting")
 	var copy: CampaignState = combo.copy()
 	check(copy.combo_kills == 10 and copy.best_streak == 10 and copy.combat_score == combo.combat_score, "Live streak and score survive checkpoint serialization")
 	combo.reward(1000)
-	check(combo.credits == 1360 and combo.combo_kills == 10 and combo.combat_score == 3600, "Ordinary credits and cheats are not multiplied or scored")
+	check(combo.credits == 1000 and combo.combo_kills == 10 and combo.combat_score == 3600, "Hoop credits are not multiplied or scored")
 	combo.break_combo()
 	check(combo.combo_multiplier() == 1 and combo.best_streak == 10 and combo.combat_score == 3600, "Breaking a streak preserves earned score and best streak")
 	combo.record_combat_kill(20)
@@ -68,22 +68,22 @@ func run() -> void:
 	accurate.stats["hits"] = 30
 	accurate.hull = 63
 	accurate.dock(true)
-	check(accurate.credits == 350 + 63 + 150 and accurate.debrief["accuracy"] == 150 and accurate.debrief["hull"] == 63, "Docking pays exact completion, remaining-hull, and 75-percent accuracy bonuses")
+	check(accurate.credits == 0 and accurate.debrief["hits"] == 30 and accurate.debrief["shots"] == 40 and accurate.debrief["completion"] == 0, "Docking records marksmanship without paying for combat")
 	check(accurate.combat_score == 0 and accurate.copy().debrief == accurate.debrief, "Debrief bonuses persist without inflating combat score")
 	var settled_credits: int = accurate.credits
 	accurate.dock(true)
-	check(accurate.credits == settled_credits and accurate.accuracy_bonus_credits == 150, "Reopening the market cannot pay the accuracy bonus twice")
+	check(accurate.credits == settled_credits and accurate.accuracy_bonus_credits == 0, "Reopening the market cannot pay the accuracy bonus twice")
 	accurate.depart("cryo")
 	accurate.stats["shots"] += 20
 	accurate.stats["hits"] += 5
 	accurate.dock(true)
-	check(accurate.debrief["shots"] == 20 and accurate.debrief["hits"] == 5 and accurate.debrief["accuracy"] == 50, "A new sortie calculates accuracy from its own shots, not lifetime totals")
+	check(accurate.debrief["shots"] == 20 and accurate.debrief["hits"] == 5 and accurate.debrief["accuracy"] == 0, "A new sortie calculates accuracy from its own shots, not lifetime totals")
 	for shot_count in [0, 19, 20]:
 		var small := CampaignState.new()
 		small.stats["shots"] = shot_count
 		small.stats["hits"] = shot_count
 		small.dock(true)
-		check(small.debrief["accuracy"] == (200 if shot_count == 20 else 0), "Accuracy bonus requires the documented twenty-shot sample (%d shots)" % shot_count)
+		check(small.debrief["accuracy"] == 0 and small.debrief["hits"] == shot_count, "Even perfect accuracy pays no credits (%d shots)" % shot_count)
 	var failed := CampaignState.new()
 	failed.stats["shots"] = 40
 	failed.stats["hits"] = 40
@@ -101,7 +101,7 @@ func run() -> void:
 	check(state.tractor, "Voluntary hull changes retain the tractor module")
 	var score_before: int = state.combat_score
 	state.collect_mineral()
-	check(state.stats["minerals"] == 1 and state.mineral_credits == MineralPickup.VALUE and state.combat_score == score_before, "Mineral collection tracks credits without combat-score inflation")
+	check(state.stats["minerals"] == 1 and state.mineral_credits == 0 and state.combat_score == score_before, "Mineral collection records salvage without cash or combat score")
 	var before: Dictionary = state.to_dict()
 	check(not state.purchase("invalid_item").is_empty() and state.to_dict() == before, "Invalid purchases do not mutate inventory or wallet")
 	state.credits = 0

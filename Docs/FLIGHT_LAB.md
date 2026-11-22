@@ -6,6 +6,15 @@ with a local Hall of Fame and repeat tours.
 The original 75-second, non-lethal
 training range is still available separately.
 
+Selecting a sector locks its lighting for the sortie. Seconds 00–14 of the current
+minute give twilight, 15–29 morning, 30–44 daylight, and 45–59 midnight.
+Vale and Lark comment on arrival. Astra Market sells a forward headlight for 200
+credits. Enable **Target brackets and distances** in settings for range overlays.
+Completed sectors carry a checkmark on the current tour’s map.
+
+Fly through the green hoops marked **$** to earn upgrade money. Each hoop pays
+once. A 100-credit hoop is common (60%); a 1,000-credit hoop is rare (1%).
+
 Choose **New Operation / Choose Sector** to start a live mission, or **Continue Saved
 Operation / Market** to resume a checkpoint. Starting a new operation asks before
 replacing an existing save.
@@ -29,7 +38,9 @@ station music continues. Asteroid artwork now takes less time to generate.
   canopy pillars, with bolted, worn steel faces and unchanged window openings.
   Quad Plasma adds two six-barrel clusters: hold fire to spin them up and
   release to watch them coast. Tachyon replaces the clusters with forked,
-  illuminated emitter rails. Weapon damage, heat and firing rates are unchanged.
+  illuminated emitter rails. Astra Market shows the fitted exterior beside
+  the shop. All five hulls carry the Twin Pulse pair and mount the equipped
+  upgrade outboard.
 - **Named games:** choose **Save / Load Game** while paused or in Astra Market.
   Enter a name and choose **Save As**, or select a saved name to load. A flight
   save restores the phase checkpoint, not mid-flight damage, kills or rewards.
@@ -137,7 +148,7 @@ historical; the current rules above and reference sections take precedence.
 - **Cryo falling ice:** eight loose chunks hang from side-lane ice overhangs.
   Amber markers and a target label warn for two seconds before a chunk falls.
   Two baseline laser hits shatter one; avoiding it is equally valid. A contact
-  deals 14 shield-first damage once, without frost slowdown. The automatic
+  kicks your ship off course and deals 14 hull damage through shields. The automatic
   centerline stays clear. Clearing ice awards no credits, enemy kill or streak.
   Pause freezes the warning and fall.
 - Kevin MacLeod’s “Fanfare for Space” accompanies the opening. “Look Busy”
@@ -145,7 +156,7 @@ historical; the current rules above and reference sections take precedence.
   combat, orbital flight and both bosses. Docking crossfades to the market
   score. Pause holds playback and computer speech lowers the music.
 - **Music controls:** the title/pause menu has a separate music slider, default
-  35%; zero stops music. Master mute silences everything. Voice volume is
+  60%; zero stops music. Master mute silences everything. Voice volume is
   independent. Recordings ship inside the game and work offline.
 - **Backdrop efficiency:** conservative, precomputed bounds cover each complete
   rotating asteroid envelope. Batches wholly behind the camera no longer upload
@@ -238,13 +249,11 @@ Developer assistance remains marked for the entire operation, including later to
   Every outer body clears before the docking pull-up; nothing is hidden or
   relocated to fake the transition.
 - **Optional guardians and cargo:** guardians leave peacefully unless attacked;
-  shooting or EMP-stunning one provokes retaliation. Their base bounty is 80
-  credits. Egg destruction pays 8 credits once, without an enemy combo reward.
-  Gold egg cargo releases a biological salvage pod worth 50 credits when
-  collected; the tractor works normally. Shell polygons replace stone fragments.
-- **Female computer voice:** 83 offline Zira recordings use restrained radio/
-  electronic processing: your 50 supplied lines, 21 category additions, and
-  12 easy/hard route quips. Urgent warnings can interrupt banter; ordinary
+  shooting or EMP-stunning one provokes retaliation. Gold egg cargo releases a
+  biological salvage pod that the tractor can collect. Shell polygons replace stone fragments.
+- **Lark's voice:** Locally rendered Chatterbox-Turbo recordings cover combat
+  calls, boss recon and route quips, with light radio processing.
+  Urgent warnings can interrupt banter; ordinary
   comments never overlap or queue into stale situations.
 - **Intermittent route comments:** six lines per route, with a 25% chance only
   after four seconds of silence since the preceding utterance finished.
@@ -416,8 +425,7 @@ Developer assistance remains marked for the entire operation, including later to
   Each is collectible once and capped by capacity. Ordnance requires an owned
   launcher; flare supply requires a pod. Full or missing equipment is reported,
   not converted into free upgrades or credits.
-- **Hazard completion:** reach the rejoin alive for 100 credits, paid once and
-  not combo-multiplied. Extra enemies retain their normal combat rewards.
+- **Hazard completion:** reach the rejoin alive with the supplies you collected.
 - **Checkpoint integrity:** route choice and uncheckpointed supplies/rewards
   roll back together when restarting ground. The normal boss checkpoint saves
   the resulting wallet and both ammunition inventories. Existing schema-seven
@@ -526,25 +534,20 @@ Developer assistance remains marked for the entire operation, including later to
 - **Web-layer drones:** distinct orbital drones deploy laser tripwires across
   the flight path. A dashed amber beam warns for 1.2 seconds before turning red.
   Fly above/below it or shoot either endpoint twice with the basic primary.
-  Disarming the whole web pays 15 credits once. An active crossing deals
+  Disarming the web clears the lane. An active crossing deals
   22 damage; this stationary hazard is not deflected by Shift. Webs expire
   after seven seconds, and at most three can exist at once.
-- **Radar-dish objectives:** five green-marked canyon dishes can be destroyed
-  for 60 credits apiece. Each jams surviving turrets up to 700 meters downstream
+- **Radar-dish objectives:** destroying a green-marked canyon dish jams
+  surviving turrets up to 700 meters downstream
   for 12 active seconds. A recovered turret warns again before firing.
   Radars and web nodes do not advance or multiply the combat streak.
 - **Optional pirate bounties:** three small skirmishers appear during the belt,
   following its clear lane with banking/weaving motion. Ignore them and they
-  leave peacefully; hit one and it returns missile fire. Destroying it pays an
-  80-credit base bounty, eligible for the combat multiplier. It escapes after
-  14 seconds if not destroyed. Pink brackets and a bounty label identify it.
+  leave peacefully. Hitting one draws missile fire. Destroying it adds combat
+  score. It escapes after 14 seconds. A HUD label identifies it.
 - **Hull plating:** two market tiers, +25 maximum hull each, costing 240 then
   360 credits. Transfers with voluntary hull changes; lost on ejection.
-- **Sortie debrief:** the market now separates already-paid completion, hull,
-  and accuracy bonuses. Completion remains 350 credits and hull pays one credit
-  per remaining hull point. Accuracy pays up to 200 credits (floor of hit ratio
-  times 200), requiring at least 20 shots in that sortie. Ejection pays none
-  of these bonuses. They are never combo-multiplied or paid twice.
+- **Sortie debrief:** docking records your shots, hits, and sector clear.
 - Schema-five saves retain earlier progress and back up the original format.
   For an old in-progress save, new accuracy tracking starts at the upgrade
   checkpoint because earlier sortie boundaries were not recorded.
@@ -585,10 +588,8 @@ Developer assistance remains marked for the entire operation, including later to
   drawings. Recessed craters, rims, and branching fractures rotate with each
   nearby rock. The winding nominal flight path remains safe; manual steering
   can still collide with close-pass obstacles.
-- **Mineral collection:** gold rocks release a cyan core. Fly through it to
-  collect 50 credits; shattering the rock alone pays only its normal 8 credits.
-  Cores disperse after 12 active seconds. Mining does not multiply combat
-  credits or advance the combat streak.
+- **Mineral collection:** gold rocks release a cyan core. Fly through it to add
+  it to your salvage tally. Cores disperse after 12 active seconds.
 - **Tractor upgrade:** buy it for 400 credits at Astra Market. It automatically
   attracts unobstructed cores within 32 meters, with a visible tether. No extra
   key is needed. Solid rocks block attraction.
@@ -606,13 +607,11 @@ Developer assistance remains marked for the entire operation, including later to
   0.65 seconds, with the requested gentle camera bank instead of a full spin.
   Incoming missiles are deflected during that window. Recharge takes six active
   seconds from activation. Towers and asteroids can still collide with you.
-- **Combat streaks:** earn 2x combat credits from your fifth consecutive kill and
+- **Combat streaks:** earn double combat score from your fifth consecutive kill and
   4x from your tenth. Only hull damage breaks the in-flight streak; shield-only
   hits and pauses do not. Streaks carry between combat phases and reset on docking,
   ejection, or a new sortie.
-- **Combat score:** ten points per awarded combat credit, tracked separately
-  from the wallet. Spending does not reduce your score. The market shows your
-  best streak and the extra credits earned through combo bonuses.
+- **Combat score:** the market shows your score and best streak.
 - **Directional gunship shields:** heavy orbital gunships protect their front.
   Attack from the side/rear, fire during their banking opening, or use a
   concussion missile to disable the shield and stun them for two seconds.
@@ -641,7 +640,8 @@ Developer assistance remains marked for the entire operation, including later to
 ## Continuous-flight improvements from v0.3.0
 
 - Continuous first-person flight between combat stages: no sector-clear modal
-  or camera reset. Ground victory leads through an atmospheric climb, the orbital
+  or camera reset. After a ground-boss kill, autopilot brakes and watches the
+  four-second breakup from the cockpit before climbing into orbit. The orbital
   battle leads into the asteroid belt, and the station approach ends inside the
   hangar before Astra Market opens.
 - Detailed moving bosses with engine banks, cooling rings, trusses, weapons,
@@ -691,7 +691,8 @@ Developer assistance remains marked for the entire operation, including later to
 
 - Move the mouse to aim and steer. In orbital dogfights, moving the pointer well off center turns the ship onto a new heading. Center it to resume automatic pursuit.
 - Use **WASD** to move the ship independently of the reticle. Hold **F** to hold your line and traverse the guns. The thrusters still work while F is held.
-- Press **B** for a barrel roll toward the pointer. The roll avoids external hits for 0.92 seconds and shares a six-second capacitor with the Shift dash. A parasite already attached to the glass can still bite.
+- Press **B** for a barrel roll toward the pointer. The roll evades incoming fire for 0.92 seconds and shares a six-second capacitor with the Shift dash. A parasite already attached to the glass can still bite.
+- Leave clearance around ships, canyon walls and solid scenery. A collision pushes your ship away from the point of contact and damages the hull through active shields, even during a roll. A continuous scrape counts as one impact. The training range keeps you flying at one hull point.
 - Press **V** to toggle the thermal governor. It breaks sustained fire into cooling bursts.
 - Press **X** to restore up to 23% of maximum shield in a campaign sortie. The surge adds 34 heat and recharges in 16 seconds. It requires enough thermal headroom.
 - Press **R** to cycle the tactical radar through 180, 360 and 720 meters. Press **I** during a boss encounter to hear the computer repeat its recon.
@@ -741,8 +742,7 @@ missile is launched rather than maintaining a straight intercept course.
 
 Mine gold rocks early enough to collect their cores as you approach. Without
 a tractor, steer through the core; with a tractor, remain within 32 meters
-with a clear line of sight. Look for the cyan tether rather than assuming a
-shattered mineral rock has already paid its bonus.
+with a clear line of sight. The cyan tether shows when the tractor has a lock.
 
 Shoot violet rocks from a distance. Each newly ignited core has its own warning
 fuse, so a chain can continue toward your flight path. Blast damage can break a
@@ -765,10 +765,7 @@ A concussion hit both deals damage and briefly halts the gunship's movement and
 firing. Shield-blocked primary shots do not count as hits or earn rewards.
 
 Ships, ground turrets, collapsing towers, and defeated boss cores advance the
-combat streak. Boss generators, intercepted missiles, mined asteroids, docking
-bonuses, and developer-granted credits do not advance or multiply the streak.
-Combat bonus credits are already included in the wallet and total earnings:
-the market's bonus total is informational, not a second payout.
+combat streak. Hoops fund the wallet independently of the score multiplier.
 Training permits practice evasions but does not earn campaign score or credits.
 
 The artwork retains its original transparency and aspect ratio. The HUD uses the
@@ -834,8 +831,7 @@ contents as `campaign.json.v1-<timestamp>-<counter>.bak` or
 Reloading a phase restores its score, streak, credits, and encounters together;
 it does not duplicate rewards.
 The docking approach has its own checkpoint. Resuming it repeats alignment and
-hangar entry rather than opening the market prematurely. Completion rewards
-are settled only after the actual docking sequence finishes.
+hangar entry. Docking marks the sector complete.
 Tour baselines, cumulative hull damage and frozen completion results use that
 same checkpoint. The separate `%APPDATA%\Cosmos Conflict\hall_of_fame.json`
 contains completed-tour records. Malformed saves or record-write failures are
@@ -1035,19 +1031,27 @@ old timing: ordinary sayings have 100% chance, route quips 25%, and all extra
 per-saying cooldowns start at zero. Disabling a warning also disables that warning's
 spoken line, so take care with hull and ejection messages.
 
-Unchanged text uses the original recordings. Changed text is synthesized locally
-at startup using Windows PowerShell and the installed **Microsoft Zira Desktop**
-voice, then cached under `%APPDATA%\Cosmos Conflict\voice-cache`. It uses the same
-radio effects, volume, pause and music ducking as the original audio. No internet
-or rebuild is required. The first restart after text changes may take longer;
-frequency-only edits do not regenerate audio. Missing voices, invalid JSON or
-failed generation produce an explicit voice error rather than speaking old text.
+The game plays bundled Chatterbox-Turbo recordings offline. The opening casts
+Captain Tomas Vale and Lark separately. The spoofed beacon uses Lark's voice.
+The Windows Voice Editor also plays the bundled takes for unchanged text.
+For new text it uses the configured Turbo Python environment, or Microsoft Zira
+Desktop on a standard installation. Older catalogs keep their selected Windows
+voice for custom lines. Edited audio is cached under
+`%APPDATA%\Cosmos Conflict\voice-cache`; changing frequency reuses the recording.
 
-For developers preparing a release after changing the **default** words, refresh
-the bundled recordings before building (frequency-only edits do not need this):
+To render release audio or enable Turbo for custom lines, install Python 3.11
+and Git, then run these commands from the repository root. The first render
+downloads the pinned public Turbo checkpoint. For offline authoring set
+`COSMIC_TTS_MODEL` to a previously downloaded checkpoint directory. The engine
+selects CUDA when available and otherwise runs on CPU. Launch the Voice Editor
+from the same environment to use Turbo for newly edited text.
 
 ```powershell
+py -3.11 -m venv .tools\chatterbox
+$env:COSMIC_TTS_PYTHON = (Resolve-Path .tools\chatterbox\Scripts\python.exe).Path
+& $env:COSMIC_TTS_PYTHON -m pip install -r tools\chatterbox-requirements.txt
 .\tools\generate-voice.ps1 -Overwrite
+.\tools\generate-opening.ps1
 .\tools\build.ps1
 ```
 

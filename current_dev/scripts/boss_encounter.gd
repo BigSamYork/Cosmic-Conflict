@@ -84,6 +84,7 @@ func _ready() -> void:
 			lens.position = Vector3(side * 11.3, 10, -11)
 			model.add_child(lens)
 			collectors.append(lens)
+	FleetArt.add_pilot_hull(model)
 	body = StaticBody3D.new()
 	body.collision_layer = 1
 	body.collision_mask = 0
@@ -171,6 +172,8 @@ func _ready() -> void:
 		add_child(radar)
 		radars.append(radar)
 		parts.append(radar)
+	for part in parts:
+		FleetArt.add_pilot_hull(part)
 
 func radar_mount(side: float) -> Vector3:
 	var x: float = side * (5 if sector == "xylo" and not orbital else 8)
@@ -276,7 +279,7 @@ func advance(delta: float, pilot: Vector3, velocity: Vector3) -> void:
 	stun_remaining = maxf(0.0, stun_remaining - delta)
 	age += delta
 	advance_visuals(delta)
-	if pursuing:
+	if pursuing and (orbital or death_time < 0.0):
 		_update_pursuit()
 	elif orbital:
 		position = anchor + Vector3(sin(age * 0.3) * 4.0, sin(age * 0.5) * 1.5, 0)

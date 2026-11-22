@@ -43,11 +43,11 @@ func verify_geometry() -> void:
 	check(not closed.advance(GroundRoute.FORK - 0.01, 8), "Steering on approach does not commit early")
 	closed.advance(GroundRoute.FORK, 0)
 	check(not closed.advance(GroundRoute.FORK + 1, 8) and not closed.selected, "Center defaults to safe and crossing sides after commitment cannot reroute")
-	check(closed.claim_bonus(GroundRoute.REJOIN + 100, true) == 0, "The default safe route never grants the hazard bonus")
+	check(not closed.finish_hazard(GroundRoute.REJOIN + 100, true), "The default safe route cannot complete the hazard trench")
 	var selected := GroundRoute.new()
 	selected.advance(GroundRoute.FORK, 1)
-	check(selected.claim_bonus(GroundRoute.REJOIN - 0.1, true) == 0 and selected.claim_bonus(GroundRoute.REJOIN, false) == 0, "Hazard reward requires reaching the rejoin alive")
-	check(selected.claim_bonus(GroundRoute.REJOIN, true) == 100 and selected.claim_bonus(GroundRoute.REJOIN + 100, true) == 0, "Hazard completion pays exactly once")
+	check(not selected.finish_hazard(GroundRoute.REJOIN - 0.1, true) and not selected.finish_hazard(GroundRoute.REJOIN, false), "Hazard completion requires reaching the rejoin alive")
+	check(selected.finish_hazard(GroundRoute.REJOIN, true) and not selected.finish_hazard(GroundRoute.REJOIN + 100, true), "Hazard completion triggers once")
 
 func verify_supplies() -> void:
 	var campaign := CampaignState.new()
@@ -117,6 +117,7 @@ func verify_game() -> void:
 	await physics_frame
 	await physics_frame
 	verify_terrain(game)
+	await verify_scenery_contacts(game)
 	for sector in ["ignis", "cryo"]:
 		game.campaign.sector = sector
 		for hazard in [false, true]:
@@ -169,18 +170,18 @@ func verify_game() -> void:
 	game.flight.distance = GroundRoute.REJOIN
 	branch.advance(0.1, game.camera.global_position, game.camera.global_position, game.campaign, game.flight)
 	branch.advance(0.1, game.camera.global_position, game.camera.global_position, game.campaign, game.flight)
-	check(game.campaign.credits == 100 and game.campaign.earned == 100 and game.campaign.combo_kills == 0, "Integrated rejoin bonus is paid once, without combat multiplier or fictitious kills")
+	check(game.campaign.credits == 0 and game.campaign.earned == 0 and game.campaign.combo_kills == 0, "Route rejoin grants no cash or kills")
 	game.flight.distance = 3780
 	game.flight.elapsed = 90
 	game.director.advance("ground", 0, 3780, 90, game.targets)
 	game._update_camera()
 	game._finish_phase()
 	var saved := CampaignStore.new(path)
-	check(saved.load_game() == OK and saved.state.phase == "ground_boss" and saved.state.credits == 100 and saved.state.ammo == 3 and saved.state.flares == 1, "The normal boss checkpoint persists branch credits and both separate ammunition inventories together")
+	check(saved.load_game() == OK and saved.state.phase == "ground_boss" and saved.state.credits == 0 and saved.state.ammo == 3 and saved.state.flares == 1, "The normal boss checkpoint persists the wallet and both separate ammunition inventories together")
 	game.campaign = CampaignState.new()
 	check(game.campaign.restore(entry).is_empty(), "The saved ground-entry state remains valid without a schema change")
 	await game._load_phase()
-	check(not game.ground_branch.route.selected and not game.ground_branch.route.rewarded and game.campaign.credits == 0 and game.flight.ammo == 1 and game.campaign.flares == 0, "Retrying a ground-entry snapshot rolls back route choice, rewards and supplies together")
+	check(not game.ground_branch.route.selected and not game.ground_branch.route.completed and game.campaign.credits == 0 and game.flight.ammo == 1 and game.campaign.flares == 0, "Retrying a ground-entry snapshot rolls back route choice, rewards and supplies together")
 	DirAccess.remove_absolute(path)
 	game.sound.stop_all()
 	game.queue_free()
@@ -192,6 +193,33 @@ func check(condition: bool, description: String) -> void:
 	else:
 		push_error("FAIL: " + description)
 		failures += 1
+
+func verify_scenery_contacts(game: Node3D) -> void:
+	var grove := Node3D.new()
+	grove.position = Vector3(8000, 4000, -5000)
+	game.add_child(grove)
+	var poses: Array[Transform3D] = [Transform3D.IDENTITY]
+	GroundArt.add_landmarks(grove, "cryo_rime_spruce", poses, true)
+	GroundArt.add_landmarks(grove, "thalassa_kelp", poses, true, true)
+	grove.add_child(FrontierArt._sea_surface(0, []))
+	game._add_ground_cover(grove)
+	await physics_frame
+	await physics_frame
+	var center := grove.global_position + Vector3.UP * 3.5
+	var space := grove.get_world_3d().direct_space_state
+	var query := PhysicsRayQueryParameters3D.create(center + Vector3.BACK * 5, center + Vector3.FORWARD * 5, FleetArt.PILOT_LAYER)
+	check(not space.intersect_ray(query).is_empty(), "The pilot can hit the generated spruce trunk")
+	query.from += Vector3.RIGHT * 2.6
+	query.to += Vector3.RIGHT * 2.6
+	check(space.intersect_ray(query).is_empty(), "Flexible needles and kelp fronds stay clear beside the trunk")
+	var water := grove.position + Vector3(30, FrontierArt.SEA_LEVEL, -20)
+	query = PhysicsRayQueryParameters3D.create(water + Vector3.UP * 3, water + Vector3.DOWN * 3, 1)
+	check(not space.intersect_ray(query).is_empty(), "The sea retains cover for incoming fire")
+	game.flight.advance(1, false)
+	var hull: float = game.flight.hull
+	game._check_obstacles(query.from, query.to)
+	check(game.flight.hull == hull, "Crossing a rendered wave never counts as a solid collision")
+	grove.free()
 
 func verify_terrain(game: Node3D) -> void:
 	var course: Transform3D = game.director.ground_course
@@ -207,8 +235,15 @@ func verify_terrain(game: Node3D) -> void:
 		check(side * game.flight.offset.x > 50 and game.flight.offset.y == 0, "Full ground steering reaches the %s ridge" % ("left" if side < 0 else "right"))
 	var ridge: Vector3 = VectorArt.ground_point(45, 160)
 	var shields: float = game.flight.shields
+	var hull: float = game.flight.hull
+	var before: Vector2 = game.flight.offset
 	game._check_obstacles(course * (ridge + Vector3.UP * 4), course * (ridge - Vector3.UP * 4))
-	check(game.flight.shields < shields, "Sweeping through the visible canyon slope damages the pilot")
+	check(game.flight.hull < hull and game.flight.shields == shields and game.flight.offset != before, "Sweeping through the visible slope deflects the pilot and dents the hull through full shields")
+	var dented: float = game.flight.hull
+	for i in 60:
+		game.flight.advance(1.0 / 60, false)
+		game._check_obstacles(course * (ridge + Vector3.UP * 4), course * (ridge - Vector3.UP * 4))
+	check(game.flight.hull == dented, "Continuous contact across a second of physics ticks only charges one impact")
 	for lateral in [0, 45]:
 		var a: Vector3 = FlightState.rail_point(120) + Vector3(lateral, 0, 0)
 		var b: Vector3 = FlightState.rail_point(200) + Vector3(lateral, 0, 0)

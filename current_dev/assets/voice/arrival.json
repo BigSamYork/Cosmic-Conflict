@@ -1,0 +1,17 @@
+{
+  "cast": {
+    "vale": {"name":"Captain Tomas Vale","voice":"Chatterbox-Turbo / Captain Tomas Vale"},
+    "lark": {"name":"Lark","voice":"Chatterbox-Turbo / Lark"}
+  },
+  "cues": [
+    {"id":"twilight_vale","speaker":"vale","text":"Look at that sunset, Lark. Almost makes me glad we took the long way."},
+    {"id":"twilight_lark","speaker":"lark","text":"I'll tell the tower you were late for artistic reasons. Watch that ridge."},
+    {"id":"morning_vale","speaker":"vale","text":"Sun's coming up. You smell coffee, Lark?"},
+    {"id":"morning_lark","speaker":"lark","text":"Hot wiring insulation, Captain. I admire your optimism."},
+    {"id":"day_vale","speaker":"vale","text":"Oh, nice! Looks like we got here in the middle of the day. This should be easy!"},
+    {"id":"day_lark","speaker":"lark","text":"Beautiful visibility. I'm sure the gun crews appreciate it just as much as you do."},
+    {"id":"midnight_vale","speaker":"vale","text":"Uh-oh. It's pitch black outside! How are we supposed to see anything?"},
+    {"id":"midnight_lark","speaker":"lark","text":"I guess you should have bought the headlight upgrade instead of spending all that time in the cantina last night."},
+    {"id":"midnight_fitted","speaker":"lark","text":"Headlight's on, Captain. That bright patch ahead? That's where I'd fly."}
+  ]
+}

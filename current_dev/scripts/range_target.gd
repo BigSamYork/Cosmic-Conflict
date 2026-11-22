@@ -56,7 +56,9 @@ func clear_impact_marks() -> void:
 func _ready() -> void:
 	collision_layer = 2
 	collision_mask = 0
-	add_child(create_model())
+	var hull := create_model()
+	add_child(hull)
+	FleetArt.add_pilot_hull(hull)
 	var collider := CollisionShape3D.new()
 	var shape := BoxShape3D.new()
 	shape.size = Vector3(6.4, 2.1, 5.5)

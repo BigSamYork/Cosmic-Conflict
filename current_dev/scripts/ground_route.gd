@@ -5,11 +5,10 @@ const FORK: float = 1260.0
 const REJOIN: float = 2940.0
 const TURN_LENGTH: float = 420.0
 const OFFSET: float = 84.0
-const BONUS: int = 100
 
 var selected: bool = false
 var locked: bool = false
-var rewarded: bool = false
+var completed: bool = false
 
 func advance(distance: float, lateral: float) -> bool:
 	if locked or distance < FORK:
@@ -18,11 +17,11 @@ func advance(distance: float, lateral: float) -> bool:
 	locked = true
 	return true
 
-func claim_bonus(distance: float, alive: bool) -> int:
-	if not selected or rewarded or not alive or distance < REJOIN:
-		return 0
-	rewarded = true
-	return BONUS
+func finish_hazard(distance: float, alive: bool) -> bool:
+	if not selected or completed or not alive or distance < REJOIN:
+		return false
+	completed = true
+	return true
 
 static func lateral_offset(distance: float) -> float:
 	var t: float = clampf(minf(distance - FORK, REJOIN - distance) / TURN_LENGTH, 0, 1)

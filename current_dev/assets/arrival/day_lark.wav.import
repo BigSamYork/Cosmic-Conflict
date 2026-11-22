@@ -2,13 +2,13 @@
 
 importer="wav"
 type="AudioStreamWAV"
-uid="uid://y20u2d4jdafd"
-path="res://.godot/imported/roots.wav-ad9a63bf0234b68777cb4c7ca3a2c4a3.sample"
+uid="uid://ypcuul8je7ai"
+path="res://.godot/imported/day_lark.wav-5d1e8e2e1fa55a43b3a3aa227853c245.sample"
 
 [deps]
 
-source_file="res://assets/opening/roots.wav"
-dest_files=["res://.godot/imported/roots.wav-ad9a63bf0234b68777cb4c7ca3a2c4a3.sample"]
+source_file="res://assets/arrival/day_lark.wav"
+dest_files=["res://.godot/imported/day_lark.wav-5d1e8e2e1fa55a43b3a3aa227853c245.sample"]
 
 [params]
 

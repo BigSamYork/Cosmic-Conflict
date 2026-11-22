@@ -56,6 +56,7 @@ func _begin(sector: String, flight_number: int) -> void:
 	add_child(main_model)
 	gate = FleetArt.model("patrol_gate", "ground")
 	main_model.add_child(gate)
+	FleetArt.add_pilot_hull(gate)
 	if current in [Job.RESCUE, Job.COURIER, Job.SURVEY]:
 		carrier = FleetArt.model("survival_pod", "ground")
 		main_model.add_child(carrier)
@@ -65,6 +66,7 @@ func _begin(sector: String, flight_number: int) -> void:
 		carrier.scale *= 0.57
 		main_model.add_child(carrier)
 		carrier.position = Vector3(5.8 * lane_sign, 0, -1.0)
+		FleetArt.add_pilot_hull(carrier)
 		if sector == "thalassa":
 			var mesh := FleetArt.mesh_for("traffic")
 			if not mesh.has_meta("storm_shape"):
@@ -95,14 +97,13 @@ func _finish(message: String, campaign: CampaignState, paid: bool = false) -> St
 	if storm_hull != null:
 		storm_hull.collision_layer = 0
 		storm_hull = null
-	var reward: int = REWARDS[current] if paid else 0
-	if reward:
-		campaign.reward(reward)
+	if paid:
+		campaign.combat_score += REWARDS[current] * 10
 	main_model.hide()
 	main_model.queue_free()
 	current = -1
 	prompt = ""
-	return message + (" / +%d CR" % reward if reward else "")
+	return message
 
 func lose_carrier(campaign: CampaignState) -> String:
 	return _finish("SUPPORT SHIP LOST TO LIGHTNING / CONTRACT CLOSED", campaign)

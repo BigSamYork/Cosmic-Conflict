@@ -43,7 +43,7 @@ func run() -> void:
 	game.cursor = game.camera.unproject_position(dish.aim_point())
 	for _i in range(5):
 		game.fire_primary()
-	check(dish.destroyed and game.campaign.stats["radars"] == 1 and game.campaign.credits == 60, "Actual reticle fire destroys a visible canyon radar and awards its objective")
+	check(dish.destroyed and game.campaign.stats["radars"] == 1 and game.campaign.credits == 0, "Actual reticle fire destroys a visible canyon radar and records its objective")
 	game._update_contacts()
 	check(game.hud.radar_jam > 0, "Cockpit displays downstream turret suppression")
 	await game._capture("radar-jammed.png")

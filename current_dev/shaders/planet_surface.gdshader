@@ -1,4 +1,5 @@
 shader_type spatial;
+global uniform vec3 sector_ambient;
 render_mode unshaded, cull_disabled, depth_draw_opaque;
 #include "palette.gdshaderinc"
 
@@ -87,6 +88,6 @@ void fragment() {
 	color *= 0.86 + fine * 0.20;
 	float light = 0.13 + 0.87 * max(0.0, dot(n, normalize(vec3(-0.3, 0.8, 0.5))));
 	float rim = pow(1.0 - abs(dot(normalize(NORMAL), normalize(VIEW))), 3.0);
-	ALBEDO = palette_to_output(color * light + atmosphere * rim * 0.16) * reveal;
+	ALBEDO = palette_to_output(color * light * sector_ambient + atmosphere * rim * 0.16) * reveal;
 	EMISSION = palette_to_output(color) * emission * reveal;
 }

@@ -1,4 +1,5 @@
 shader_type spatial;
+global uniform vec3 sector_ambient;
 render_mode cull_disabled, ambient_light_disabled, specular_disabled;
 
 uniform sampler2D geology : repeat_enable, filter_linear_mipmap_anisotropic;
@@ -29,6 +30,7 @@ void fragment() {
 	NORMAL = normal;
 	ROUGHNESS = 1.0;
 	SPECULAR = 0.0;
+	color *= sector_ambient;
 	EMISSION = OUTPUT_IS_SRGB ? pow(color,vec3(1.0/2.2)) : color;
 }
 

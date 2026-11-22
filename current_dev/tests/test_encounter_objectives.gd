@@ -101,13 +101,13 @@ func run() -> void:
 	check(downstream.tracking_jammed == RadarDish.JAM_DURATION and upstream.tracking_jammed == 0 and distant.tracking_jammed == 0, "Destroying a radar jams only its downstream turret sector")
 	var credits: int = game.campaign.credits
 	game._strike({"collider": radar, "position": radar.aim_point()}, 5)
-	check(game.campaign.credits == credits and credits == 60 and game.campaign.combo_kills == 0, "Radar objective pays once without inflating the combat streak")
+	check(game.campaign.credits == credits and credits == 0 and game.campaign.combo_kills == 0, "Radar objectives grant no credits or combat streak")
 	var bounty := PirateSkirmisher.new()
 	game.world.add_child(bounty)
 	game._strike({"collider": bounty, "position": bounty.global_position}, 5)
 	var bounty_credits: int = game.campaign.credits
 	game._strike({"collider": bounty, "position": bounty.global_position}, 5)
-	check(bounty_credits == credits + PirateSkirmisher.BOUNTY and game.campaign.credits == bounty_credits and game.campaign.stats["pirates"] == 1, "Defeated pirate pays one bounty and records one kill")
+	check(bounty_credits == credits and game.campaign.credits == bounty_credits and game.campaign.stats["pirates"] == 1, "Defeating a pirate records one kill without funding the wallet")
 	var launches: Array[int] = [0]
 	downstream.missile_requested.connect(func(_at: Vector3, _direction: Vector3) -> void: launches[0] += 1)
 	var pilot: Vector3 = downstream.position + Vector3(0, 10, 100)

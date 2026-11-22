@@ -2,13 +2,13 @@
 
 importer="wav"
 type="AudioStreamWAV"
-uid="uid://bcolpi38jt74u"
-path="res://.godot/imported/clinic.wav-c3fb62237d99e58ca3aef1ca9a48e856.sample"
+uid="uid://xcj4u6xvjx57"
+path="res://.godot/imported/vale.wav-3244c3f034994f8a098734295f73cad9.sample"
 
 [deps]
 
-source_file="res://assets/opening/clinic.wav"
-dest_files=["res://.godot/imported/clinic.wav-c3fb62237d99e58ca3aef1ca9a48e856.sample"]
+source_file="res://assets/voice/profiles/vale.wav"
+dest_files=["res://.godot/imported/vale.wav-3244c3f034994f8a098734295f73cad9.sample"]
 
 [params]
 

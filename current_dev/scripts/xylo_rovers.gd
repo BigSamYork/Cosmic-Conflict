@@ -13,6 +13,7 @@ func _ready() -> void:
 		var model: Node3D = XyloArt.rover()
 		model.position = XyloArt.floor_point(side * 21, travel)
 		add_child(model)
+		FleetArt.add_pilot_hull(model)
 		vehicles.append(model)
 		drivetrains.append(SurfaceRig.start(model, &"Patrol", i * 0.73))
 		locations.append(model.position)

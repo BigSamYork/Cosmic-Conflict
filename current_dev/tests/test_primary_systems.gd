@@ -238,7 +238,8 @@ func verify_gameplay() -> void:
 	target = fighter(game, Vector3.ZERO)
 	await physics_frame
 	await physics_frame
-	fire_tick(game)
+	# Fire from the overlapping position before flight physics resolves the crash.
+	game.fire_primary()
 	check(target.armor == 9 and game.flight.hits == 1, "An initial overlapping ship is hit once rather than ignored or repeatedly pierced")
 	await prepare(game, 2)
 	var missile := EnemyMissile.new()

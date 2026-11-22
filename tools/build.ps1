@@ -14,24 +14,32 @@ if ($Version -notmatch '^\d+\.\d+\.\d+$') { throw "Version must be MAJOR.MINOR.P
 if (-not $Godot) { $Godot = Join-Path $root ".tools\godot\Godot_v$($config.godot)_win64_console.exe" }
 if (-not (Test-Path -LiteralPath $Godot)) { throw 'Godot is missing. Run tools\bootstrap.ps1 or supply -Godot.' }
 $project = Join-Path $root 'current_dev'
-if (Test-Path -LiteralPath (Join-Path $project 'scripts\computer_voice.gd')) {
-    $voiceIndex = Join-Path $project 'assets\voice\generated-voice.json'
-    if (-not (Test-Path -LiteralPath $voiceIndex)) { throw 'Voice recordings are not generated. Run tools\generate-voice.ps1.' }
-    $voiceProof = Get-Content -LiteralPath $voiceIndex -Raw | ConvertFrom-Json
-    $voiceCatalog = Get-Content -LiteralPath (Join-Path $project 'assets\voice\lines.json') -Raw -Encoding UTF8 | ConvertFrom-Json
-    if ($voiceProof.voice -ne $voiceCatalog.voice) { throw 'Voice changed. Run tools\generate-voice.ps1 -Overwrite before building.' }
-    foreach ($line in $voiceCatalog.sections.lines) {
-        $clip = @($voiceProof.clips | Where-Object id -eq $line.id)
-        $sha = [Security.Cryptography.SHA256]::Create()
-        try { $textHash = [BitConverter]::ToString($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($line.text))).Replace('-', '').ToLowerInvariant() }
-        finally { $sha.Dispose() }
-        if ($clip.Count -ne 1 -or -not $clip[0].PSObject.Properties['text_sha256'] -or $clip[0].text_sha256 -ne $textHash) { throw 'Voice dialogue changed. Run tools\generate-voice.ps1 -Overwrite before building.' }
+function Assert-VoiceRecordings([string]$Folder, [string]$Index, [array]$Lines, [string]$Voice) {
+    $proof = Get-Content -LiteralPath (Join-Path $Folder $Index) -Raw -Encoding UTF8 | ConvertFrom-Json
+    if ($proof.model -cne 'ResembleAI/chatterbox-turbo' -or $proof.voice -cne $Voice -or $proof.clips.Count -ne $Lines.Count) {
+        throw "Chatterbox-Turbo recordings need regeneration: $Index"
     }
-    foreach ($clip in $voiceProof.clips) {
-        $clipPath = Join-Path $project ("assets\voice\{0}.wav" -f $clip.id)
-        if (-not (Test-Path -LiteralPath $clipPath) -or (Get-Item -LiteralPath $clipPath).Length -ne $clip.bytes) { throw "Voice recording is missing or changed: $clipPath" }
-    }
+    $sha = [Security.Cryptography.SHA256]::Create()
+    try {
+        foreach ($line in $Lines) {
+            $clip = @($proof.clips | Where-Object { $_.id -ceq $line.id })
+            $textHash = [BitConverter]::ToString($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($line.text))).Replace('-', '')
+            $speaker = if ($line.PSObject.Properties['speaker']) { $line.speaker } else { 'lark' }
+            $path = Join-Path $Folder ($line.id + '.wav')
+            if ($clip.Count -ne 1 -or $clip[0].speaker -cne $speaker -or $clip[0].text_sha256 -ne $textHash -or
+                (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash -ne $clip[0].audio_sha256) {
+                throw "Voice recording needs regeneration: $path"
+            }
+        }
+    } finally { $sha.Dispose() }
 }
+$voiceFolder = Join-Path $project 'assets/voice'
+$voiceCatalog = Get-Content -LiteralPath (Join-Path $voiceFolder 'lines.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+Assert-VoiceRecordings $voiceFolder 'generated-voice.json' @($voiceCatalog.sections.lines) $voiceCatalog.voice
+$opening = Get-Content -LiteralPath (Join-Path $voiceFolder 'opening.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+Assert-VoiceRecordings (Join-Path $project 'assets/opening') 'generated-opening.json' $opening.cues 'opening cast'
+$arrival = Get-Content -LiteralPath (Join-Path $voiceFolder 'arrival.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+Assert-VoiceRecordings (Join-Path $project 'assets/arrival') 'generated-arrival.json' $arrival.cues 'opening cast'
 $release = Join-Path $root "releases\$Version"
 $app = Join-Path $release 'app'
 New-Item -ItemType Directory -Force -Path $app | Out-Null

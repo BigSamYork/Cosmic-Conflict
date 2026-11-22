@@ -2,13 +2,13 @@
 
 importer="wav"
 type="AudioStreamWAV"
-uid="uid://cw1jkm5tuk71k"
-path="res://.godot/imported/light.wav-ab174afccfd873dddfaf44fa6835dbd8.sample"
+uid="uid://coqoohok24ipl"
+path="res://.godot/imported/day_vale.wav-c4dd853231c24973283d7439bfea8762.sample"
 
 [deps]
 
-source_file="res://assets/opening/light.wav"
-dest_files=["res://.godot/imported/light.wav-ab174afccfd873dddfaf44fa6835dbd8.sample"]
+source_file="res://assets/arrival/day_vale.wav"
+dest_files=["res://.godot/imported/day_vale.wav-c4dd853231c24973283d7439bfea8762.sample"]
 
 [params]
 

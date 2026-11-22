@@ -1,7 +1,6 @@
 class_name MineralPickup
 extends Node3D
 
-const VALUE: int = CampaignState.MINERAL_VALUE
 const LIFETIME: float = 12.0
 const COLLECT_RADIUS: float = 2.6
 const TRACTOR_RANGE: float = 32.0

@@ -17,6 +17,7 @@ func _ready() -> void:
 	dish = EncounterArt.radar_dish(biological)
 	dish.position.y = 11
 	add_child(dish)
+	FleetArt.add_pilot_hull(self)
 	var collider := CollisionShape3D.new()
 	var shape := SphereShape3D.new()
 	shape.radius = 5.0

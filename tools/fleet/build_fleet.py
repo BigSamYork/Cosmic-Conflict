@@ -704,12 +704,7 @@ def cutter(name, livery, kind):
     s.canopy(offset, -l * 0.32, h * 1.42, w * 0.49, l * 0.24, h * 0.57)
     if kind == "bastion":
         s.fin(1, 0.16, -1.70, 1.1, 1.5, 1.22, 0.48)
-    for i in range(2 if kind != "bastion" else 1):
-        y = l * (0.10 + 0.37 * i) if kind != "bastion" else -0.25
-        for side in SIDES:
-            x = side * (w * 0.38 if kind != "bastion" else w * 0.94)
-            s.pod((x, y, h * 0.91), (w * 0.23, l * 0.115, h * 0.40), "frame")
-            boom(s, side, abs(x), y + l * 0.10, h * 1.06, w * 0.084, l * 0.28)
+    # The two playable heavy hulls receive the pilot's equipped primary mounts in game.
     return s
 
 
