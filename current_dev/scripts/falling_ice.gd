@@ -17,14 +17,14 @@ var marker: Node3D
 
 func support_model() -> Node3D:
 	var side: float = signf(lane.x)
-	var batch := GeometryBatch.new()
-	batch.crystal(Vector3(side * 17, -2, 0), 4.5, 43, CryoArt.STEEL)
-	batch.limb(Vector3(side * 17, 33, 0), Vector3(side * 6, 40, 0), 3.2, 2.4, CryoArt.ICE)
-	batch.limb(Vector3(side * 6, 40, 0), Vector3(0, 39, 0), 2.4, 1.7, CryoArt.ICE)
-	var model: Node3D = batch.build()
+	var model := FleetArt.model("ice_cornice", "ground")
+	model.scale.x = side
 	var origin: Vector3 = FlightState.rail_point(travel)
 	model.position = Vector3(origin.x + lane.x, 0, origin.z)
 	return model
+
+func falling_model() -> Node3D:
+	return FleetArt.model("ice_calving", "ground")
 
 func _ready() -> void:
 	collision_layer = 2
@@ -33,10 +33,7 @@ func _ready() -> void:
 	armor = 2
 	var origin: Vector3 = FlightState.rail_point(travel)
 	position = Vector3(origin.x + lane.x, DROP_HEIGHT, origin.z)
-	var batch := GeometryBatch.new()
-	batch.crystal(Vector3(0, -2.7, 0), 1.6, 5.4, CryoArt.ICE)
-	batch.crystal(Vector3(0.7, -1.5, 0.4), 0.8, 3.2, CryoArt.STEEL)
-	add_child(batch.build())
+	add_child(falling_model())
 	var collider := CollisionShape3D.new()
 	var sphere := SphereShape3D.new()
 	sphere.radius = RADIUS

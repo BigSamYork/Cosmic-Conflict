@@ -1,5 +1,5 @@
 shader_type spatial;
-render_mode unshaded, cull_disabled;
+render_mode ambient_light_disabled, specular_disabled, cull_disabled;
 
 // The game uses an unlit world. A broad key and cool reflected light give the
 // curved armor a consistent volume even in the first-person hangar viewport.
@@ -10,6 +10,8 @@ uniform float pulse_strength : hint_range(0.0, 1.0) = 1.0;
 
 instance uniform bool parked = false;
 instance uniform bool weathered = false;
+instance uniform bool living_shell = false;
+instance uniform vec4 nav_tint : source_color = vec4(0.0);
 
 float surface_grain(vec3 p) {
     vec3 cell = floor(p);
@@ -24,6 +26,10 @@ float surface_grain(vec3 p) {
 void vertex() {
     hull_normal = normalize(MODEL_NORMAL_MATRIX * NORMAL);
     local_position = VERTEX;
+    if (living_shell) {
+        float breath = sin(TIME * 1.65 + VERTEX.y * 2.0 + float(INSTANCE_ID));
+        VERTEX.xz *= 1.0 + 0.018 * breath * pulse_strength;
+    }
 }
 
 void fragment() {
@@ -39,6 +45,15 @@ void fragment() {
     vec3 reflect_dir = reflect(-eye, n);
     float sky_band = smoothstep(-0.12, 0.08, reflect_dir.y) * (1.0 - smoothstep(0.28, 0.57, reflect_dir.y));
     vec3 paint = COLOR.rgb;
+    if (living_shell) {
+        float fleck = surface_grain(local_position * 9.5);
+        float membranes = surface_grain(local_position * vec3(14.0,6.0,13.0) + 1.15 * fleck);
+        float vein = 1.0 - smoothstep(0.012,0.067,abs(membranes - 0.48));
+        paint *= (0.69 + 0.52 * fleck) * mix(vec3(1.0), vec3(0.44,0.40,0.38), vein);
+    }
+    if (finish > 0.8 && nav_tint.a > 0.0) {
+        paint = nav_tint.rgb * 1.85;
+    }
     if (weathered && finish < 0.40) {
         float deposit = surface_grain(local_position * vec3(2.6, 0.68, 2.6));
         float coarse = surface_grain(local_position * 0.75);
@@ -50,6 +65,16 @@ void fragment() {
     vec3 color = paint * (0.34 + 0.76 * max(0.0, dot(n, key)) + 0.14 * max(n.y, 0.0));
     color += vec3(0.66, 0.82, 0.97) * (shine * (0.13 + 0.38 * metal) + rim * (0.035 + 0.12 * glass));
     color += sky_band * (vec3(0.08, 0.34, 0.47) * glass + paint * metal * 0.23);
+    // Lubricant gathers in frame recesses and on bare steel. Local coordinates
+    // keep leaks attached to moving turrets, parked ships and station equipment.
+    bool frame = abs(finish - 0.18) < 0.008;
+    if (!living_shell && (frame || abs(finish - 0.29) < 0.008)) {
+        float residue = surface_grain(local_position * vec3(1.3, 0.27, 1.3));
+        float grains = surface_grain(local_position * 0.38);
+        float film = smoothstep(0.59, 0.74, residue * 0.66 + grains * 0.34);
+        vec3 interference = 0.5 + 0.5 * cos(6.283 * (residue * 1.9 + facing * 0.46 + vec3(0.07, 0.40, 0.73)));
+        color = mix(color, color * 0.52 + (interference * 0.074 + vec3(0.011)) * (0.25 + rim + 0.6 * sky_band) + shine * 0.31, film);
+    }
     if (finish > 0.69 && finish < 0.78) {
         if (parked) {
             discard;
@@ -66,5 +91,12 @@ void fragment() {
         }
         color = paint * (1.45 + pulse * pulse_strength);
     }
-    ALBEDO = OUTPUT_IS_SRGB ? pow(max(color, vec3(0.0)), vec3(1.0 / 2.2)) : color;
+    EMISSION = OUTPUT_IS_SRGB ? pow(max(color, vec3(0.0)), vec3(1.0 / 2.2)) : color;
+    ALBEDO = paint;
+    ROUGHNESS = 1.0;
+    SPECULAR = 0.0;
+}
+
+void light() {
+    DIFFUSE_LIGHT += LIGHT_COLOR * ATTENUATION * max(dot(NORMAL, LIGHT), 0.0) / PI;
 }

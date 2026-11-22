@@ -2,6 +2,7 @@ class_name BossPart
 extends RangeTarget
 
 var core: bool = false
+var armored_interlock := false
 var unlocked: bool = true:
 	set(value):
 		unlocked = value
@@ -32,7 +33,7 @@ func _ready() -> void:
 	target_face.position = face_offset
 	target_face.scale = Vector3.ONE * radius
 	add_child(target_face)
-	if core:
+	if core or armored_interlock:
 		shield_cover = FleetArt.model("boss_membrane" if biological else "boss_iris")
 		shield_cover.position = face_offset
 		shield_cover.scale = Vector3.ONE * radius

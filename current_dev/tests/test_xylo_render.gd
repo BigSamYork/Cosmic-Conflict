@@ -163,6 +163,29 @@ func verify_swamp() -> void:
 	game._update_contacts()
 	game.hud.objective = game.boss.objective()
 	await game._capture("xylo-leviathan.png")
+	game.campaign.phase = "asteroids"
+	await game._load_phase()
+	var brood: EggShip
+	for egg in game.targets:
+		if egg is EggShip and egg.infested:
+			brood = egg
+			break
+	brood.global_position = game.camera.to_global(Vector3(4, 1, -32))
+	game.cursor = game.camera.unproject_position(brood.global_position)
+	game._update_contacts()
+	var shell: Image = await image("xylo-brood-shell.png")
+	game._strike({"collider": brood, "position": brood.global_position}, brood.armor)
+	game._advance_explosions(1.0)
+	game._advance_parasites(CanopyParasite.LEAP + 0.6)
+	var latch: Image = await image("xylo-canopy-latch.png")
+	check(changed(shell, latch, Rect2i(560, 230, 800, 460)) > 140000, "The parasite visibly obscures the central canopy")
+	check(game.sound.parasite_voice.playing and game.sound.parasite_voice.stream.loop_mode == AudioStreamWAV.LOOP_FORWARD, "The attached parasite plays a looping growl")
+	game.pause_flight()
+	check(game.sound.parasite_voice.stream_paused, "Pause silences the attached parasite")
+	game.resume_flight()
+	check(not game.sound.parasite_voice.stream_paused, "Resuming flight resumes the growl")
+	game._advance_parasites(CanopyParasite.LATCH + CanopyParasite.SLIDE)
+	check(game.parasites.is_empty() and not game.sound.parasite_voice.playing, "Releasing the glass ends the growl")
 	game.sound.stop_all()
 	game.queue_free()
 	await process_frame

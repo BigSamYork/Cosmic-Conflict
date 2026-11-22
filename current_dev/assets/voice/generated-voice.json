@@ -1,5 +1,5 @@
-{
-  "catalog_sha256": "D47E5E275527D4C7AA4700A4072D14C71F74E114B2EE7B11B9CF4E035FBA1554",
+﻿{
+  "catalog_sha256": "09D92D7B5D2A496F450FF757133C2CB29DA09C9294C62E67B0EF202A8A51F2B2",
   "rate": 22050,
   "clips": [
     {
@@ -582,6 +582,90 @@
       "seconds": 4.544,
       "text_sha256": "f935fcaa734cb14df72f0b1f2b811115a622543d77c24c230ab6204d622f35a4",
       "event": "route_hard"
+    },
+    {
+      "text_sha256": "28d1643892ffeff5e36348671be84bd294d4507db96a58e30e49d7c64ae0934e",
+      "seconds": 9.463,
+      "id": "recon_ignis_ground",
+      "event": "recon_ignis_ground",
+      "bytes": 417352
+    },
+    {
+      "text_sha256": "6194cf2431e4627d7cfc19e37935744c562438dfa7109f14ceace49aa8a1235b",
+      "seconds": 8.423,
+      "id": "recon_ignis_orbit",
+      "event": "recon_ignis_orbit",
+      "bytes": 371500
+    },
+    {
+      "text_sha256": "24f16a5ffb0a5e503a3be2a2231954766a65b26e5f9857ceafafd443313859be",
+      "seconds": 8.308,
+      "id": "recon_cryo_ground",
+      "event": "recon_cryo_ground",
+      "bytes": 366430
+    },
+    {
+      "text_sha256": "c47218e79075fc166cdc741a089064652b8ba470acb050e4abc4ae752329570a",
+      "seconds": 8.888,
+      "id": "recon_cryo_orbit",
+      "event": "recon_cryo_orbit",
+      "bytes": 391998
+    },
+    {
+      "text_sha256": "e937908201594b053249901d8c6f47d0576064fff7add9c1fb15f1f2febc5b6b",
+      "seconds": 8.618,
+      "id": "recon_vespera_ground",
+      "event": "recon_vespera_ground",
+      "bytes": 380110
+    },
+    {
+      "text_sha256": "a6160cb86abbb6e7371bb10c7bf19c53494f866f0e14db733add35723655152d",
+      "seconds": 9.778,
+      "id": "recon_vespera_orbit",
+      "event": "recon_vespera_orbit",
+      "bytes": 431256
+    },
+    {
+      "text_sha256": "29e1966678ce0413fdb30823ea7364faa07083dbb4a05a182d36f043eb84c350",
+      "seconds": 8.378,
+      "id": "recon_xylo_ground",
+      "event": "recon_xylo_ground",
+      "bytes": 369518
+    },
+    {
+      "text_sha256": "fa9166874421453b79ef168e03b60cb4e44c8e4a1ae8746809c606778352841a",
+      "seconds": 8.083,
+      "id": "recon_xylo_orbit",
+      "event": "recon_xylo_orbit",
+      "bytes": 356508
+    },
+    {
+      "text_sha256": "0e467e9fcdbdfee1a93e985d61e45a4d5a4204aa9b76b2f31e39090878d24a62",
+      "seconds": 8.048,
+      "id": "recon_thalassa_ground",
+      "event": "recon_thalassa_ground",
+      "bytes": 354962
+    },
+    {
+      "text_sha256": "a2b988c1800b3786eec0593d0c6c950bd1e4c1b07c2d67c6145ff5de530f7b6e",
+      "seconds": 6.833,
+      "id": "recon_thalassa_orbit",
+      "event": "recon_thalassa_orbit",
+      "bytes": 301390
+    },
+    {
+      "text_sha256": "947c99c9833c4e6cff024f46a3ea657397011c998a0223172f32682a879e6c23",
+      "seconds": 9.113,
+      "id": "recon_kharon_ground",
+      "event": "recon_kharon_ground",
+      "bytes": 401918
+    },
+    {
+      "text_sha256": "b9b3283b415749b6e88bc86da6bce7e9e28b7885714abd9e17a88a746dad43f6",
+      "seconds": 9.723,
+      "id": "recon_kharon_orbit",
+      "event": "recon_kharon_orbit",
+      "bytes": 428828
     }
   ],
   "channels": 1,

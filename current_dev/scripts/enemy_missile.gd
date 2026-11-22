@@ -16,12 +16,15 @@ var diverted: bool = false
 var diversion_age: float = 0.0
 var frost: bool = false
 var biological: bool = false
+var wake: EngineWake
 
 func _ready() -> void:
 	collision_layer = 4
 	collision_mask = 0
 	monitoring = false
 	add_child(XyloArt.spore_bolt() if biological else VectorArt.enemy_missile(CryoArt.ICE if frost else VectorArt.HOSTILE))
+	wake = EngineWake.new()
+	wake.mount(self, XyloArt.ACID if biological else CryoArt.ICE if frost else Color("#ff7e32"))
 	var collider := CollisionShape3D.new()
 	var shape := SphereShape3D.new()
 	shape.radius = 0.9
@@ -34,6 +37,7 @@ func advance(delta: float, previous_pilot: Vector3, pilot: Vector3, pilot_radius
 	if not active:
 		return
 	age += delta
+	wake.advance(age)
 	if diverted:
 		diversion_age += delta
 	if age >= MAX_AGE or diversion_age >= 2.0:
@@ -61,6 +65,9 @@ func advance(delta: float, previous_pilot: Vector3, pilot: Vector3, pilot_radius
 		retire()
 		hit_pilot.emit()
 	elif not cover.is_empty():
+		var obstacle: Object = cover["collider"]
+		if dangerous and obstacle is DestructibleTower:
+			obstacle.receive_hit_at(3, cover["position"], direction)
 		retire()
 
 func divert(pilot: Vector3, escape: Vector3) -> bool:

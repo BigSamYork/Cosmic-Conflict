@@ -25,6 +25,14 @@ func read_catalog(path: String, rules: Dictionary) -> String:
 	var parser := JSON.new()
 	if parser.parse(source) != OK or not parser.data is Dictionary:
 		return "Invalid computer voice JSON in %s at line %d: %s" % [path, parser.get_error_line(), parser.get_error_message()]
+	# Preserve edited recordings when an existing pilot installs the new briefings.
+	if path == USER_PATH and parser.data.get("recon_version", 0) == 0 and parser.data.get("sections") is Array:
+		var shipped: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(DEFAULT_PATH))
+		if not parser.data["sections"].any(func(section: Variant) -> bool: return section is Dictionary and section.get("id") == "boss_recon"):
+			for section in shipped["sections"]:
+				if section["id"] == "boss_recon":
+					parser.data["sections"].append(section)
+		parser.data["recon_version"] = 1
 	var error: String = validate_data(parser.data, rules)
 	if not error.is_empty():
 		return error + " File: " + path

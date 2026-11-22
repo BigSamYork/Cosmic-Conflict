@@ -7,6 +7,18 @@ signal fault(message: String)
 
 const CATALOG: String = VoiceCatalog.DEFAULT_PATH
 const RULES: Dictionary = {
+	"recon_ignis_ground": Vector2i(90, 0),
+	"recon_ignis_orbit": Vector2i(90, 0),
+	"recon_cryo_ground": Vector2i(90, 0),
+	"recon_cryo_orbit": Vector2i(90, 0),
+	"recon_vespera_ground": Vector2i(90, 0),
+	"recon_vespera_orbit": Vector2i(90, 0),
+	"recon_xylo_ground": Vector2i(90, 0),
+	"recon_xylo_orbit": Vector2i(90, 0),
+	"recon_thalassa_ground": Vector2i(90, 0),
+	"recon_thalassa_orbit": Vector2i(90, 0),
+	"recon_kharon_ground": Vector2i(90, 0),
+	"recon_kharon_orbit": Vector2i(90, 0),
 	"reactor_weapons": Vector2i(20, 12), "reactor_shields": Vector2i(20, 12),
 	"reactor_engines": Vector2i(20, 12), "reactor_balanced": Vector2i(20, 12),
 	"reactor_routing": Vector2i(20, 12),
@@ -46,6 +58,7 @@ var failure_message: String = ""
 var volume_percent: int = 70
 var suppressed: bool = true
 var paused: bool = false
+var pending_recon := ""
 var playback_available: bool = false
 
 func _ready() -> void:
@@ -55,10 +68,17 @@ func _ready() -> void:
 	if not error.is_empty():
 		_fail(error)
 		return
-	bus_name = "ComputerVoice-%d" % get_instance_id()
+	bus_name = create_radio_bus("ComputerVoice-%d" % get_instance_id())
+	player = AudioStreamPlayer.new()
+	player.bus = bus_name
+	add_child(player)
+	player.finished.connect(_finished)
+	set_level(volume_percent, suppressed)
+
+static func create_radio_bus(label: String) -> String:
 	var index: int = AudioServer.bus_count
 	AudioServer.add_bus()
-	AudioServer.set_bus_name(index, bus_name)
+	AudioServer.set_bus_name(index, label)
 	AudioServer.set_bus_send(index, "Master")
 	var high := AudioEffectHighPassFilter.new()
 	high.cutoff_hz = 200
@@ -79,11 +99,7 @@ func _ready() -> void:
 	chorus.set("voice/1/level_db", -4.0)
 	chorus.set("voice/1/pan", 0.0)
 	AudioServer.add_bus_effect(index, chorus)
-	player = AudioStreamPlayer.new()
-	player.bus = bus_name
-	add_child(player)
-	player.finished.connect(_finished)
-	set_level(volume_percent, suppressed)
+	return label
 
 func _load_catalog() -> String:
 	if catalog_path.is_empty():
@@ -102,6 +118,10 @@ func _load_catalog() -> String:
 func _process(delta: float) -> void:
 	if not paused:
 		policy.advance(delta)
+		if not pending_recon.is_empty() and not policy.speaking:
+			var briefing := pending_recon
+			pending_recon = ""
+			say(briefing)
 
 func set_level(percent: int, suppress: bool) -> void:
 	assert(percent >= 0 and percent <= 100)
@@ -131,6 +151,8 @@ func say(event: String) -> bool:
 	var rule: Vector2i = RULES[event]
 	var silence: float = 4.0 if event.begins_with("route_") else 6.0
 	if not policy.can_start(event, rule.x, silence):
+		if event.begins_with("recon_") and policy.speaking:
+			pending_recon = event
 		return false
 	var selected: Dictionary = _choose_line(event)
 	if selected.is_empty():
@@ -175,6 +197,7 @@ func cancel_group(group: String) -> void:
 		stop_speech()
 
 func stop_speech(reset: bool = false) -> void:
+	pending_recon = ""
 	if player != null:
 		player.stop()
 		player.stream = null
@@ -198,7 +221,10 @@ func _fail(message: String) -> void:
 
 func _exit_tree() -> void:
 	stop_speech()
-	if not bus_name.is_empty():
-		var index: int = AudioServer.get_bus_index(bus_name)
+	release_radio_bus(bus_name)
+
+static func release_radio_bus(label: String) -> void:
+	if not label.is_empty():
+		var index: int = AudioServer.get_bus_index(label)
 		if index >= 0:
 			AudioServer.remove_bus(index)

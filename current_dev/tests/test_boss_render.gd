@@ -13,6 +13,7 @@ func run() -> void:
 	root.size = Vector2i(1920, 1080)
 	var packed: PackedScene = load("res://main.tscn")
 	var game: Node3D = packed.instantiate()
+	game.automation = "--native-fixture"
 	root.add_child(game)
 	await process_frame
 	game.set_process(false)
@@ -30,15 +31,18 @@ func run() -> void:
 	for argument in OS.get_cmdline_user_args():
 		if argument.begins_with("--capture-dir="):
 			game.screenshot_directory = argument.trim_prefix("--capture-dir=")
-	for orbital in [false, true]:
+	for encounter in [["ignis", false], ["ignis", true], ["thalassa", false], ["xylo", false], ["cryo", false], ["vespera", false], ["kharon", false]]:
+		var orbital: bool = encounter[1]
 		var boss := BossEncounter.new()
+		boss.sector = encounter[0]
+		game.campaign.sector = boss.sector
 		boss.orbital = orbital
 		game.world.add_child(boss)
 		boss.missile_requested.connect(game._launch_missile)
 		game.boss = boss
 		game.targets.assign(boss.parts)
 		game.camera.global_transform = Transform3D(Basis.IDENTITY, Vector3(0, 7, 140 if orbital else 105))
-		game.hud.phase_title = "CAPITAL SHIP / DESTRUCTIBLE MISSILE BATTERIES"
+		game.hud.phase_title = SectorCatalog.ORBITAL_BOSSES[boss.sector] if orbital else SectorCatalog.GROUND_BOSSES[boss.sector]
 		boss.advance(0.3, game.camera.global_position, Vector3.ZERO)
 		await physics_frame
 		await physics_frame
@@ -53,9 +57,11 @@ func run() -> void:
 		check(not game.missiles.is_empty(), "Visible boss weaponry launches real incoming missiles")
 		game._update_contacts()
 		var label: String = "orbital" if orbital else "ground"
+		if boss.sector != "ignis":
+			label = boss.sector + "-" + label
 		await game._capture(label + "-boss-intact.png")
 		game._clear_missiles()
-		for part in [boss.turrets[0], boss.parts[0]]:
+		for part in [boss.turrets[0], boss.parts[0], boss.radars[0]]:
 			game.cursor = game.camera.unproject_position(part.aim_point())
 			for _shot in range(part.maximum_armor):
 				if part.destroyed:

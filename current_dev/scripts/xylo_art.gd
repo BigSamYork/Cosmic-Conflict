@@ -29,46 +29,13 @@ static func insect() -> Node3D:
 	return FleetArt.model("insect")
 
 static func insect_leg() -> Node3D:
-	var cached: Node3D = VectorArt.cached_model("xylo_insect_leg")
-	if cached != null:
-		return cached
-	var batch := GeometryBatch.new()
-	batch.limb(Vector3.ZERO, Vector3(1.3, -0.4, 0.3), 0.17, 0.13, LEAF, 6)
-	batch.limb(Vector3(1.3, -0.4, 0.3), Vector3(1.8, -1, 0.9), 0.13, 0.025, ACID, 6)
-	return VectorArt.remember_model("xylo_insect_leg", batch.build())
+	return FleetArt.model("hive_flight_leg")
 
 static func goliath() -> Node3D:
-	var cached: Node3D = VectorArt.cached_model("xylo_goliath")
-	if cached != null:
-		return cached
-	var batch := GeometryBatch.new()
-	batch.ellipsoid(Vector3(0, 9, -4), Vector3(8.5, 12, 7), SHELL, 12, 16)
-	for rib in range(5):
-		batch.ellipsoid(Vector3(0, 2 + rib * 4, 1.8), Vector3(8 - absf(rib - 2) * 0.7, 1.3, 4), LEAF if rib % 2 == 0 else SHELL, 6, 12)
-	batch.limb(Vector3(0, 17, -3), Vector3(0, 25, 0), 3.3, 2.8, LEAF)
-	batch.ellipsoid(Vector3(0, 26, 0), Vector3(6.5, 3.8, 5.5), SHELL, 8, 16)
-	for side in [-1.0, 1.0]:
-		batch.ellipsoid(Vector3(side * 4, 27, 4.8), Vector3(1, 0.7, 0.8), ACID, 6, 10)
-		batch.limb(Vector3(side * 2, 25, 5), Vector3(side * 3.5, 23, 7), 0.7, 0.4, ACID)
-		batch.limb(Vector3(side * 3.5, 23, 7), Vector3(side, 22.5, 8.5), 0.4, 0.04, LEAF)
-		batch.limb(Vector3(side * 8, 17, -4), Vector3(side * 22, 14, 1), 3.4, 2.6, LEAF)
-		batch.limb(Vector3(side * 22, 14, 1), Vector3(side * 19, 8, 14), 2.6, 1.6, SHELL)
-		batch.limb(Vector3(side * 9, 6, -9), Vector3(side * 30, 7, -4), 2.6, 1.7, LEAF)
-		for finger in range(3):
-			batch.limb(Vector3(side * (17 + finger * 2), 8, 13), Vector3(side * (18 + finger * 2), 2, 17 + finger), 0.55, 0.04, ACID, 6)
-	return VectorArt.remember_model("xylo_goliath", batch.build())
+	return FleetArt.model("bio_titan", "ground")
 
 static func goliath_leg() -> Node3D:
-	var cached: Node3D = VectorArt.cached_model("xylo_goliath_leg")
-	if cached != null:
-		return cached
-	var batch := GeometryBatch.new()
-	batch.limb(Vector3.ZERO, Vector3(1.5, -4, 1.5), 2.3, 1.7, SHELL)
-	batch.ellipsoid(Vector3(1.5, -4, 1.5), Vector3(1.8, 1.8, 1.8), LEAF)
-	batch.limb(Vector3(1.5, -4, 1.5), Vector3(-1, -8.5, 5), 1.6, 0.7, SHELL)
-	for toe in range(3):
-		batch.limb(Vector3(-1, -8.2, 4), Vector3(-2 + toe, -8.5, 7 + toe * 0.3), 0.45, 0.05, ACID, 6)
-	return VectorArt.remember_model("xylo_goliath_leg", batch.build())
+	return FleetArt.model("titan_leg", "ground")
 
 static func leviathan() -> Node3D:
 	return FleetArt.model("leviathan")
@@ -83,18 +50,7 @@ static func egg_ship(variant: int = 0, distant: bool = false) -> Node3D:
 	return FleetArt.model("egg_%d%s" % [clampi(variant, 0, 2), "_far" if distant else ""])
 
 static func rover() -> Node3D:
-	var cached: Node3D = VectorArt.cached_model("xylo_rover")
-	if cached != null:
-		return cached
-	var batch := GeometryBatch.new()
-	batch.box(Vector3(0, 1.5, 0), Vector3(4, 2, 5), ACID, DARK)
-	batch.box(Vector3(0, 3, -0.6), Vector3(2.2, 1.5, 2.8), LEAF, Color("#294534"))
-	for side in [-1.0, 1.0]:
-		for z in [-1.6, 1.6]:
-			batch.ellipsoid(Vector3(side * 2.1, 0.8, z), Vector3(0.6, 0.8, 0.8), SHELL, 6, 8)
-	batch.limb(Vector3(0, 3.7, 0.6), Vector3(0, 6, 0.6), 0.12, 0.08, ACID, 6)
-	batch.ring(Vector3(0, 6, 0.6), 0.8, LEAF, 12)
-	return VectorArt.remember_model("xylo_rover", batch.build())
+	return SurfaceRig.model("field_rover")
 
 static func acid_plume() -> Node3D:
 	var cached: Node3D = VectorArt.cached_model("xylo_acid_plume")
@@ -131,16 +87,7 @@ static func sensor() -> Node3D:
 	return VectorArt.remember_model("xylo_sensor", batch.build())
 
 static func spore_bolt() -> Node3D:
-	var cached: Node3D = VectorArt.cached_model("xylo_spore_bolt")
-	if cached != null:
-		return cached
-	var batch := GeometryBatch.new()
-	batch.ellipsoid(Vector3.ZERO, Vector3(0.4, 0.4, 1.2), ACID, 6, 8)
-	for i in range(6):
-		var angle: float = i * TAU / 6
-		batch.line(Vector3(cos(angle) * 0.3, sin(angle) * 0.3, 0.2), Vector3(cos(angle) * 0.65, sin(angle) * 0.65, 1.1), VectorArt.HOSTILE)
-	batch.line(Vector3(0, 0, 0.8), Vector3(0, 0, 4), LEAF)
-	return VectorArt.remember_model("xylo_spore_bolt", batch.build())
+	return FleetArt.model("living_spore_round")
 
 static func floor_point(x: float, travel: float) -> Vector3:
 	return Vector3(FlightState.rail_point(travel).x + x, -1, -travel)
@@ -183,7 +130,7 @@ static func terrain_chunk(start: float, branching: bool = false) -> Node3D:
 		var reed: Vector3 = floor_point(side * 16, travel)
 		for blade in range(4):
 			batch.line(reed + Vector3(blade * 0.3, 0, 0), reed + Vector3((blade - 1) * 0.7, 3 + blade * 0.5, 1), ACID.darkened(0.2))
-	var chunk := GroundArt.finish_chunk(batch.build(), terrain, scenery, "xylo")
+	var chunk := GroundArt.finish_chunk(batch.build(), terrain, scenery, "xylo", start, branching)
 	return VectorArt.remember_model(key, chunk) if start < VectorArt.TERRAIN_CACHE_CHUNKS * VectorArt.CHUNK_LENGTH else chunk
 
 static func horizon() -> Node3D:
@@ -192,8 +139,13 @@ static func horizon() -> Node3D:
 		return cached
 	var batch := GeometryBatch.new()
 	batch.surface(PackedVector3Array([Vector3(-20000, -12, -20000), Vector3(20000, -12, -20000), Vector3(20000, -12, 20000), Vector3(-20000, -12, 20000)]), PackedInt32Array([0, 1, 2, 0, 2, 3]), Color("#10281e"))
-	for i in range(40):
-		var side: float = -1 if i % 2 == 0 else 1
-		var at := Vector3(side * (220 + i % 3 * 70), -12, -i * 160)
-		batch.limb(at, at + Vector3(side * 20, 130 + i % 4 * 30, 0), 16, 5, Color("#315533"), 6)
-	return VectorArt.remember_model("xylo_horizon", batch.build())
+	var model := batch.build()
+	for stretch in range(8):
+		var crowns: Array[Transform3D] = []
+		for j in range(5):
+			var i := stretch * 5 + j
+			var side := -1.0 if i % 2 == 0 else 1.0
+			var at := Vector3(side * (220 + i % 3 * 70), -12, -i * 160)
+			crowns.append(GroundArt.placement(at, Vector3(3.7, 3.4 + 0.42 * (i % 4), 3.7), i * 0.7))
+		GroundArt.add_landmarks(model, "vista_xylo" if stretch % 3 else "landmark_xylo", crowns)
+	return VectorArt.remember_model("xylo_horizon", model)

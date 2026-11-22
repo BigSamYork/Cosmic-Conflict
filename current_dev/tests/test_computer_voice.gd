@@ -138,6 +138,13 @@ func verify_events() -> void:
 	game.flight.impact_cooldown = 0
 	game._apply_pilot_damage("VOICE TEST", 10)
 	check(recorder.requests.has("hull_critical"), "Crossing the critical hull threshold requests the urgent warning")
+	game.campaign.sector = "thalassa"
+	game.campaign.phase = "ground_boss"
+	await game._load_phase()
+	check(recorder.requests.count("recon_thalassa_ground") == 1, "Encounter entry identifies the Tempest Walker and briefs its ballast failure")
+	game.campaign.phase = "orbit_boss"
+	await game._load_phase()
+	check(recorder.requests.count("recon_thalassa_orbit") == 1, "Orbital entry briefs the Storm Ark instead of the surface walker")
 	game.automation = "--unit-fixture"
 	recorder.requests.clear()
 	game._voice_event("ejection")

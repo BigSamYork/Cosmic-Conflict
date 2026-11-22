@@ -4,6 +4,7 @@ extends Control
 signal launch_requested
 signal resume_requested
 signal title_requested
+signal opening_requested
 signal quit_requested
 signal setting_changed(key: String, value: Variant)
 signal mission_requested
@@ -27,6 +28,9 @@ var mode: String = "title"
 var cursor: Vector2 = Vector2(960, 540)
 var contacts: Array[Dictionary] = []
 var radar_contacts: Array[Dictionary] = []
+var sensors := FlightDeckSensors.new()
+var lead_marker := Vector2.ZERO
+var show_lead := false
 var incoming: Array[Vector2] = []
 var salvage_contacts: Array[Vector2] = []
 var blast_warning: bool = false
@@ -37,6 +41,7 @@ var thermal_warning: bool = false
 var vent_warning: bool = false
 var frost_warning: bool = false
 var gate_warning: bool = false
+var lightning_warning := false
 var acid_warning: bool = false
 var autopilot: bool = false
 var transit_seconds: int = 0
@@ -139,6 +144,10 @@ func _process(_delta: float) -> void:
 			instrument_canvas.transit_seconds = transit_seconds
 			instrument_canvas.boss_fraction = boss_fraction
 			instrument_canvas.radar_contacts = radar_contacts
+			instrument_canvas.scope_range = sensors.range_m
+			instrument_canvas.intercept_seconds = sensors.intercept_seconds
+			instrument_canvas.collision_seconds = sensors.collision_seconds
+			instrument_canvas.escape_side = sensors.escape_side
 			instrument_canvas.fps = fps
 			instrument_canvas.queue_redraw()
 			instrument_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
@@ -186,6 +195,15 @@ func show_message(text: String) -> void:
 	message = text
 	message_until = Time.get_ticks_msec() / 1000.0 + 3.0
 
+func scan_flight_deck(pilot: Camera3D, targets: Array[RangeTarget], missiles: Array[EnemyMissile], pickups: Array[MineralPickup], supplies: Array, tracked: EnemyFighter) -> void:
+	sensors.scan(pilot, flight, targets, missiles, pickups, supplies, tracked, cursor)
+	radar_contacts = sensors.returns
+	show_lead = flight.radar_static_remaining <= 0 and is_instance_valid(sensors.lead_target)
+	if show_lead:
+		show_lead = not sensors.lead_target.destroyed and not pilot.is_position_behind(sensors.lead_world)
+		if show_lead:
+			lead_marker = pilot.unproject_position(sensors.lead_world)
+
 func show_menu(next_mode: String, current_settings: Dictionary) -> void:
 	mode = next_mode
 	settings = current_settings
@@ -205,14 +223,17 @@ func show_menu(next_mode: String, current_settings: Dictionary) -> void:
 		_add_button(stack, "BACK", func() -> void: title_requested.emit())
 		return
 	if mode == "title":
-		_add_label(stack, "SIX WORLDS / ONE PILOT", 18, CYAN)
-		_add_label(stack, "FIND YOUR FLIGHT LINE.", 34, WHITE)
-		_add_label(stack, "Ground assault. Orbital blockade. Asteroid escape.\nEarn credits, improve your ship, and return to Astra.", 21, MUTED)
+		_add_label(stack, "CAPTAIN TOMAS VALE  /  FLIGHT COMPUTER LARK", 18, CYAN)
+		_add_label(stack, "TWO KNOCKS HOME", 34, WHITE)
+		_add_label(stack, "Six convoys lift at dawn. Clear the ground lanes,\nbreak the blockades, and bring them home to Astra.", 21, MUTED)
 		_add_button(stack, "NEW OPERATION / CHOOSE SECTOR", func() -> void: mission_requested.emit())
 		if can_resume:
 			_add_button(stack, "CONTINUE SAVED OPERATION / MARKET", func() -> void: continue_requested.emit())
 		_add_button(stack, "LAUNCH TRAINING FLIGHT", func() -> void: launch_requested.emit())
-		_add_button(stack, "HALL OF FAME", func() -> void: hall_requested.emit())
+		var extras := HBoxContainer.new()
+		stack.add_child(extras)
+		_add_button(extras, "HALL OF FAME", func() -> void: hall_requested.emit())
+		_add_button(extras, "REPLAY OPENING", func() -> void: opening_requested.emit())
 	elif mode == "pause":
 		_add_label(stack, "TACTICAL STATUS / SIMULATION HELD", 18, CYAN)
 		_add_label(stack, "TAKE A BREATH, PILOT.", 32, WHITE)
@@ -236,7 +257,7 @@ func show_menu(next_mode: String, current_settings: Dictionary) -> void:
 		_add_label(stack, "Prototype only. No campaign progress or credits saved.", 18, MUTED)
 		_add_button(stack, "FLY AGAIN", func() -> void: launch_requested.emit())
 	_add_settings(stack)
-	_add_label(stack, "MOUSE Aim + steer   LMB Fire   SHIFT Evasive dash\nSPACE Secondary / C Flares / RMB or ESC Pause\n1 Weapons / 2 Shields / 3 Engines / 0 Balanced\nF11 Fullscreen     ` Developer panel", 18, MUTED)
+	_add_label(stack, "Mouse aim + steer / WASD thrusters / Hold F to hold line\nShift dash / B roll / LMB fire / V burst governor / Space secondary\nC flares / X shield surge / R scope range / I repeat boss recon\n0–3 reactor / RMB or Esc pause / F11 fullscreen / ` developer panel", 16, MUTED)
 	if mode == "title":
 		_add_button(stack, "CREDITS & LICENSES", func() -> void: show_menu("credits", settings))
 	else:
@@ -266,6 +287,9 @@ func show_market(state: CampaignState, error: String = "") -> void:
 	_add_label(stack, "%s     |     %d CREDITS     |     PRIMARY LV %d" % [ship_name, state.credits, state.primary_level], 22, WHITE)
 	var result: String = SectorCatalog.name_for(state.sector).to_upper() + " COMPLETE" if state.last_result == "completed" else "PILOT RECOVERED" if state.last_result == "ejected" else "DOCKED"
 	_add_label(stack, "%s / Ships and shields are fully repaired here, free of charge.\nHull purchases transfer fitted upgrades. Ejection loses the ship and its equipment." % result, 18, MUTED)
+	if state.last_result == "completed":
+		var dispatch := _add_label(stack, "LARK   /   " + SectorCatalog.DISPATCH[state.sector], 18, CYAN)
+		dispatch.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	if not error.is_empty():
 		_add_label(stack, error, 19, VectorArt.HOSTILE)
 	if state.ship.is_empty() and state.credits < state.price("rook"):
@@ -364,7 +388,7 @@ func show_sector_map(state: CampaignState = null) -> void:
 	mode = "sector"
 	var stack: VBoxContainer = _menu_stack(1100, 145)
 	_add_label(stack, "SECTOR NAVIGATION / CHOOSE YOUR DESTINATION", 28, CYAN)
-	_add_label(stack, "Station departure, hyperspace and arrival remain one continuous flight.", 20, WHITE)
+	_add_label(stack, "Lark has the distress traffic. Choose the next convoy to reach.", 20, WHITE)
 	var grid := GridContainer.new()
 	grid.columns = 2
 	grid.add_theme_constant_override("h_separation", 20)
@@ -390,6 +414,9 @@ func show_sector_map(state: CampaignState = null) -> void:
 		var description: Label = _add_label(labels, SectorCatalog.DESCRIPTIONS[id], 16, MUTED)
 		description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		description.custom_minimum_size.x = 380
+		var request := _add_label(labels, SectorCatalog.DISTRESS[id], 16, WHITE)
+		request.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		request.custom_minimum_size.x = 380
 		var available: bool = SectorCatalog.AVAILABLE.has(id)
 		var cleared: bool = state != null and state.cleared_sectors.has(id)
 		var permitted: bool = available and (state == null or state.can_visit(id))
@@ -400,7 +427,7 @@ func show_sector_map(state: CampaignState = null) -> void:
 		_add_label(stack, "TOUR %d / REPLAYS UNLOCKED / ENEMY HEALTH %.0f%%\nClear all %d required worlds for this tour's debrief." % [state.tour, state.health_multiplier() * 100, state.required_sectors.size()], 18, MUTED)
 	_add_button(stack, "BACK", func() -> void: sector_cancelled.emit())
 
-func show_campaign_result(record: Dictionary, actions: Array[Dictionary]) -> void:
+func show_campaign_result(record: Dictionary, actions: Array[Dictionary], final_sector: String = "") -> void:
 	mode = "campaign_result"
 	var stack: VBoxContainer = _menu_stack(1450, 145)
 	stack.add_theme_constant_override("separation", 10)
@@ -418,6 +445,10 @@ func show_campaign_result(record: Dictionary, actions: Array[Dictionary]) -> voi
 	_add_label(title, CampaignHonors.RANKS[record["rank"]], 34, WHITE)
 	_add_label(title, "%s MEDAL / RATING %d OF 1000" % [CampaignHonors.MEDALS[record["rank"]].to_upper(), record["rating"]], 24, AMBER)
 	_add_label(title, "%s / %s" % ["DEVELOPER-ASSISTED / SEPARATE RECORDS" if record["assisted"] else "UNASSISTED", record["completed_at"]], 17, MUTED)
+	if CampaignHonors.record_sectors(record).size() == SectorCatalog.AVAILABLE.size() and record["tour"] == 1:
+		var last_arrival: String = SectorCatalog.DISPATCH.get(final_sector, "")
+		var epilogue := _add_label(stack, ("LARK   /   " + last_arrival + "\n" if not last_arrival.is_empty() else "") + "I read the arrivals aloud, Tomas. Every name. When I finished, someone knocked twice on the hangar wall.", 19, CYAN)
+		epilogue.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_add_label(stack, CampaignHonors.loadout_text(record["loadout"]), 19, WHITE)
 	var scroll := ScrollContainer.new()
 	scroll.name = "CampaignStatistics"
@@ -625,7 +656,7 @@ func _add_settings(stack: VBoxContainer) -> void:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 16)
 	stack.add_child(row)
-	for item in [["reduced_effects", "Reduced glow"], ["mute", "Mute audio"], ["shake", "Camera motion"]]:
+	for item in [["reduced_effects", "Reduced effects"], ["mute", "Mute audio"], ["shake", "Camera motion"]]:
 		var check := CheckBox.new()
 		check.text = item[1]
 		check.button_pressed = bool(settings.get(item[0], false))
@@ -641,7 +672,7 @@ func _add_settings(stack: VBoxContainer) -> void:
 	options.selected = int(settings.get("response", 1))
 	options.item_selected.connect(func(index: int) -> void: setting_changed.emit("response", index))
 	response_row.add_child(options)
-	for entry in [["voice_volume", "Computer voice (0 = off)  ", 70], ["music_volume", "Ambient music (0 = off)    ", AmbientMusic.DEFAULT_VOLUME]]:
+	for entry in [["voice_volume", "Voices / Lark & Vale  ", 70], ["music_volume", "Ambient music (0 = off)    ", AmbientMusic.DEFAULT_VOLUME]]:
 		var volume_row := HBoxContainer.new()
 		stack.add_child(volume_row)
 		_add_label(volume_row, entry[1], 18, MUTED)
@@ -697,6 +728,128 @@ func _make_theme() -> Theme:
 func _text(at: Vector2, text: String, size_px: int = 20, color: Color = WHITE) -> void:
 	draw_string(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, size_px, color)
 
+func _draw_console() -> void:
+	var reduced: bool = settings.get("reduced_effects", false)
+	var shield_hit := AMBER if flight.last_hit_hull else CYAN
+	var impact := clampf(flight.damage_flash / 0.35, 0, 1)
+	var muzzle := clampf(flight.fire_cooldown / (0.25 if flight.primary_level == 1 else 0.125), 0, 1)
+	var electrical := gate_warning or lightning_warning
+	var interference := flight.radar_static_remaining > 0 or electrical or thermal_warning
+	var hazard := interference or flight.hull < flight.max_hull * 0.30
+	var power := Color("#69c4d1")
+	if flight.power_mode == "weapons":
+		power = AMBER
+	elif flight.power_mode == "shields":
+		power = Color("#81aaff")
+	elif flight.power_mode == "engines":
+		power = Color("#84deb1")
+	draw_set_transform_matrix(CockpitInstruments.artwork_transform(size))
+	for side in [-1.0, 1.0]:
+		# The louvered annunciators bolt into the sill below each MFD. Outer
+		# bevels catch the currently routed bus and immediate weapon light.
+		var x: float = 447.0 if side < 0 else 798.0
+		var plate := PackedVector2Array([Vector2(x, 717), Vector2(x + 104, 717), Vector2(x + 111, 724), Vector2(x + 107, 749), Vector2(x + 3, 749), Vector2(x - 4, 740)])
+		draw_colored_polygon(plate, Color("#101b20"))
+		draw_line(plate[0], plate[1], Color("#5a7379"), 1.4, true)
+		draw_line(plate[1], plate[2], Color("#577079"), 1.5, true)
+		draw_line(plate[3], plate[4], Color("#050a0c"), 2.0, true)
+		for bolt in [Vector2(x + 3, 722), Vector2(x + 103, 743)]:
+			draw_circle(bolt, 2.2, Color("#80969a"))
+			draw_line(bolt - Vector2(1.4, -0.7), bolt + Vector2(1.4, -0.7), Color("#1b262a"), 1.1)
+		var warning := hazard if side < 0 else flight.overheat_remaining > 0.0
+		var tint := (AMBER if warning else power) if side < 0 else (AMBER if flight.heat > 55 else CYAN)
+		_text(Vector2(x + 13, 730), ("CAUTION" if hazard else "DEFLECTOR") if side < 0 else "THERMAL LOAD", 8, Color("#afc3c6"))
+		for i in range(8):
+			var lamp := Rect2(x + 12 + i * 10, 735, 7, 5)
+			var level := flight.shields / flight.max_shields if side < 0 else flight.heat / 100.0
+			var lit := level * 8.0 > i or warning
+			draw_rect(lamp, Color("#324046"))
+			if lit:
+				draw_rect(lamp.grow(-1), tint)
+				if not reduced:
+					draw_rect(lamp.grow(1.5), Color(tint, 0.13))
+		var rail := PackedVector2Array([Vector2(688 + side * 553, 655), Vector2(688 + side * 463, 617), Vector2(688 + side * 389, 578)])
+		var spill := power
+		var intensity := 0.15
+		if muzzle > 0.0 and not reduced:
+			spill = Color("#fbd398") if flight.primary_level == 0 else Color("#85dcff")
+			intensity += 0.37 * muzzle * muzzle
+		if impact > 0.0:
+			spill = shield_hit
+			intensity += (0.10 if reduced else 0.50) * impact
+		if interference:
+			spill = Color("#baacff") if electrical else Color("#f1a666") if thermal_warning else Color("#92d89e")
+			intensity += 0.06 if reduced else 0.13 * (0.5 + 0.5 * sin(floorf(flight.elapsed * 8.0) * 2.7))
+		draw_polyline(rail, Color(spill, intensity * 0.25), 12, true)
+		draw_polyline(rail, Color(spill, intensity * 0.5), 4, true)
+		draw_polyline(rail, Color(spill, intensity), 1.3, true)
+		_draw_canopy_rail(side, spill, intensity)
+		if flight.hull / flight.max_hull < (0.62 if side < 0 else 0.31) and not flight.training:
+			_draw_glass_fracture(side)
+	draw_set_transform_matrix(Transform2D.IDENTITY)
+
+func _draw_canopy_rail(side: float, spill: Color, intensity: float) -> void:
+	var hinge := Vector2(688 + side * 446, 210)
+	var knee := Vector2(688 + side * 561, 391)
+	var sill := Vector2(688 + side * 627, 563)
+	var rail := PackedVector2Array([hinge, knee, sill])
+	# A recessed fiber-optic bus follows the metal spar down to the console.
+	draw_polyline(rail, Color("#142126"), 6.5, true)
+	draw_polyline(rail, Color(spill, 0.24 + intensity * 0.55), 2.4, true)
+	for i in [0.17, 0.47, 0.84]:
+		var at := hinge.lerp(knee, i)
+		var along := hinge.direction_to(knee)
+		var cross := along.orthogonal()
+		var bracket := PackedVector2Array([at - along * 5 - cross * 6, at + along * 5 - cross * 6, at + along * 5 + cross * 6, at - along * 5 + cross * 6])
+		draw_colored_polygon(bracket, Color("#3a444a"))
+		draw_line(bracket[0], bracket[3], Color("#adbbba"), 1.2, true)
+		draw_line(bracket[1], bracket[2], Color("#111a20"), 1.4, true)
+		draw_circle(at, 2.2, Color("#12191c"))
+		draw_line(at - cross * 1.3, at + cross * 1.3, Color("#738888"), 1)
+	var ship := campaign.ship if campaign != null and not flight.training else "rook"
+	var paint: Color = Color("#db985c") if ship == "titan" else Color("#8bb3d2") if ship == "hawk" else Color("#adb775") if ship == "bastion" else Color("#74b3b4")
+	for i in range(3):
+		var at := knee.lerp(sill, 0.23 + 0.035 * i)
+		var axis := knee.direction_to(sill).orthogonal()
+		draw_line(at - axis * 5, at + axis * 5, paint, 2.6, true)
+
+func _draw_glass_fracture(side: float) -> void:
+	var origin := Vector2(145, 359) if side < 0 else Vector2(1250, 395)
+	var paths := [
+		[Vector2.ZERO, Vector2(14, -6), Vector2(21, -3), Vector2(38, -15), Vector2(57, -16)],
+		[Vector2(21, -3), Vector2(29, 6), Vector2(45, 12), Vector2(51, 25)],
+		[Vector2(38, -15), Vector2(40, -22), Vector2(55, -31)],
+		[Vector2.ZERO, Vector2(11, 9), Vector2(17, 24), Vector2(35, 32)]]
+	for path: Array in paths:
+		var crack := PackedVector2Array()
+		for vertex: Vector2 in path:
+			crack.append(origin + vertex * Vector2(-side, 1))
+		draw_polyline(crack, Color(0.86, 0.94, 0.95, 0.44), 1.1, true)
+
+func _draw_flight_path(center: Vector2) -> void:
+	if autopilot:
+		return
+	# Horizon wings roll with the outside world. The small velocity pip follows
+	# lateral motion independently of the gun reticle.
+	var level := Vector2.from_angle(sensors.horizon_bank)
+	var horizon := center + Vector2(0, -sensors.below_horizon * 90)
+	for side in [-1.0, 1.0]:
+		draw_line(horizon + side * level * 58, horizon + side * level * 84, Color(CYAN, 0.36), 1.2, true)
+		draw_line(horizon + side * level * 84, horizon + side * level * 84 + level.orthogonal() * 5, Color(CYAN, 0.36), 1.2, true)
+	if flight.offset_velocity.length_squared() > 2.5:
+		var motion := Vector2(flight.offset_velocity.x, -flight.offset_velocity.y) / maxf(1, flight.speed)
+		var pip := center + motion.limit_length(1.0) * size.y * 0.12
+		draw_arc(pip, 5, 0, TAU, 16, Color(WHITE, 0.75), 1.4, true)
+		draw_line(pip - Vector2(12, 0), pip - Vector2(5, 0), Color(WHITE, 0.75), 1.4)
+		draw_line(pip + Vector2(5, 0), pip + Vector2(12, 0), Color(WHITE, 0.75), 1.4)
+	if show_lead and flight.primary_level == 1 and Rect2(Vector2.ZERO, size).has_point(lead_marker):
+		draw_arc(lead_marker, 7, 0, TAU, 20, AMBER, 1.7, true)
+		draw_circle(lead_marker, 1.5, AMBER)
+	if sensors.collision_seconds < 1.9:
+		var escape := Vector2(sensors.escape_side, 0)
+		var arrow := center + escape * 92 + Vector2.DOWN * 62
+		draw_polyline(PackedVector2Array([arrow - escape * 10 + Vector2.UP * 7, arrow, arrow - escape * 10 + Vector2.DOWN * 7]), AMBER, 2.3, true)
+
 func _draw() -> void:
 	if flight == null or font == null:
 		return
@@ -716,6 +869,7 @@ func _draw() -> void:
 			_text(Vector2(width - 530, height - 130), "BOUNDED FLIGHT. UNBOUNDED HORIZONS.", 16, MUTED)
 		_text(Vector2(110, height - 34), "SIX SECTORS / PLAYER BATTLESHIPS / LOCAL HALL OF FAME", 15, MUTED)
 		return
+	_draw_console()
 	_text(Vector2(width - 260, 170), "%02d  TARGETS DISABLED" % flight.destroyed, 18, CYAN)
 	_text(Vector2(width - 260, 198), "%02d%%  ACCURACY" % int(flight.accuracy()), 18, MUTED)
 	if not flight.training and campaign != null:
@@ -750,10 +904,14 @@ func _draw() -> void:
 		draw_arc(location, 15, 0, TAU, 24, CYAN, 1.5, true)
 		_text(location + Vector2(21, 5), "CORE +%d" % MineralPickup.VALUE, 14, CYAN)
 	var center := Vector2(width * 0.5, height * 0.5)
+	_draw_flight_path(center)
 	draw_circle(center, 3, Color(CYAN, 0.25), false, 1, true)
 	draw_line(center, cursor, Color(CYAN, 0.09), 1, true)
 	var reticle_color: Color = AMBER if flight.hit_flash > 0.0 else CYAN
 	draw_arc(cursor, 12, 0, TAU, 40, reticle_color, 1.5, true)
+	if not flight.training and flight.heat > 2.0:
+		var hot := VectorArt.HOSTILE if flight.heat >= 76.0 else AMBER
+		draw_arc(cursor, 16.0, PI * 0.12, PI * (0.12 + 0.76 * flight.heat / 100.0), 24, hot, 2.0, true)
 	for direction in [Vector2.LEFT, Vector2.RIGHT, Vector2.UP, Vector2.DOWN]:
 		draw_line(cursor + direction * 17, cursor + direction * 27, reticle_color, 2, true)
 	draw_circle(cursor, 1.8, WHITE)
@@ -766,4 +924,4 @@ func _draw() -> void:
 		_text(Vector2(center.x - 100, center.y + 125), flight.last_impact, 20, AMBER)
 	if Time.get_ticks_msec() / 1000.0 < message_until:
 		_text(Vector2(center.x - 280, height - 250), message, 20, AMBER)
-	_text(Vector2(48, height - 24), "MOUSE  AIM + STEER     LMB  FIRE     RMB / ESC  STATUS     F11  FULLSCREEN", 14, MUTED)
+	_text(Vector2(48, height - 24), "WASD  THRUST    B  ROLL    R  RADAR    RMB / ESC  FLIGHT CONTROLS", 14, MUTED)

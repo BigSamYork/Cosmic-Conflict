@@ -187,7 +187,11 @@ func verify_gameplay() -> void:
 		await physics_frame
 		await physics_frame
 		fire_tick(game)
-		check(rear.armor == 12 and game.flight.hits == 0 and game._trace_tachyon(false).z > -40, "Tachyon stops at protected %s without damaging it or the ship behind" % blocker_kind)
+		check(rear.armor == 12 and game._trace_tachyon(false).z > -40, "Tachyon stops at %s and shields the ship behind it" % blocker_kind)
+		if blocker is DestructibleTower:
+			check(blocker.armor == 3 and game.flight.hits == 1, "A tachyon shot damages the tower shaft at its actual contact")
+		else:
+			check(game.flight.hits == 0, "Protected %s rejects beam damage" % blocker_kind)
 	await prepare(game, 2)
 	var rear: EnemyFighter = fighter(game, Vector3(0, 0, -90))
 	var partial_cover: StaticBody3D = wall(game, Vector3(0.45, 0, -30))

@@ -163,6 +163,8 @@ func _create_batch(model: Node3D, transforms: Array[Transform3D], axes: PackedVe
 		var node := MultiMeshInstance3D.new()
 		node.multimesh = instances
 		node.material_override = surface.material_override
+		if surface.has_meta("living_shell"):
+			node.set_instance_shader_parameter(&"living_shell", true)
 		node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		node.extra_cull_margin = 2
 		node.set_meta("giant", giant)

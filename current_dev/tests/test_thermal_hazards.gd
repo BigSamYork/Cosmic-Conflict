@@ -84,7 +84,7 @@ func run() -> void:
 		interrupted.aim = Basis.IDENTITY
 		root.add_child(interrupted)
 		emitter.receive_hit(emitter.armor)
-		check(not interrupted.advance(5.0, Vector3(0, 0, -100), Vector3(0, 0, -100), 0.6) and interrupted.complete() and not interrupted.visible, "Destroying the optional projector immediately cancels its thermal sweep")
+		check(not interrupted.advance(5.0, Vector3(0, 0, -100), Vector3(0, 0, -100), 0.6) and interrupted.complete() and not interrupted.visible, "Destroying the projector immediately cancels its thermal sweep")
 		interrupted.queue_free()
 		emitter.queue_free()
 	var boss := BossEncounter.new()
@@ -96,7 +96,7 @@ func run() -> void:
 	check(launches[0] == 1 and not boss.core.unlocked, "Orbital boss uses its projector independently of shield-generator progression")
 	boss.thermal_emitter.receive_hit(boss.thermal_emitter.armor)
 	boss.advance(12.0, Vector3(0, 0, 120), Vector3.ZERO)
-	check(launches[0] == 1 and not boss.defeated(), "Disabling the thermal weapon stops future sweeps but does not defeat the boss")
+	check(launches[0] == 1 and not boss.defeated() and boss.core.unlocked, "Disabling the thermal weapon stops future sweeps and exposes the reactor")
 	boss.queue_free()
 	await process_frame
 	var scene: PackedScene = load("res://main.tscn")

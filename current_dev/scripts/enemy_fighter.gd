@@ -83,7 +83,8 @@ func reset() -> void:
 
 func animate(time: float) -> void:
 	for i in range(insect_legs.size()):
-		insect_legs[i].rotation.z = sin(time * 4 + phase + i) * 0.18
+		var swing := sin(time * 4 + phase + i) * 0.18
+		insect_legs[i].basis = Basis(Vector3.BACK, swing).scaled_local(Vector3(-1 if i < 3 else 1, 1, 1))
 	if dogfight:
 		return
 	super.animate(time)

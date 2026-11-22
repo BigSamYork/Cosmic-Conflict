@@ -101,16 +101,16 @@ func verify_hazards() -> void:
 	for fps in [30, 45, 120]:
 		var lightning := StormLightning.new()
 		root.add_child(lightning)
+		lightning.advance(0.05, Vector3.ZERO, Vector3.ZERO)
+		var on_channel: Vector3 = lightning.paths[0][18]
 		var hits: int = 0
 		for i in range(fps * 4):
-			hits += int(lightning.advance(1.0 / fps, Vector3(0, 10, 0), Vector3(0, 10, 0)))
+			hits += int(lightning.advance(1.0 / fps, on_channel, on_channel))
 		check(hits == 1, "Storm strike damages once per warned cycle at %dHz" % fps)
 		var age: float = lightning.age
 		lightning.advance(0, Vector3.ZERO, Vector3.ZERO)
 		check(lightning.age == age, "A paused storm strike does not consume its cycle")
-		lightning.struck_cycle = -1
-		lightning.age = 2
-		check(lightning.advance(0.01, Vector3(0, 30, 0), Vector3(0, 30, 0)), "Lightning collision covers the upper visible strike, not only the old frost-plume height")
+		check(on_channel.y > 30 and lightning.paths[0][-1].distance_to(on_channel) <= lightning.pilot_radius, "The visible channel terminates at the ship that intercepted it")
 		lightning.queue_free()
 	var ruin := RuinFall.new()
 	ruin.travel = 560
@@ -162,6 +162,7 @@ func verify_worlds() -> void:
 		check(game.heat_vents.is_empty() and game.frost_fields.is_empty() and game.flight.duration == 90, "The new world has its own environment rather than inherited volcanic/frost hazards: " + sector)
 		if sector == "thalassa":
 			check(game.lightning_fields.size() == 10 and game.ocean_material != null, "Thalassa has animated water, offshore geometry and ten warned storm strikes")
+			verify_ocean_tiles()
 			var age: float = game.ocean_age
 			game.pause_flight()
 			game._physics_process(3)
@@ -188,9 +189,100 @@ func verify_worlds() -> void:
 					if absf(a.r - b.r) + absf(a.g - b.g) + absf(a.b - b.b) > 0.02:
 						changes += 1
 			check(changes > 500, "Visible ocean waves actually move in the forward canopy (%d changed samples)" % changes)
+		if sector == "thalassa":
+			await verify_storm_destruction()
 		game._open_sector_map(false)
 		await shot("six-world-map")
 		check(root.get_visible_rect().encloses(game.hud.menu.get_global_rect()), "All six world-selection cards fit the viewport")
+
+func verify_storm_destruction() -> void:
+	var platforms := get_nodes_in_group(&"offshore_platforms")
+	check(platforms.size() >= 2, "Offshore rigs stream as independently destructible structures")
+	var rig: OffshorePlatform = platforms[0]
+	var fighter := EnemyFighter.new()
+	fighter.sector = "thalassa"
+	game.world.add_child(fighter)
+	fighter.global_position = rig.global_position + Vector3(0, 45, 0)
+	await physics_frame
+	await physics_frame
+	var bolt := StormLightning.new()
+	game.world.add_child(bolt)
+	bolt.global_position = rig.global_position
+	bolt.contact.connect(game._storm_contact)
+	var credited: int = game.flight.destroyed
+	var wallet: int = game.campaign.credits
+	var count: int = game.explosions.size()
+	var aside := rig.global_position + Vector3(50, 20, 0)
+	var straight := PackedVector3Array([Vector3.UP * 90, Vector3.UP * 65, Vector3.DOWN * 4])
+	bolt.cycle_id = 0
+	bolt.paths.assign([straight.duplicate()])
+	bolt.advance(1.51, aside, aside)
+	check(fighter.destroyed and rig.collision_layer != 0 and bolt.paths[0][-1].y > 42, "A ship intercepts the bolt and explodes, shielding the platform underneath")
+	bolt.advance(0.59, aside, aside)
+	check(game.explosions.size() == count + 1, "Return strokes stop at the first contact without duplicating the explosion")
+	await physics_frame
+	bolt.age = StormLightning.CYCLE
+	bolt.cycle_id = 1
+	bolt.next_stroke = 0
+	bolt.paths.assign([straight])
+	bolt.advance(1.51, aside, aside)
+	check(not rig.visible and rig.collision_layer == 0 and platforms[1].visible and game.explosions.size() == count + 2, "A subsequent direct hit blows up only that rig and removes its cover")
+	var tower: DestructibleTower = game.towers[0]
+	game._storm_contact(tower, tower.to_global(Vector3.UP * 3), Vector3.DOWN)
+	check(tower.destroyed and tower.break_band == 2, "A lightning hit at the crown starts the tower's upper-section collapse")
+	var patrol: SurfacePatrol = game.ground_branch.patrol
+	patrol.job_order = [SurfacePatrol.Job.REPAIR, SurfacePatrol.Job.REPAIR, SurfacePatrol.Job.REPAIR]
+	patrol.advance(0.01, aside, aside, game.campaign, game.flight, game.ground_branch.route)
+	check(patrol.storm_hull != null, "The repair tender participates in storm collisions")
+	if patrol.storm_hull != null:
+		game._storm_contact(patrol.storm_hull, patrol.carrier.global_position, Vector3.DOWN)
+		check(patrol.current < 0 and patrol.storm_hull == null, "A destroyed support ship closes its contract without paying the pilot")
+	check(game.flight.destroyed == credited and game.campaign.credits == wallet, "Storm kills do not count as pilot weapons or pay a bounty")
+	var hull: float = game.flight.hull
+	var shields: float = game.flight.shields
+	var saved_camera: Transform3D = game.camera.global_transform
+	game.camera.global_position = rig.global_position + Vector3.UP * 58
+	game.lightning_fields.append(bolt)
+	bolt.age = 0.0
+	bolt.cycle_id = 0
+	bolt.next_stroke = 0
+	bolt.paths.assign([PackedVector3Array([Vector3.UP * 90, Vector3.UP * 38])])
+	game.flight.roll_remaining = 0.2
+	game._advance_storm(1.51, game.camera.global_position)
+	check(game.flight.hull == hull, "A barrel roll evades a direct lightning discharge")
+	game.flight.roll_remaining = 0.0
+	game._advance_storm(0.25, game.camera.global_position)
+	check(game.flight.hull == 0 and game.flight.shields == 0, "An unprotected pilot ship caught by the return stroke is destroyed")
+	game.lightning_fields.erase(bolt)
+	game.camera.global_transform = saved_camera
+	game.flight.hull = hull
+	game.flight.shields = shields
+	bolt.free()
+	fighter.free()
+
+func verify_ocean_tiles() -> void:
+	var previous := PackedVector2Array()
+	var joined := true
+	var oily := 0
+	var clean := 0
+	var width := FrontierArt.SEA_COLUMNS + 1
+	for chunk in game.ground_chunks:
+		var surface: MeshInstance3D = chunk.get_child(0)
+		var masks: PackedVector2Array = surface.mesh.surface_get_arrays(0)[Mesh.ARRAY_TEX_UV]
+		if not previous.is_empty():
+			for x in range(width):
+				joined = joined and previous[x].distance_to(masks[x]) < 0.002
+		previous = masks.slice(masks.size() - width)
+		for mask in masks:
+			oily += int(mask.x > 0.6)
+			clean += int(mask.x < 0.01)
+	check(joined and oily > 0 and clean > oily, "Oil plumes cross streamed boundaries continuously and leave most water clear")
+	game.settings["reduced_effects"] = true
+	game._apply_settings()
+	check(game.ocean_material.shader == FrontierArt.WATER, "Reduced effects keeps waves with a single-pass ocean")
+	game.settings["reduced_effects"] = false
+	game._apply_settings()
+	check(game.ocean_material.shader == FrontierArt.WATER_REFLECTION, "Full effects restores reflections on already streamed water")
 
 func verify_boss_radars() -> void:
 	for sector in SectorCatalog.AVAILABLE:
@@ -230,12 +322,13 @@ func verify_boss_radars() -> void:
 			for _i in range(6):
 				game._strike(contact, 1)
 			check(radar.destroyed and radar.collision_layer == 0 and not radar.visible, "Six actual baseline hits destroy the radar, hide it and remove collision")
-			check(game.campaign.credits == credits + 30 and game.campaign.stats["enemies"] == enemies and game.campaign.combo_kills == streak and not boss.core.unlocked, "Radar gives one optional credit reward without combo, enemy kill or core unlock")
+			check(game.campaign.credits == credits + 30 and game.campaign.stats["enemies"] == enemies and game.campaign.combo_kills == streak and not boss.core.unlocked, "One radar gives a single reward and leaves the core sealed")
 			check(not game._strike({"collider": radar, "position": radar.aim_point()}, 10) and game.campaign.credits == credits + 30, "Destroyed radar cannot be rewarded again")
 			boss.advance(0.01, game.camera.global_position, Vector3.ZERO)
 			check(boss.turrets[0].interval_multiplier == 1.25, "One radar loss slows turret cadence by the agreed interval multiplier")
 			boss.radars[1].receive_hit(boss.radars[1].armor)
 			boss.advance(0.01, game.camera.global_position, Vector3.ZERO)
+			check(boss.core.unlocked == (sector == "vespera"), "Both shield radars expose the Vespera core, with other sector objectives still active")
 			check(boss.turrets[0].interval_multiplier == 1.5 and not game.explosions.is_empty() and not game.debris.is_empty(), "Both radars stack additively and real destruction includes explosion and hull-colored breakup")
 			var camera_before: Basis = game.camera.basis
 			var hull_before: Vector3 = boss.global_position

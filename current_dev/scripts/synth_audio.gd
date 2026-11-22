@@ -5,9 +5,11 @@ var voices: Array[AudioStreamPlayer] = []
 var pulse: AudioStreamWAV
 var hit: AudioStreamWAV
 var impact: AudioStreamWAV
+var thunder: AudioStreamWAV
 const ImpactSpray := preload("res://scripts/impact_spray.gd")
 var contact_thuds: Dictionary = {}
 var last_contact_usec := -100000
+var parasite_voice := AudioStreamPlayer.new()
 var warp: AudioStreamWAV
 var voice_index: int = 0
 var playback_enabled: bool = true
@@ -22,6 +24,9 @@ func _ready() -> void:
 	for surface in ImpactSpray.Surface.values():
 		contact_thuds[surface] = make_contact_thud(surface)
 	warp = make_tone(1.6, 90.0, 1100.0, 0.25)
+	parasite_voice.stream = preload("res://assets/sfx/canopy_parasite.wav")
+	parasite_voice.volume_db = -8.0
+	add_child(parasite_voice)
 	for _i in range(8):
 		var player := AudioStreamPlayer.new()
 		player.volume_db = -10.0
@@ -36,6 +41,27 @@ func play_sound(stream: AudioStreamWAV) -> void:
 	voice.play()
 	voice_index += 1
 
+func play_thunder() -> void:
+	if thunder == null:
+		const RATE := 22050
+		var rng := RandomNumberGenerator.new()
+		rng.seed = 7118
+		var pcm := PackedByteArray()
+		pcm.resize(int(1.4 * RATE) * 2)
+		var rumble := 0.0
+		for i in range(pcm.size() / 2):
+			var t := float(i) / RATE
+			var noise := rng.randf_range(-1.0, 1.0)
+			rumble = lerpf(rumble, noise, 0.021)
+			var roll := 0.58 + 0.42 * cos(13.0 * t + 1.7 * sin(t * 8.0))
+			var sample := noise * exp(-48.0 * t) * 0.44 + rumble * 4.2 * roll * exp(-2.6 * t)
+			pcm.encode_s16(i * 2, roundi(32767 * clampf(sample, -0.98, 0.98)))
+		thunder = AudioStreamWAV.new()
+		thunder.format = AudioStreamWAV.FORMAT_16_BITS
+		thunder.mix_rate = RATE
+		thunder.data = pcm
+	play_sound(thunder)
+
 func play_contact(surface: ImpactSpray.Surface) -> void:
 	# Coincident plasma bolts and piercing hits share one cockpit confirmation.
 	var now := Time.get_ticks_usec()
@@ -44,17 +70,26 @@ func play_contact(surface: ImpactSpray.Surface) -> void:
 		last_contact_usec = now
 
 func pause_sounds(paused: bool) -> void:
+	parasite_voice.stream_paused = paused
 	for voice in voices:
 		voice.stream_paused = paused
 
 func stop_all() -> void:
+	parasite_voice.stop()
 	for voice in voices:
 		voice.stop()
 		voice.stream = null
 
 func set_ducked(active: bool) -> void:
+	parasite_voice.volume_db = -13.0 if active else -8.0
 	for voice in voices:
 		voice.volume_db = -15.0 if active else -10.0
+
+func set_parasite_audible(active: bool) -> void:
+	if active and playback_enabled and not parasite_voice.playing:
+		parasite_voice.play()
+	elif not active and parasite_voice.playing:
+		parasite_voice.stop()
 
 func _exit_tree() -> void:
 	stop_all()

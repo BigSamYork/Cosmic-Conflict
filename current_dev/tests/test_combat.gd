@@ -91,9 +91,9 @@ func run() -> void:
 	var tower := DestructibleTower.new()
 	game.add_child(tower)
 	game._strike({"collider": tower, "position": tower.global_position}, 1)
-	check(game.impact_sprays.size() == feedback_before and tower.scar_surfaces.is_empty(), "The armored tower top does not confirm a damaging hit")
-	game._strike({"collider": tower, "position": tower.aim_point()}, 1)
-	check(game.impact_sprays.size() == feedback_before + 1 and not tower.scar_surfaces.is_empty() and game.ImpactSpray.surface_for(tower) == game.ImpactSpray.Surface.STONE, "A vulnerable tower base sheds grit and takes a lasting mark")
+	check(game.impact_sprays.size() == feedback_before + 1 and not tower.scar_surfaces.is_empty() and tower.armor == 5, "A shaft strike confirms damage and leaves a lasting mark")
+	game._strike({"collider": tower, "position": tower.to_global(Vector3(0, -4.5, 1))}, 1)
+	check(game.impact_sprays.size() == feedback_before + 2 and tower.armor == 4 and game.ImpactSpray.surface_for(tower) == game.ImpactSpray.Surface.STONE, "A foundation hit also sheds grit and reduces armor")
 	tower.free()
 	var organ := BossPart.new()
 	organ.biological = true

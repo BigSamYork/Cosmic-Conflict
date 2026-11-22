@@ -1,6 +1,7 @@
 {
   "voice": "Microsoft Zira Desktop",
   "language": "en-US",
+  "recon_version": 1,
   "sections": [
     {
       "id": "reactor",
@@ -131,6 +132,24 @@
         {"id":"routes_10","event":"route_hard","added":true,"chance_percent":25,"cooldown_seconds":0,"text":"Hazard corridor locked. Confidence detected. Supporting evidence remains inconclusive."},
         {"id":"routes_11","event":"route_hard","added":true,"chance_percent":25,"cooldown_seconds":0,"text":"Extra defenses ahead. You really do consider warning signs a personal invitation."},
         {"id":"routes_12","event":"route_hard","added":true,"chance_percent":25,"cooldown_seconds":0,"text":"Hard route selected. Please collect the supplies before becoming one."}
+      ]
+    },
+    {
+      "id": "boss_recon",
+      "title": "Boss identification and tactical reconnaissance",
+      "lines": [
+        {"id":"recon_ignis_ground","event":"recon_ignis_ground","added":true,"chance_percent":100,"cooldown_seconds":0,"text":"Vulcan Siege Runner. Shoot both amber generators, then put a round through the cyan reactor. Two padlocks on a furnace. Inspired."},
+        {"id":"recon_ignis_orbit","event":"recon_ignis_orbit","added":true,"chance_percent":100,"cooldown_seconds":0,"text":"Solar Flare Cruiser. Burn out the thermal projector, then hit the cyan reactor. Let's give their heating department a quiet afternoon."},
+        {"id":"recon_cryo_ground","event":"recon_cryo_ground","added":true,"chance_percent":100,"cooldown_seconds":0,"text":"Glacier Bore-Mech. Crack either amber coolant pod. Its cyan core vents for four seconds at a time. Kindly shoot during the open part."},
+        {"id":"recon_cryo_orbit","event":"recon_cryo_orbit","added":true,"chance_percent":100,"cooldown_seconds":0,"text":"Cryo-Carrier Hydra. Take out the drone bay and either generator, then the core. Both generators also work, if you'd prefer company."},
+        {"id":"recon_vespera_ground","event":"recon_vespera_ground","added":true,"chance_percent":100,"cooldown_seconds":0,"text":"Overlord Defense Core. Break both radar dishes, then hit the core. It spent the entire defense budget on watching you do this."},
+        {"id":"recon_vespera_orbit","event":"recon_vespera_orbit","added":true,"chance_percent":100,"cooldown_seconds":0,"text":"Stealth Dreadnought Nyx. Smash both radar dishes to kill its cloak and expose the core. Lovely disappearing act. Shame about the antennas."},
+        {"id":"recon_xylo_ground","event":"recon_xylo_ground","added":true,"chance_percent":100,"cooldown_seconds":0,"text":"Bio-Titan Goliath. Rupture both amber organs, then shoot the heart. My medical license remains entirely theoretical."},
+        {"id":"recon_xylo_orbit","event":"recon_xylo_orbit","added":true,"chance_percent":100,"cooldown_seconds":0,"text":"Hive Mother Leviathan. Silence any three spitters, then strike the heart. Apparently three counts as a second opinion."},
+        {"id":"recon_thalassa_ground","event":"recon_thalassa_ground","added":true,"chance_percent":100,"cooldown_seconds":0,"text":"Tempest Walker. Breach both amber ballast pods and the sea will finish the job. Finally, a subcontractor I trust."},
+        {"id":"recon_thalassa_orbit","event":"recon_thalassa_orbit","added":true,"chance_percent":100,"cooldown_seconds":0,"text":"Storm Ark. Knock out two launchers and either amber generator, then hit the core. Expect a strongly worded missile."},
+        {"id":"recon_kharon_ground","event":"recon_kharon_ground","added":true,"chance_percent":100,"cooldown_seconds":0,"text":"Sunforge Colossus. Break the left generator first, then the right, then the core. Yes, their ancient lock has three buttons."},
+        {"id":"recon_kharon_orbit","event":"recon_kharon_orbit","added":true,"chance_percent":100,"cooldown_seconds":0,"text":"Obelisk Sovereign. Destroy all six launchers to ignite the magazines. Or break both generators and hit the core. Your choice of fireworks."}
       ]
     }
   ]

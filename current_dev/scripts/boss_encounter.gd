@@ -29,6 +29,16 @@ var drone_bay: DroneBay
 var cloak: StealthSignature
 var core_rings: Array[Node3D] = []
 var bio_legs: Array[Node3D] = []
+var tempest_legs: Array[Node3D] = []
+var collectors: Array[Node3D] = []
+var interlock_opened := false
+var wreck_direction := 1.0
+var mounted_at_failure: Array[Transform3D] = []
+var vent_time := 0.0
+var vent_started := false
+var breaches: Dictionary[BossPart, MultiMeshInstance3D] = {}
+static var breach_mesh: MultiMesh
+static var breach_material := ShaderMaterial.new()
 
 func _ready() -> void:
 	anchor = position
@@ -50,6 +60,14 @@ func _ready() -> void:
 			leg.scale.x = side
 			model.add_child(leg)
 			bio_legs.append(leg)
+	elif sector == "thalassa" and not orbital:
+		for side in [-1.0, 1.0]:
+			for fore in [-1.0, 1.0]:
+				var leg := FleetArt.model("tempest_leg", "ground")
+				leg.position = Vector3(side * 12.1, -0.75, -11.4 if fore > 0 else 10.5)
+				leg.scale = Vector3(side, 1, fore)
+				model.add_child(leg)
+				tempest_legs.append(leg)
 	if sector == "vespera" and not orbital:
 		for i in range(3):
 			var ring: Node3D = VesperaArt.core_ring()
@@ -60,6 +78,12 @@ func _ready() -> void:
 		drill = CryoArt.drill()
 		drill.position = Vector3(0, 8, 14)
 		model.add_child(drill)
+	if sector == "kharon" and not orbital:
+		for side in [-1.0, 1.0]:
+			var lens := FleetArt.model("solar_collector", "ground")
+			lens.position = Vector3(side * 11.3, 10, -11)
+			model.add_child(lens)
+			collectors.append(lens)
 	body = StaticBody3D.new()
 	body.collision_layer = 1
 	body.collision_mask = 0
@@ -87,6 +111,8 @@ func _ready() -> void:
 	for side in [-1.0, 1.0]:
 		var generator := BossPart.new()
 		generator.biological = sector == "xylo"
+		generator.armored_interlock = sector == "kharon" and not orbital and side > 0
+		generator.unlocked = not generator.armored_interlock
 		generator.position = Vector3(side * (10.0 if orbital else 11.0), 0, 34 if orbital else 13)
 		generator.maximum_armor = ceili((24 if orbital else 18) * health_scale)
 		generator.nacelle_radius = 4.3 if orbital else 4.6
@@ -132,6 +158,7 @@ func _ready() -> void:
 		cloak.attach(model)
 	for side in [-1.0, 1.0]:
 		var radar := BossRadar.new()
+		radar.biological = sector == "xylo"
 		radar.position = radar_mount(side)
 		var scan_height: float = collider.position.y + shape.size.y * 0.5 + 9
 		for part in parts:
@@ -174,19 +201,56 @@ func radar_interval_multiplier() -> float:
 
 func advance_visuals(delta: float) -> void:
 	visual_age += delta
+	for part in parts:
+		if part.armor * 3 >= part.maximum_armor:
+			continue
+		if not breaches.has(part):
+			_open_breach(part)
+		breaches[part].set_instance_shader_parameter(&"breach_time", visual_age)
 	for reactor in [parts[0], parts[1], core]:
 		reactor.animate_reactor(visual_age)
 	for i in range(core_rings.size()):
 		core_rings[i].rotation.y = visual_age * (0.32 if i % 2 == 0 else -0.23)
+	for i in range(collectors.size()):
+		collectors[i].rotation.y = visual_age * (0.8 if i == 0 else -0.8)
+		collectors[i].rotation.z = sin(visual_age * 0.42) * 0.16
 	for i in range(bio_legs.size()):
-		bio_legs[i].rotation.x = sin(visual_age * 2.4 + i * PI) * 0.18
+		var stride := sin(visual_age * 2.4 + i * PI) * 0.18
+		bio_legs[i].basis = Basis(Vector3.RIGHT, stride).scaled_local(Vector3(-1 if i == 0 else 1, 1, 1))
+	for i in range(tempest_legs.size()):
+		var stride := sin(visual_age * 1.7) * (1.0 if i == 0 or i == 3 else -1.0)
+		var mirror := Vector3(-1 if i < 2 else 1, 1, -1 if i % 2 == 0 else 1)
+		tempest_legs[i].basis = Basis(Vector3.RIGHT, stride * 0.09).scaled_local(mirror)
 	if cloak != null and death_time < 0:
+		if radars[0].destroyed and radars[1].destroyed:
+			cloak.reveal(delta + 0.1)
 		cloak.advance(delta)
 		_update_guidance()
 	if drill != null:
 		drill.rotation.z = fposmod(visual_age * 2.8, TAU)
 	for radar in radars:
 		radar.advance_scanner(visual_age)
+
+func _open_breach(part: BossPart) -> void:
+	if breach_mesh == null:
+		breach_material.shader = preload("res://shaders/boss_breach.gdshader")
+		breach_mesh = MultiMesh.new()
+		breach_mesh.transform_format = MultiMesh.TRANSFORM_3D
+		breach_mesh.use_custom_data = true
+		breach_mesh.mesh = QuadMesh.new()
+		breach_mesh.instance_count = 9
+		breach_mesh.custom_aabb = AABB(Vector3(-4, -8, -2), Vector3(8, 18, 11))
+		for i in range(9):
+			breach_mesh.set_instance_transform(i, Transform3D.IDENTITY)
+			breach_mesh.set_instance_custom_data(i, Color(i / 9.0, 0, 0, 1))
+	var plume := MultiMeshInstance3D.new()
+	plume.multimesh = breach_mesh
+	plume.material_override = breach_material
+	plume.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	plume.set_instance_shader_parameter(&"organic", part.biological)
+	model.add_child(plume)
+	plume.global_position = part.aim_point()
+	breaches[part] = plume
 
 func advance(delta: float, pilot: Vector3, velocity: Vector3) -> void:
 	var weapon_time: float = maxf(0.0, delta - stun_remaining)
@@ -199,6 +263,11 @@ func advance(delta: float, pilot: Vector3, velocity: Vector3) -> void:
 		position = anchor + Vector3(sin(age * 0.3) * 4.0, sin(age * 0.5) * 1.5, 0)
 	if death_time >= 0.0:
 		death_time += delta
+		var fall := clampf(death_time / 1.5, 0, 1)
+		model.rotation.z = wreck_direction * fall * fall * (0.55 if orbital else 0.30)
+		model.position.y = -fall * fall * (9.0 if sector == "thalassa" and not orbital else 4.5)
+		for i in range(parts.size()):
+			parts[i].transform = model.transform * mounted_at_failure[i]
 		if death_time >= 1.5:
 			model.hide()
 			for part in parts:
@@ -208,9 +277,22 @@ func advance(delta: float, pilot: Vector3, velocity: Vector3) -> void:
 	for part in parts:
 		if part != core:
 			part.unlocked = in_range
-	core.unlocked = in_range and parts[0].destroyed and parts[1].destroyed
+	if sector == "kharon" and not orbital:
+		parts[1].unlocked = in_range and parts[0].destroyed
+	if sector == "cryo" and not orbital and (parts[0].destroyed or parts[1].destroyed):
+		if vent_started:
+			vent_time += delta
+		vent_started = true
+	core.unlocked = in_range and _core_exposed()
+	if core.unlocked and not interlock_opened:
+		# The first overload trips the guns while the pilot transfers aim.
+		interlock_opened = true
+		for turret in turrets:
+			turret.cooldown = maxf(turret.cooldown, 1.65)
 	for turret in turrets:
 		turret.interval_multiplier = radar_interval_multiplier()
+		turret.lead_fraction = 1.0 - 0.4 * (int(radars[0].destroyed) + int(radars[1].destroyed))
+		turret.emergency_power = core.unlocked and core.armor * 3 <= core.maximum_armor
 		if weapon_time > 0:
 			turret.advance(weapon_time, pilot, velocity)
 		else:
@@ -236,22 +318,120 @@ func _update_guidance() -> void:
 		part.guided_lockable = cloak == null or not cloak.active()
 
 func defeated() -> bool:
-	return core != null and core.destroyed
+	if core == null:
+		return false
+	if sector == "thalassa" and not orbital and parts[0].destroyed and parts[1].destroyed:
+		return true
+	if sector == "kharon" and orbital and _lost(turrets) == turrets.size():
+		return true
+	return core.destroyed
+
+func _lost(bank: Array) -> int:
+	var count := 0
+	for part: BossPart in bank:
+		count += int(part.destroyed)
+	return count
+
+func _core_exposed() -> bool:
+	var both := parts[0].destroyed and parts[1].destroyed
+	var either := parts[0].destroyed or parts[1].destroyed
+	match sector:
+		"ignis":
+			return thermal_emitter.destroyed if orbital else both
+		"cryo":
+			return (both or (drone_bay.destroyed and either)) if orbital else vent_started and fmod(vent_time, 7.0) < 4.0
+		"vespera":
+			return _lost(radars) == 2
+		"xylo":
+			return _lost(turrets) >= 3 if orbital else both
+		"thalassa":
+			return orbital and either and _lost(turrets) >= 2
+		_:
+			return both
+
+# Smallest remaining workload among legal target routes. Optional armor never
+# pads out the HUD, and a magazine or ballast kill always empties the gauge.
+func _remaining(bank: Array, required: int) -> float:
+	var ratios: Array[float] = []
+	for part: BossPart in bank:
+		ratios.append(clampf(float(part.armor) / part.maximum_armor, 0, 1))
+	ratios.sort()
+	var amount := 0.0
+	for i in range(required):
+		amount += ratios[i]
+	return amount
+
+func health_fraction() -> float:
+	if defeated():
+		return 0.0
+	var cells := [parts[0], parts[1]]
+	var heart := float(core.armor) / core.maximum_armor
+	var standard := (_remaining(cells, 2) + heart) / 3.0
+	match sector:
+		"ignis":
+			return (_remaining([thermal_emitter], 1) + heart) * 0.5 if orbital else standard
+		"cryo":
+			if orbital:
+				return minf(standard, (_remaining([drone_bay], 1) + _remaining(cells, 1) + heart) / 3.0)
+			return (_remaining(cells, 1) + heart) * 0.5
+		"vespera":
+			return (_remaining(radars, 2) + heart) / 3.0
+		"xylo":
+			return (_remaining(turrets, 3) + heart) * 0.25 if orbital else standard
+		"thalassa":
+			return (_remaining(turrets, 2) + _remaining(cells, 1) + heart) * 0.25 if orbital else _remaining(cells, 2) * 0.5
+		_:
+			return minf(standard, _remaining(turrets, 6) / 6.0) if orbital else standard
+
+func recon_bounty() -> int:
+	return 75 if defeated() and _lost(radars) == 0 else 0
+
+func part_label(part: BossPart) -> String:
+	if part == core:
+		if sector == "thalassa" and not orbital:
+			return "ARMORED BRIDGE"
+		return ("HEART" if part.biological else "CORE") + (" / EXPOSED" if part.unlocked else " / SEALED")
+	if part is BossRadar:
+		return "SHIELD RELAY" if sector == "vespera" else "TRACKING RADAR"
+	if part is BossTurret:
+		return "SPORE SPITTER" if part.biological else "MAGAZINE" if sector == "kharon" and orbital else "LAUNCHER"
+	if part is ThermalEmitter:
+		return "THERMAL PROJECTOR"
+	if part is DroneBay:
+		return "DRONE BAY"
+	if sector == "kharon" and not orbital:
+		return "FIRST / LEFT RELAY" if part == parts[0] else "SECOND / RIGHT RELAY"
+	if sector == "thalassa" and not orbital:
+		return "BALLAST POD"
+	if sector == "cryo" and not orbital:
+		return "COOLANT POD"
+	return "SPORE ORGAN" if part.biological else "GENERATOR"
 
 func objective() -> String:
 	if pursuing and pursuit_range >= (260.0 if orbital else 230.0):
 		return "PURSUIT / CLOSING ON THE FLEEING CAPITAL SHIP"
+	if sector == "cryo" and not orbital and vent_started:
+		var clock := fmod(vent_time, 7.0)
+		return "VENT OPEN / HIT CORE / %ds" % ceili(4.0 - clock) if clock < 4.0 else "VENT SEALED / REOPENS IN %ds" % ceili(7.0 - clock)
 	if core.unlocked:
 		return "VITAL CORE EXPOSED / DESTROY THE CYAN ORGAN" if sector == "xylo" else "REACTOR EXPOSED / DESTROY THE CYAN CORE"
 	if stun_remaining > 0:
 		return "EMP / CAPITAL WEAPON SYSTEMS DISABLED"
-	if cloak != null and cloak.active():
-		return "NYX SHIMMER / MANUAL FIRE WORKS / EMP RESTORES GUIDED LOCKS"
-	if drone_bay != null and not drone_bay.destroyed:
-		return "DRONE BAY: OPTIONAL / AMBER GENERATORS: REQUIRED"
-	if sector == "xylo":
-		return "DISABLE SPORE SPITTERS / DESTROY BOTH AMBER ORGANS"
-	return "DISABLE MISSILE TURRETS / DESTROY BOTH AMBER GENERATORS"
+	match sector:
+		"ignis":
+			return "DESTROY THE THERMAL PROJECTOR" if orbital else "BREAK BOTH AMBER GENERATORS"
+		"cryo":
+			return "BREAK BOTH GENERATORS / OR ONE AND THE DRONE BAY" if orbital else "RUPTURE EITHER COOLANT POD TO OPEN THE VENT"
+		"vespera":
+			return "SHIMMER / MANUAL FIRE ON BOTH RADARS" if cloak != null and cloak.active() else "DISABLE SHIELD RADARS / %d OF 2" % _lost(radars)
+		"xylo":
+			return "SILENCE THREE SPORE SPITTERS / %d OF 3" % _lost(turrets) if orbital else "RUPTURE BOTH AMBER ORGANS"
+		"thalassa":
+			return "BREAK ONE GENERATOR AND TWO LAUNCHERS / %d OF 2" % mini(2, _lost(turrets)) if orbital else "RUPTURE BOTH BALLAST PODS TO SINK THE WALKER"
+		_:
+			if orbital:
+				return "GENERATORS THEN CORE / OR DETONATE ALL SIX MAGAZINES"
+			return "RIGHT RELAY EXPOSED / BREAK IT" if parts[0].destroyed else "BREAK THE LEFT RELAY FIRST"
 
 func configure_pursuit(entry: Transform3D, canyon_distance: float = 0.0, ground_origin: Transform3D = Transform3D.IDENTITY) -> void:
 	pursuing = true
@@ -281,6 +461,12 @@ func begin_destruction() -> void:
 	if death_time >= 0.0:
 		return
 	death_time = 0.0
+	var imbalance := 0.0
+	for part in parts:
+		mounted_at_failure.append(part.transform)
+		if part.destroyed:
+			imbalance += signf(part.position.x)
+	wreck_direction = -signf(imbalance) if imbalance != 0 else 1.0
 	if cloak != null:
 		cloak.restore()
 	body.collision_layer = 0

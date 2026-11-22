@@ -58,9 +58,10 @@ station music continues. Asteroid artwork now takes less time to generate.
   to the next playable phase, even across multiple autopilot maneuvers.
 
 - **Thalassa Reach / storm ocean:** animated waves, offshore platform settlements,
-  dockside cranes, marine defense pylons and manta interceptors. Amber side-lane
-  rings warn before lightning strikes; contact deals 18 shield-first damage once
-  per cycle without frost or damage over time. Stay near the clear center route.
+  dockside cranes, marine defense pylons and manta interceptors. An amber ring
+  marks the next strike. Watch for the branching leader and steer clear or
+  barrel roll through the discharge. A direct hit can destroy your ship, a manta
+  or a platform. A structure that intercepts the bolt can shelter a ship below it.
   Tempest Walker and Storm Ark are the ground/orbital bosses. The ocean-themed
   orbital escape retains mining, salvage and optional pirates.
 - **Kharon Dunes / desert ruins:** undulating dunes, broken arches, engraved
@@ -75,12 +76,10 @@ station music continues. Asteroid artwork now takes less time to generate.
   larger hitboxes, distinct supplied heavy cockpits and battleship silhouettes.
   They are actual purchasable player hulls, not hostile ships or scenery unlocks.
   Existing upgrades transfer on purchase; ejection loses the hull/equipment.
-- **Destructible boss radars:** every ground/orbital boss has two marine-style
-  rotating bar scanners on solid supports rooted in the hull. Six baseline hits
-  destroy one, with visible explosion/breakup. Each radar pays 30 CR once and
-  increases turret firing intervals by 25% (50% with both destroyed). They do not
-  grant a combat streak or unlock the core; both amber generators are still required.
-  Radar hit points scale with the tour just like other boss sections.
+- Each boss carries two rotating scanners. Six baseline hits destroy one and earn
+  30 CR. Every lost scanner reduces the launchers' ability to lead the ship and
+  increases firing intervals by 25%. On Vespera, the scanners also power reactor
+  shielding. Recover both scanners intact elsewhere for a 75 CR intelligence bounty.
 - **Closer boss view:** stable pursuit is 25% closer (82.5m ground, 112.5m orbit),
   with gentle 24-second left/right hull drift. Mouse aiming remains active;
   no forced oscillating camera is added.
@@ -293,10 +292,10 @@ Developer assistance remains marked for the entire operation, including later to
   kill and awards no credits or combat multiplier.
 - **Overlord Defense Core:** a mobile, layered ground fortress with three
   independently rotating machinery rings and visible missile batteries.
-  Destroy both amber generators before attacking its core.
+  Destroy both shield radars before attacking its core.
 - **Stealth Dreadnought Nyx:** an original swept-wing capital ship with a
-  scanning shimmer cloak. Its generators/core retain the normal protection rules;
-  cloaking does not grant invulnerability.
+  scanning shimmer cloak. Destroying both tracking radars permanently breaks the
+  cloak and exposes the core.
 - **Readable stealth:** Vespera's light fighters and Nyx remain visible and
   damageable by manually aimed weapons while cloaked. Swarm cannot acquire them;
   existing guided rockets fly straight until they can reacquire a revealed target.
@@ -317,8 +316,10 @@ Developer assistance remains marked for the entire operation, including later to
   large crystal spires, tracked gun vehicles, ice defense pylons and cold fighters.
 - **Two new bosses:** the Glacier Bore-Mech has a rotating drill and missile
   batteries. The Cryo-Carrier Hydra launches drones from a destroyable bay.
-  Destroying the bay stops reinforcements; both shield generators and the core
-  remain mandatory. EMP also temporarily disables drone deployment.
+  On the Bore-Mech, rupture either coolant pod and attack the core during its
+  four-second vent openings. On Hydra, destroy both generators or destroy the
+  drone bay and one generator, then attack the core. Losing the bay ends
+  reinforcements. EMP temporarily disables deployment.
 - **Frost hazards:** blue fissures warn for 1.5 seconds, erupt for two seconds
   and repeat every seven seconds. An eruption can deal 12 damage once.
   Successful frost hits, including frost-tagged missiles, reduce steering
@@ -518,8 +519,7 @@ Developer assistance remains marked for the entire operation, including later to
   not deflect this continuous beam.
 - External heat uses the same two-second overheat lock as primary fire.
   It cannot keep resetting an already-active vent cycle. Pause freezes warning,
-  eruption, and sweep timers. The projector is optional: the original
-  two-generator/core boss requirement is unchanged.
+  eruption, and sweep timers. Destroying the projector exposes the cruiser's reactor.
 
 ## Encounter objectives from v0.7.0
 
@@ -560,11 +560,9 @@ Developer assistance remains marked for the entire operation, including later to
   lights precede missiles. Destroy a turret to remove it and stop its fire.
 - **Removable boss sections:** destroying an amber generator now blows away its
   entire engine nacelle, with a larger fragment burst and cascading explosion.
-  Destroyed sections stay gone, leaving visible mounting sockets. The cyan core
-  remains shielded until both amber generators are destroyed.
-- Turrets are optional defensive targets, not another required boss shield.
-  The boss health bar tracks the mandatory generators/core. Pink brackets mark
-  missile turrets; amber marks the generators, and cyan marks the core.
+  Destroyed sections stay gone. Damaged sockets continue venting smoke or ichor.
+- The boss health bar tracks progress along the available victory routes.
+  Target labels identify the systems called out in the computer's briefing.
 
 ## Peripheral-field refinements from v0.6.1
 
@@ -651,8 +649,9 @@ Developer assistance remains marked for the entire operation, including later to
   pilot and gradually enter engagement range while the ship keeps moving.
 - Staged capital-ship destruction: cascading fireballs, an expanding shockwave,
   and larger spinning hull fragments.
-- Towers can be destroyed with several hits to their lower amber foundation.
-  Hits on upper armor do not count. A damaged tower topples and fragments.
+- The entire tower silhouette accepts shots. A foundation breach topples the
+  structure. A shaft hit breaks the upper body free, and a crown hit tears off
+  the head. Tight shot groups cut through faster. Towers also intercept hostile missiles.
 - Close dogfight encounters from different bearings, including behind the pilot.
   The flight computer smoothly acquires the next live fighter; red triangles
   appear on the center Flight Vector display, with a gold ring around its target.
@@ -668,8 +667,10 @@ Developer assistance remains marked for the entire operation, including later to
   when destroyed. The original training damage balance is unchanged.
 - A full Ignis loop: 90-second ground assault, Vulcan Siege Runner boss, 90-second
   orbital battle, Solar Flare Cruiser boss, and 60-second asteroid escape.
-- Bosses require both amber shield generators to be destroyed before the cyan
-  core is vulnerable. Boss fights are untimed and need no purchased weapon.
+- Boss fights are untimed and beatable with the starting primary weapon. Follow the
+  sector-specific briefing. For example, the Tempest Walker sinks when both
+  ballast pods rupture, and the Obelisk Sovereign can suffer a magazine chain
+  reaction if all six launchers are destroyed.
 - Astra Market provides ships, primary/shield upgrades, a concussion launcher,
   ammunition, live prices/benefits, and a one-planet completion result.
 - Campaign hull damage is lethal. Ejection returns the pilot to market.
@@ -688,7 +689,12 @@ Developer assistance remains marked for the entire operation, including later to
 
 ## Controls
 
-- Mouse: aim the reticle and steer within the expanded flight corridor.
+- Move the mouse to aim and steer. In orbital dogfights, moving the pointer well off center turns the ship onto a new heading. Center it to resume automatic pursuit.
+- Use **WASD** to move the ship independently of the reticle. Hold **F** to hold your line and traverse the guns. The thrusters still work while F is held.
+- Press **B** for a barrel roll toward the pointer. The roll avoids external hits for 0.92 seconds and shares a six-second capacitor with the Shift dash. A parasite already attached to the glass can still bite.
+- Press **V** to toggle the thermal governor. It breaks sustained fire into cooling bursts.
+- Press **X** to restore up to 23% of maximum shield in a campaign sortie. The surge adds 34 heat and recharges in 16 seconds. It requires enough thermal headroom.
+- Press **R** to cycle the tactical radar through 180, 360 and 720 meters. Press **I** during a boss encounter to hear the computer repeat its recon.
 - Hold left mouse: fire the equipped primary weapon.
 - Right mouse or Escape: pause and inspect status. Use Resume or Escape to return.
 - Space: fire the selected secondary station if its shared ordnance cost is available.
@@ -705,9 +711,9 @@ automatic sequences. During asteroid combat, the mouse remains fully active.
 Evasion can only be initiated during combat/training, not during autopilot
 transit. An already-active maneuver finishes smoothly across a phase transition.
 
-The briefing/pause menus offer three flight-response settings, reduced glow,
-audio mute, and camera motion. Disable **Camera motion** to remove the evasive
-bank and impact shake without changing dodge movement or deflection.
+The briefing and pause menus offer three flight-response settings, reduced effects,
+audio mute and camera motion. Reduced effects dampen the roll animation and
+interior light flashes. Turning off camera motion also dampens the roll and removes impact shake.
 Settings persist locally. Losing focus pauses the
 game; it does not resume automatically.
 
@@ -721,8 +727,8 @@ missile is launched rather than maintaining a straight intercept course.
   flight, boss/progress bar, and missile warnings.
 - Left angled MFD: shield, hull, impact status, and Shift recharge/readiness.
 - Right angled MFD: weapon damage, missile ammunition, credits, speed, and FPS.
-- Center MFD: live corridor position plus all-direction dogfight radar.
-  Red triangles are hostile fighters; the gold ring marks the computer's target.
+- The center MFD plots contacts on a forward-up scope around your ship. Red triangles mark threats, circled red triangles mark missiles, amber squares mark objectives, green crosses mark salvage and dots mark obstacles. A white ring marks the tracked target. A short vertical stroke indicates a contact significantly above or below you.
+- A closing missile or predicted collision with an egg or rock gives a time-to-impact warning. The escape arrow points away from the obstacle. The winged white pip shows lateral motion, and the amber lead pip predicts a Quad Plasma intercept on a moving fighter.
 - Left five-slot gauges: shield charge. Right five-slot gauges: weapon heat.
   Overheat locks only the primary; secondary missiles remain available.
 - Live HUD: current combat multiplier and score. Blue target brackets indicate

@@ -80,7 +80,7 @@ func attach_ground(ground: Node3D, horizon: Node3D = null) -> void:
 		assert(original is StandardMaterial3D or original is ShaderMaterial)
 		if not copies.has(original):
 			var material: ShaderMaterial
-			if original == FleetArt.hull_material:
+			if original == FleetArt.hull_material or original == GroundArt.foliage_material:
 				material = ShaderMaterial.new()
 				material.shader = GROUND_SHADER
 				material.set_shader_parameter("use_vertex_color", true)
@@ -89,6 +89,8 @@ func attach_ground(ground: Node3D, horizon: Node3D = null) -> void:
 				material.shader = GROUND_SHADER
 				material.set_shader_parameter("use_swatch", true)
 				material.set_shader_parameter("swatch", original.get_shader_parameter("swatch"))
+				material.set_shader_parameter("deposits_map", original.get_shader_parameter("deposits_map"))
+				material.set_shader_parameter("surface_id", original.get_shader_parameter("surface_id"))
 			elif original is StandardMaterial3D:
 				assert(original.shading_mode == BaseMaterial3D.SHADING_MODE_UNSHADED)
 				material = ShaderMaterial.new()
@@ -97,7 +99,7 @@ func attach_ground(ground: Node3D, horizon: Node3D = null) -> void:
 				material.set_shader_parameter("use_vertex_color", original.vertex_color_use_as_albedo)
 			else:
 				material = original.duplicate() as ShaderMaterial
-				if original.shader == FrontierArt.WATER:
+				if original.shader in [FrontierArt.WATER, FrontierArt.WATER_REFLECTION]:
 					material.shader = FrontierArt.WATER_ARRIVAL
 				material.render_priority = 1
 			material.set_shader_parameter("effect_opacity", 0.0)
@@ -110,7 +112,7 @@ func attach_ground(ground: Node3D, horizon: Node3D = null) -> void:
 			copies[original] = material
 		var mesh: Mesh = geometry.mesh if geometry is MeshInstance3D else null
 		ground_sources.append({"node": geometry, "material": original, "mesh": mesh, "margin": geometry.extra_cull_margin})
-		if horizon != null and horizon.is_ancestor_of(geometry) and (original is StandardMaterial3D or (original is ShaderMaterial and original.shader == FrontierArt.WATER)):
+		if horizon != null and horizon.is_ancestor_of(geometry) and (original is StandardMaterial3D or (original is ShaderMaterial and original.shader in [FrontierArt.WATER, FrontierArt.WATER_REFLECTION])):
 			geometry.mesh = _subdivided_horizon(mesh)
 		geometry.extra_cull_margin += PLANET_RADIUS
 		geometry.material_override = copies[original]

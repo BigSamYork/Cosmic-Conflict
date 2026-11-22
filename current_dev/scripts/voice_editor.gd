@@ -1,10 +1,10 @@
 class_name VoiceEditor
 extends Control
 
-const WHITE := FlightHUD.WHITE
+const WHITE := Color("#e5f2f2")
 const MUTED := Color("#a0b3c5")
-const CYAN := FlightHUD.CYAN
-const AMBER := FlightHUD.AMBER
+const CYAN := Color("#70e2e7")
+const AMBER := Color("#ffa65c")
 const BACKGROUND := Color("#0b1220")
 const SURFACE := Color("#131f30")
 

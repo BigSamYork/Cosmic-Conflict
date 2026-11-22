@@ -30,6 +30,7 @@ func verify_document() -> void:
 	var document := VoiceDocument.new()
 	check(document.open_file(path).is_empty() and not document.has_changes(), "Opening a catalog does not manufacture unsaved changes")
 	var metadata: Dictionary = document.data["sections"][0]["lines"][0].duplicate(true)
+	var sections: int = document.data["sections"].size()
 	var text: String = "Pilot says \"hello\".\nBackslash: \\ and caf\u00e9."
 	document.data["sections"][0]["lines"][0]["text"] = text
 	document.data["sections"][0]["lines"][0]["chance_percent"] = 37
@@ -41,7 +42,7 @@ func verify_document() -> void:
 	check(loaded.open_file(path).is_empty(), "A saved editor document is accepted by the game's shared validator")
 	var line: Dictionary = loaded.data["sections"][0]["lines"][0]
 	check(line["text"] == text and line["chance_percent"] == 37 and line["cooldown_seconds"] == 90.5, "Unicode, quotes, newlines and both frequency settings round-trip exactly")
-	check(line["id"] == metadata["id"] and line["event"] == metadata["event"] and line["added"] == metadata["added"] and loaded.data["sections"].size() == 8, "Saving preserves event IDs, category metadata and the rest of the catalog")
+	check(line["id"] == metadata["id"] and line["event"] == metadata["event"] and line["added"] == metadata["added"] and loaded.data["sections"].size() == sections, "Saving preserves event IDs, category metadata and the rest of the catalog")
 	var external: String = FileAccess.get_file_as_string(path) + "\n"
 	VoiceCatalog.write_text(path, external)
 	document.data["sections"][0]["lines"][0]["text"] = "Unsaved local edit."
@@ -88,7 +89,10 @@ func verify_editor() -> void:
 	editor.preview_cache_directory = fixture.path_join("cache")
 	root.add_child(editor)
 	await process_frame
-	check(editor.sayings.item_count == 83 and editor.words.editable, "The desktop editor opens all sayings and selects an editable line")
+	var expected := 0
+	for section in editor.document.data["sections"]:
+		expected += section["lines"].size()
+	check(editor.sayings.item_count == expected and editor.words.editable, "The desktop editor opens all sayings and selects an editable line")
 	editor.categories.select(8)
 	editor.categories.item_selected.emit(8)
 	check(editor.sayings.item_count == 12, "Category selection filters the library to its twelve route sayings")
