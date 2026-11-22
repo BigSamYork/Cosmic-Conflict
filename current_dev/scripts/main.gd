@@ -6,6 +6,10 @@ var named_games_origin: Mode
 var flight := FlightState.new()
 var mode: Mode = Mode.TITLE
 var camera: Camera3D
+const SKY_LIGHT := [Vector3(0.53, 0.26, 0.50), Vector3(1.04, 0.69, 0.43), Vector3.ONE, Vector3(0.035, 0.055, 0.10)]
+var headlamp := SpotLight3D.new()
+var weapon_lamp := SpotLight3D.new()
+var credit_hoops := preload("res://scripts/credit_hoops.gd").new()
 var combat_lights := CombatLighting.new()
 var surface_weather := SurfaceWeather.new()
 var surface_flight := false
@@ -156,7 +160,7 @@ var plasma_bolts: Array[PlasmaBolt] = []
 var tachyon_beam: TachyonBeam
 var cursor := Vector2(960, 540)
 var fire_armed: bool = false
-var settings: Dictionary = {"reduced_effects": false, "mute": false, "shake": true, "response": 1, "voice_volume": 70, "music_volume": AmbientMusic.DEFAULT_VOLUME}
+var settings: Dictionary = {"reduced_effects": false, "mute": false, "shake": true, "target_ranges": false, "response": 1, "voice_volume": 70, "music_volume": AmbientMusic.DEFAULT_VOLUME}
 var telemetry: Array[float] = []
 var last_frame_usec: int = 0
 var profile_frames: bool = false
@@ -317,12 +321,23 @@ func _build_environment() -> void:
 	world_environment.environment = environment
 	add_child(world_environment)
 	add_child(combat_lights)
+	add_child(credit_hoops)
 	camera = Camera3D.new()
 	camera.fov = 78.0
 	camera.near = 0.15
 	camera.far = VectorArt.VIEW_DISTANCE
 	add_child(camera)
 	camera.add_child(surface_weather)
+	for lamp: SpotLight3D in [headlamp, weapon_lamp]:
+		camera.add_child(lamp)
+		lamp.spot_range = 155
+		lamp.spot_attenuation = 0.45
+		lamp.spot_angle = 33
+		lamp.shadow_enabled = false
+		lamp.light_color = Color("#e4f4ff")
+	headlamp.light_energy = 3.5
+	headlamp.hide()
+	weapon_lamp.light_energy = 0
 	camera.make_current()
 	_build_cockpit()
 
@@ -586,6 +601,7 @@ func start_flight() -> void:
 	computer_voice.stop_speech(true)
 	computer_voice.pause_speech(false)
 	is_campaign = false
+	_apply_sector_light()
 	god_mode = false
 	zero_heat = false
 	infinite_ammo = false
@@ -620,6 +636,7 @@ func start_flight() -> void:
 	_set_ground_environment(true)
 
 func show_title() -> void:
+	credit_hoops.clear()
 	surface_flight = false
 	surface_weather.configure("ignis", false, settings["reduced_effects"])
 	_clear_parasites()
@@ -634,6 +651,7 @@ func show_title() -> void:
 	launch_prepared = false
 	camera.far = VectorArt.VIEW_DISTANCE
 	is_campaign = false
+	_apply_sector_light()
 	god_mode = false
 	zero_heat = false
 	infinite_ammo = false
@@ -796,7 +814,7 @@ func _physics_process(delta: float) -> void:
 		campaign.stats["shots"] += shots
 		if ground_branch != null and campaign.phase == "ground":
 			if ground_branch.route.advance(flight.distance, flight.offset.x):
-				hud.show_message("HAZARD ROUTE SELECTED / SUPPLIES AND +100 CR AT REJOIN" if ground_branch.route.selected else "SAFE ROUTE SELECTED")
+				hud.show_message("HAZARD ROUTE SELECTED / SUPPLIES AT REJOIN" if ground_branch.route.selected else "SAFE ROUTE SELECTED")
 				_voice_route(ground_branch.route.selected)
 		if mission_world != null:
 			mission_world.advance(delta, director.frame)
@@ -830,6 +848,11 @@ func _physics_process(delta: float) -> void:
 			_voice_event("nyx_cloak")
 		voice_nyx_cloaked = cloaked
 	_check_obstacles(previous, camera.position, canyon_contact)
+	if is_campaign:
+		var collected := credit_hoops.advance(delta, to_global(previous), camera.global_position, campaign, flight, director)
+		if collected > 0:
+			hud.show_message("CREDIT HOOP / +%d CR" % collected)
+			sound.play_sound(sound.hit)
 	_advance_missiles(delta, previous, camera.position)
 	if is_campaign and flight.hull <= 0.0:
 		flight.shots -= shots
@@ -1031,6 +1054,10 @@ func _apply_frost() -> void:
 			_voice_event("frost_hit")
 
 func fire_primary() -> void:
+	if is_campaign and campaign.sky_quarter == 3:
+		weapon_lamp.look_at(camera.global_position + camera.project_ray_normal(cursor), camera.global_basis.y)
+		weapon_lamp.light_color = Color("#8fdcff") if flight.primary_level < 2 else Color("#ffce82")
+		weapon_lamp.light_energy = 2.5 if settings["reduced_effects"] else 5.0
 	if flight.primary_level == 2:
 		_trace_tachyon(true)
 		sound.play_sound(sound.pulse)
@@ -1219,7 +1246,6 @@ func _strike(result: Dictionary, damage: int, secondary_hit: bool = false, recor
 					_resolve_asteroid(collider, false)
 				elif collider is EggShip:
 					campaign.stats["eggs"] += 1
-					campaign.reward(8)
 					if collider.infested:
 						var hatchling := CanopyParasite.new()
 						hatchling.launch(camera, at, -0.13 if parasites.size() % 2 == 0 else 0.19, settings["reduced_effects"])
@@ -1229,8 +1255,7 @@ func _strike(result: Dictionary, damage: int, secondary_hit: bool = false, recor
 						_spawn_mineral(collider.global_position, true)
 				elif collider is WebNode:
 					campaign.stats["webs"] += 1
-					campaign.reward(15)
-					hud.show_message("LASER WEB DISARMED / +15 CR")
+					hud.show_message("LASER WEB DISARMED")
 				elif collider is RadarDish:
 					campaign.stats["radars"] += 1
 					var jammed: int = 0
@@ -1238,25 +1263,21 @@ func _strike(result: Dictionary, damage: int, secondary_hit: bool = false, recor
 						if not turret.destroyed and turret.travel >= collider.travel and turret.travel <= collider.travel + RadarDish.JAM_RANGE:
 							turret.jam_tracking(RadarDish.JAM_DURATION)
 							jammed += 1
-					campaign.reward(60)
-					hud.show_message("RADAR DESTROYED / %d DOWNSTREAM TURRETS JAMMED FOR 12s / +60 CR" % jammed)
+					hud.show_message("RADAR DESTROYED / %d DOWNSTREAM TURRETS JAMMED FOR 12s" % jammed)
 				elif collider is PirateSkirmisher:
 					campaign.stats["guardians" if collider.biological else "pirates"] += 1
 					campaign.stats["enemies"] += 1
-					var previous_credits: int = campaign.credits
 					_award_combat_kill(PirateSkirmisher.BOUNTY)
-					hud.show_message(("%s BOUNTY COLLECTED / +%d CR") % ["GUARDIAN" if collider.biological else "PIRATE", campaign.credits - previous_credits])
+					hud.show_message("GUARDIAN DISABLED" if collider.biological else "PIRATE DISABLED")
 				elif collider is BossPart:
 					if boss != null and collider.get_parent() == boss and boss.defeated() and boss.death_time < 0:
 						_award_combat_kill(120)
 						var bounty: int = boss.recon_bounty()
 						if bounty > 0:
-							campaign.reward(bounty)
-							hud.show_message("INTACT TRACKING DATA / +%d CR" % bounty)
+							hud.show_message("INTACT TRACKING DATA RECOVERED")
 						campaign.stats["bosses"] += 1
 						_start_boss_destruction()
 					elif boss == null or boss.death_time < 0:
-						campaign.reward(30)
 						if collider is BossRadar:
 							campaign.stats["radars"] += 1
 						var explosion := DestructionEffect.new()
@@ -1265,7 +1286,7 @@ func _strike(result: Dictionary, damage: int, secondary_hit: bool = false, recor
 						explosion.size = 4.0 if collider is BossTurret or collider is ThermalEmitter else 6.0
 						add_child(explosion)
 						explosions.append(explosion)
-						hud.show_message("BOSS RADAR DESTROYED / TURRET INTERVAL +25% / +30 CR" if collider is BossRadar else (boss.part_label(collider) + " DESTROYED" if boss != null else "SECTION DESTROYED"))
+						hud.show_message("BOSS RADAR DESTROYED / TURRET INTERVAL +25%" if collider is BossRadar else (boss.part_label(collider) + " DESTROYED" if boss != null else "SECTION DESTROYED"))
 				else:
 					campaign.stats["enemies"] += 1
 					_award_combat_kill(25 if collider is GroundTurret else 35 if collider is EnemyFighter and collider.has_directional_shield() else 20)
@@ -1343,7 +1364,6 @@ func _resolve_asteroid(rock: Asteroid, from_blast: bool) -> void:
 		return
 	_spawn_rock_fragments(rock)
 	campaign.stats["asteroids"] += 1
-	campaign.reward(8)
 	if from_blast:
 		campaign.stats["chain_rocks"] += 1
 	if rock.mineral:
@@ -1399,7 +1419,7 @@ func _advance_salvage(delta: float, previous_pilot: Vector3, pilot: Vector3) -> 
 		if pickup.advance(delta, previous_pilot, pilot, is_campaign and campaign.tractor):
 			if is_campaign:
 				campaign.collect_mineral()
-				hud.show_message("MINERAL CORE RECOVERED / +%d CR" % MineralPickup.VALUE)
+				hud.show_message("MINERAL CORE RECOVERED")
 				sound.play_sound(sound.pulse)
 		if not pickup.active:
 			pickup.queue_free()
@@ -1999,7 +2019,7 @@ func _update_contacts() -> void:
 			stealth_seen = stealth_seen or distance < 160
 		var label: String = "SHIMMER" if not target.guided_lockable and target is EnemyFighter and distance < 160 else ("EMITTER" if distance < 160 else "") if target is GateEmitter else "DRONE BAY / STOP REINFORCEMENTS" if target is DroneBay else "THERMAL PROJECTOR" if target is ThermalEmitter else "RADAR / JAM TRACKING" if target is RadarDish else "WEB NODE" if target is WebNode else ""
 		if target is PirateSkirmisher:
-			label = ("GUARDIAN" if target.biological else "PIRATE") + (" / RETURNING FIRE" if target.engaged else " / OPTIONAL / 80 CR BASE")
+			label = ("GUARDIAN" if target.biological else "PIRATE") + (" / RETURNING FIRE" if target.engaged else " / OPTIONAL")
 		elif target is BossRadar:
 			label = "RADAR"
 		elif target is FallingIce:
@@ -2045,6 +2065,7 @@ func _update_contacts() -> void:
 				hud.incoming.append(camera.unproject_position(missile.position))
 
 func _process(delta: float) -> void:
+	weapon_lamp.light_energy *= exp(-delta * (5.0 if settings["reduced_effects"] else 11.0))
 	var now: int = Time.get_ticks_usec()
 	var frame_ms: float = float(now - last_frame_usec) / 1000.0 if last_frame_usec > 0 else 0.0
 	last_frame_usec = now
@@ -2126,6 +2147,7 @@ func _change_setting(key: String, value: Variant) -> void:
 		hud.show_message("SETTINGS COULD NOT BE SAVED.")
 
 func _apply_settings() -> void:
+	hud.show_target_ranges = settings["target_ranges"]
 	flight.response = FlightState.RESPONSE_RATES[int(settings["response"])]
 	if is_campaign and campaign != null and not campaign.ship.is_empty():
 		flight.response *= float(CampaignState.SHIPS[campaign.ship]["response"])
@@ -2155,6 +2177,8 @@ func _apply_settings() -> void:
 			music.set_level(int(settings["music_volume"]), bool(settings["mute"]) or automated_session or not automation.is_empty())
 
 func _clear_stage() -> void:
+	credit_hoops.clear()
+	weapon_lamp.light_energy = 0
 	_end_ship_loss()
 	surface_flight = false
 	surface_weather.hide()
@@ -2331,7 +2355,15 @@ func _advance_ocean(delta: float) -> void:
 			if material.shader == FrontierArt.WATER_ARRIVAL:
 				material.set_shader_parameter("wave_time", ocean_age)
 
+func _apply_sector_light() -> void:
+	var active := is_campaign and campaign != null and campaign.phase != "market"
+	var tint: Vector3 = SKY_LIGHT[campaign.sky_quarter] if active else Vector3.ONE
+	RenderingServer.global_shader_parameter_set("sector_ambient", tint)
+	get_world_3d().environment.sky.sky_material.set_shader_parameter("sun_height", [-0.015, 0.08, 0.25, -0.55][campaign.sky_quarter] if active else 0.25)
+	headlamp.visible = active and campaign.headlight
+
 func _set_ground_environment(ground: bool, update_sky: bool = true) -> void:
+	_apply_sector_light()
 	surface_flight = ground
 	surface_weather.configure(campaign.sector if is_campaign and campaign != null else "ignis", ground, settings["reduced_effects"])
 	var icy: bool = is_campaign and campaign != null and campaign.sector == "cryo"
@@ -2349,7 +2381,9 @@ func _set_ground_environment(ground: bool, update_sky: bool = true) -> void:
 
 func _sector_fog() -> Color:
 	var sector: String = campaign.sector if is_campaign and campaign != null else "ignis"
-	return {"ignis": Color("#1b1022"), "cryo": Color("#19384d"), "vespera": Color("#21102f"), "xylo": Color("#102b1c"), "thalassa": Color("#132f43"), "kharon": Color("#614329")}[sector]
+	var fog: Color = {"ignis": Color("#1b1022"), "cryo": Color("#19384d"), "vespera": Color("#21102f"), "xylo": Color("#102b1c"), "thalassa": Color("#132f43"), "kharon": Color("#614329")}[sector]
+	var tint: Vector3 = SKY_LIGHT[campaign.sky_quarter] if is_campaign and campaign != null and campaign.phase != "market" else Vector3.ONE
+	return fog * Color(tint.x, tint.y, tint.z)
 
 func _set_sky_mix(value: float, city_value: float = 0.0, swamp_value: float = 0.0, ocean_value: float = 0.0, desert_value: float = 0.0) -> void:
 	sky_icy_mix = value
@@ -2409,6 +2443,7 @@ func _new_campaign(destination: String = "ignis") -> void:
 	store = CampaignStore.new(normal_save_path)
 	var next := CampaignState.new()
 	next.sector = destination
+	next.select_sky(Time.get_time_dict_from_system().second)
 	next.phase = "launch"
 	next.assisted = not automation.is_empty()
 	if not automation.is_empty():
@@ -2422,10 +2457,7 @@ func _new_campaign(destination: String = "ignis") -> void:
 			next.replays_unlocked = true
 			next.stats["sorties"] = (automation_tour - 1) * SectorCatalog.AVAILABLE.size()
 			next.tour_start = next.totals()
-	if _save_campaign(next, _new_campaign.bind(destination)):
-		is_campaign = true
-		god_mode = false
-		_load_phase()
+	_launch_selected(next, false)
 
 func _continue_campaign() -> void:
 	computer_voice.stop_speech(true)
@@ -2552,6 +2584,7 @@ func _load_phase() -> void:
 	_enter_phase(false)
 
 func _enter_phase(continuous: bool) -> void:
+	credit_hoops.clear()
 	if campaign.phase == "launch":
 		_prepare_launch()
 		return
@@ -2672,6 +2705,8 @@ func _enter_phase(continuous: bool) -> void:
 	computer_voice.pause_speech(false)
 	if campaign.phase.ends_with("_boss"):
 		_voice_event("recon_" + campaign.sector + ("_orbit" if boss.orbital else "_ground"))
+	elif campaign.phase == "ground" and not continuous and automation.is_empty() and not automated_session:
+		computer_voice.say_arrival(campaign.sky_quarter, campaign.headlight)
 	elif campaign.phase == "ground" and campaign.sector in ["ignis", "vespera", "xylo"]:
 		_voice_event(campaign.sector + "_arrival")
 	elif campaign.phase == "asteroids" and campaign.sector == "xylo":
@@ -2702,6 +2737,9 @@ func _finish_phase() -> void:
 		"asteroids": _begin_sequence("belt_exit")
 
 func _begin_sequence(kind: String) -> void:
+	credit_hoops.clear()
+	if kind == "planet_descent" and automation.is_empty() and not automated_session:
+		computer_voice.say_arrival(campaign.sky_quarter, campaign.headlight)
 	_disarm_primary()
 	sequence = kind
 	sequence_time = 0.0
@@ -3054,6 +3092,7 @@ func _complete_docking() -> void:
 	_voice_event("docking")
 
 func _eject() -> void:
+	credit_hoops.clear()
 	if ship_loss != null or campaign.ship.is_empty():
 		return
 	_clear_parasites()
@@ -3229,8 +3268,17 @@ func _depart_market(destination: String) -> void:
 	if not error.is_empty():
 		_show_market(error)
 		return
-	if _save_campaign(next, _depart_market.bind(destination)):
+	_launch_selected(next, true)
+
+func _launch_selected(next: CampaignState, from_market: bool) -> void:
+	if not _save_campaign(next, _launch_selected.bind(next, from_market)):
+		return
+	if from_market:
 		_prepare_launch(true)
+	else:
+		is_campaign = true
+		god_mode = false
+		_load_phase()
 
 func _toggle_debug() -> void:
 	if mode == Mode.DEBUG:
@@ -3256,7 +3304,7 @@ func _debug_action(action: String) -> void:
 		else:
 			show_title()
 		return
-	var known: bool = action in ["credits", "credits_large", "reset_credits", "refill", "max", "god", "zero_heat", "infinite_ammo", "one_hit", "kill_boss", "rook", "hawk"]
+	var known: bool = action in ["reset_credits", "refill", "max", "god", "zero_heat", "infinite_ammo", "one_hit", "kill_boss", "rook", "hawk"]
 	var sector_warp: bool = action.begins_with("sector:") and SectorCatalog.AVAILABLE.has(action.trim_prefix("sector:"))
 	if not known and not sector_warp and not (action.begins_with("phase:") and CampaignState.PHASES.has(action.trim_prefix("phase:"))):
 		hud.show_message("UNKNOWN DEVELOPER ACTION")
@@ -3283,11 +3331,7 @@ func _debug_action(action: String) -> void:
 	if action in ["rook", "hawk"]:
 		next.ship = action
 		next.ammo = mini(next.ammo, int(CampaignState.SHIPS[next.ship]["ammo"]))
-	if action == "credits":
-		next.reward(1000)
-	elif action == "credits_large":
-		next.reward(10000)
-	elif action == "reset_credits":
+	if action == "reset_credits":
 		next.credits = 0
 	elif action in ["max", "refill"]:
 		next.secondary = true
@@ -3656,7 +3700,7 @@ func _run_branch_benchmark() -> void:
 				capture_marks[mark] = true
 				_capture(mark + ".png")
 	elif mode == Mode.FLIGHT and campaign.phase == "ground_boss":
-		_check(ground_branch.route.selected == automation_hazard and ground_branch.route.rewarded == automation_hazard, "The ground benchmark follows the requested safe/hazard route and reward policy")
+		_check(ground_branch.route.selected == automation_hazard and ground_branch.route.completed == automation_hazard, "The ground benchmark follows the requested safe/hazard route through rejoin")
 		var collected: int = 0
 		for supply in ground_branch.supplies:
 			if not supply.active:
@@ -3719,7 +3763,7 @@ func _run_belt_automation() -> void:
 		_check(campaign.last_result == "completed" and is_equal_approx(flight.elapsed, 60.0), "Dense asteroid field lasts 60 active seconds and docks normally")
 		_check(sequence_log.has("belt_climb") and mission_world != null and world == mission_world, "Belt pull-up retains the asteroid world all the way into docking")
 		if automation == "--mining-test":
-			_check(campaign.stats["minerals"] > 0 and campaign.mineral_credits > 0, "Visible mineral cores are mined and collected during real flight")
+			_check(campaign.stats["minerals"] > 0, "Visible mineral cores are mined and collected during real flight")
 			if campaign.sector == "xylo":
 				_check(campaign.stats["eggs"] > 0 and rock_fragments.is_empty(), "Biological cargo comes from egg ships without spawning asteroid fragments")
 			else:
@@ -3825,7 +3869,7 @@ func _run_mission_automation() -> void:
 		_new_campaign(automation_sector)
 	if mode == Mode.FLIGHT:
 		_automated_aim()
-		if ground_branch != null and campaign.phase == "ground" and ground_branch.route.rewarded:
+		if ground_branch != null and campaign.phase == "ground" and ground_branch.route.completed:
 			capture_marks["route-completed"] = true
 		if is_campaign and flight.elapsed > 12.0 and not capture_marks.has(campaign.phase):
 			capture_marks[campaign.phase] = true
@@ -3853,10 +3897,10 @@ func _run_mission_automation() -> void:
 		_check(campaign.primary_level == automation_primary and campaign.stats["hits"] <= campaign.stats["shots"], "The full mission retains its requested primary and valid accuracy accounting")
 		_check(capture_marks.has("route-completed") == automation_hazard, "The full mission follows its requested safe/hazard route")
 		_check(campaign.stats["bosses"] == 2, "Both mandatory bosses defeated")
-		_check(campaign.best_streak >= 10 and campaign.combo_bonus_credits > 0 and campaign.combat_score > 0, "Live combat earns the 4x streak tier and persistent score")
+		_check(campaign.best_streak >= 10 and campaign.combat_score > 0, "Live combat earns the 4x streak tier and persistent score")
 		_check(flight.evasions > 0, "Automatic test pilot uses the player's Shift maneuver")
 		_check(campaign.stats["radars"] > 0 and campaign.stats["webs"] > 0 and campaign.stats["guardians" if campaign.sector == "xylo" else "pirates"] > 0, "Full mission completes radar suppression, tripwire disarm, and its optional guardian/pirate bounty")
-		_check(campaign.debrief["accuracy"] > 0 and campaign.debrief["completion"] == 350, "Docking pays the displayed accuracy and completion bonuses")
+		_check(campaign.debrief["shots"] > 0 and campaign.debrief["completion"] == 0 and campaign.cleared_sectors.has(campaign.sector), "Docking records marksmanship and sector completion without a cash bonus")
 		print("MISSION_OBJECTIVES radars=%d webs=%d pirates=%d debrief=%s" % [campaign.stats["radars"], campaign.stats["webs"], campaign.stats["pirates"], JSON.stringify(campaign.debrief)])
 		print("MISSION_TACTICS evasions=%d deflections=%d best_streak=%d combo_bonus=%d score=%d shield_blocks=%d" % [flight.evasions, flight.deflections, campaign.best_streak, campaign.combo_bonus_credits, campaign.combat_score, blocked_primary_hits])
 		_check(docked and station.to_local(camera.global_position).z < 0.0, "Market opens only after entering the station hangar")
@@ -4059,4 +4103,5 @@ func _finish_automation() -> void:
 	get_tree().quit(automation_failures)
 
 func _exit_tree() -> void:
+	RenderingServer.global_shader_parameter_set("sector_ambient", Vector3.ONE)
 	_set_pointer(false)

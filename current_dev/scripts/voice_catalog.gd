@@ -39,6 +39,14 @@ func read_catalog(path: String, rules: Dictionary) -> String:
 	var error: String = validate_data(parser.data, rules)
 	if not error.is_empty():
 		return error + " File: " + path
+	if path == USER_PATH:
+		for line in lines:
+			if line.id == "streaks_03" and line.text == "Ten-kill streak! Four-times credit multiplier! Please survive long enough to spend them.":
+				var bundled: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(DEFAULT_PATH))
+				for section in bundled.sections:
+					for cue in section.lines:
+						if cue.id == line.id:
+							line.text = cue.text
 	data = parser.data
 	return ""
 

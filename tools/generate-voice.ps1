@@ -1,15 +1,16 @@
 param(
     [string]$OutputDirectory,
     [switch]$Opening,
+    [switch]$Arrival,
     [switch]$Overwrite
 )
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $root = Split-Path $PSScriptRoot -Parent
 $voiceDirectory = Join-Path $root 'current_dev\assets\voice'
-$catalog = if ($Opening) { 'opening.json' } else { 'lines.json' }
+$catalog = if ($Arrival) { 'arrival.json' } elseif ($Opening) { 'opening.json' } else { 'lines.json' }
 if (-not $OutputDirectory) {
-    $OutputDirectory = if ($Opening) { Join-Path $root 'current_dev\assets\opening' } else { $voiceDirectory }
+    $OutputDirectory = if ($Arrival) { Join-Path $root 'current_dev\assets\arrival' } elseif ($Opening) { Join-Path $root 'current_dev\assets\opening' } else { $voiceDirectory }
 }
 $python = $env:COSMIC_TTS_PYTHON
 if (-not $python) { $python = Join-Path $root '.tools\chatterbox\Scripts\python.exe' }

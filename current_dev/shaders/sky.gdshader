@@ -1,5 +1,7 @@
 shader_type sky;
+global uniform vec3 sector_ambient;
 #include "palette.gdshaderinc"
+uniform float sun_height = 0.25;
 uniform float icy_mix : hint_range(0.0, 1.0) = 0.0;
 uniform float city_mix : hint_range(0.0, 1.0) = 0.0;
 uniform float swamp_mix : hint_range(0.0, 1.0) = 0.0;
@@ -33,7 +35,7 @@ vec3 ring_color(vec3 color, vec2 p, float body, vec3 tint, float strength) {
 }
 
 vec3 solar_disc(vec3 background, vec3 ray) {
-	vec3 axis = normalize(vec3(-0.44, 0.25, -1.0));
+	vec3 axis = normalize(vec3(-0.44, sun_height, -1.0));
 	if (dot(ray, axis) < 0.98) {
 		return background;
 	}
@@ -115,5 +117,5 @@ void sky() {
 	float sheet = exp(-separation * 13.0) * (0.17 + 0.53 * air.r + 0.30 * cloud);
 	COLOR += vec3(0.28, 0.34, 0.53) * sheet * storm_glow * atmosphere_mix * ocean_mix;
 	COLOR = lunar_disc(COLOR, EYEDIR);
-	COLOR = palette_to_output(COLOR);
+	COLOR = palette_to_output(COLOR * sector_ambient);
 }

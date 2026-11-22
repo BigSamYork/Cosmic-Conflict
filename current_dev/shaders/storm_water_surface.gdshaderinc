@@ -48,6 +48,7 @@ void vertex() {
 	VERTEX = arrival_local_position(VERTEX, MODEL_MATRIX);
 }
 
+global uniform vec3 sector_ambient;
 void fragment() {
 	vec2 p = water_position;
 	vec2 drift = vec2(0.48, 0.23) * wave_time;
@@ -81,7 +82,7 @@ void fragment() {
 	float lace = mix(0.35, smoothstep(0.09, 0.83, fine.b * 0.74 + broad.b * 0.51), detail);
 	water = mix(water, vec3(0.67, 0.80, 0.79), foam * (0.20 + 0.79 * lace));
 	NORMAL = normalize(mat3(VIEW_MATRIX) * normal);
-	EMISSION = palette_to_output(water);
+	EMISSION = palette_to_output(water * sector_ambient);
 #ifdef RIG_REFLECTION
 	// Restrict ray marches to nearby water. The sky provides the offscreen reflection.
 	if (length(VERTEX) < 160.0 && foam < 0.8) {

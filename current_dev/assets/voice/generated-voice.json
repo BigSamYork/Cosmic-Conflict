@@ -2,7 +2,7 @@
   "model": "ResembleAI/chatterbox-turbo",
   "revision": "749d1c1a46eb10492095d68fbcf55691ccf137cd",
   "voice": "Chatterbox-Turbo / Lark",
-  "catalog_sha256": "5578a57c6382773c593c4405f597099f0d6caee600f704020c4c5247653701ff",
+  "catalog_sha256": "1b4468e95bc9afcdd957de86f824bcedb1b5b753a8b11bc21d321c87c0bdb72f",
   "rate": 24000,
   "channels": 1,
   "clips": [
@@ -244,10 +244,10 @@
       "id": "streaks_03",
       "speaker": "lark",
       "event": "streak_ten",
-      "text_sha256": "6e4bb684f19d6ad13c6d78365d430894664cc39f74c1294f024b49e7cf60cf79",
-      "audio_sha256": "3d3fb6c4d6d902c9e4fa22749a79de3b6c442a96b8af8b8332ad38ce3018faee",
-      "seconds": 5.636,
-      "bytes": 270552
+      "text_sha256": "77e84fee464d17e6e50716b812388c71748e61935ad75ae568c1efa7605c9c07",
+      "audio_sha256": "e7c348a3ebad4b42430d64737967fc7a920191ec514a0f6025136d08f5198beb",
+      "seconds": 5.041,
+      "bytes": 242006
     },
     {
       "id": "streaks_04",

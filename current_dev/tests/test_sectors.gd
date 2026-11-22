@@ -18,6 +18,7 @@ func _initialize() -> void:
 
 func run() -> void:
 	verify_state()
+	verify_arrival_equipment_and_hoops()
 	verify_frost()
 	await verify_worlds()
 	await verify_selection()
@@ -48,6 +49,7 @@ func verify_state() -> void:
 		state.dock(true)
 	check(state.can_visit("ignis") and state.can_visit("cryo") and state.can_visit("vespera") and state.can_visit("xylo") and state.replays_unlocked and not state.tour_result.is_empty(), "Clearing available sectors retains replay entitlement and presents the completed tour")
 	state.continue_tour()
+	state.reward(100)
 	state.depart("cryo")
 	state.dock(true)
 	state.depart("ignis")
@@ -77,6 +79,39 @@ func verify_state() -> void:
 	invalid = old.to_dict()
 	invalid["cleared_sectors"] = ["cryo", "cryo"]
 	check(not CampaignState.new().restore(invalid).is_empty(), "Duplicate completion flags are rejected")
+
+func verify_arrival_equipment_and_hoops() -> void:
+	var state := CampaignState.new()
+	for second in [0, 14, 15, 29, 30, 44, 45, 59]:
+		state.select_sky(second)
+		check(state.sky_quarter == floori(second / 15.0) and state.copy().sky_quarter == state.sky_quarter, "Sector lighting survives a checkpoint at second %d" % second)
+	state.phase = "market"
+	state.reward(200)
+	check(state.purchase("headlight").is_empty() and state.credits == 0 and state.copy().headlight, "The 200-credit headlight installs and survives a checkpoint")
+	check(not state.purchase("headlight").is_empty(), "An installed headlight cannot be bought twice")
+	var legacy := state.to_dict()
+	legacy["schema"] = 12
+	legacy.erase("sky_quarter")
+	legacy.erase("headlight")
+	var migrated := CampaignState.new()
+	check(migrated.restore(legacy).is_empty() and migrated.sky_quarter == 2 and not migrated.headlight, "Older checkpoints resume in daylight")
+	var rings := preload("res://scripts/credit_hoops.gd").new()
+	root.add_child(rings)
+	state.phase = "ground"
+	var flight := FlightState.new()
+	var director := FlightDirector.new()
+	rings.advance(0, Vector3.ZERO, Vector3.ZERO, state, flight, director)
+	rings._spawn(Transform3D.IDENTITY)
+	var prize: int = rings.value
+	check(rings.advance(0.1, Vector3(6, 0, 8), Vector3(6, 0, -8), state, flight, director) == 0, "Passing beside a hoop leaves it available")
+	check(rings.advance(0.1, Vector3(1, 0, 8), Vector3(-1, 0, -8), state, flight, director) == prize and state.credits == prize, "Crossing the opening credits the wallet")
+	check(rings.advance(0.1, Vector3(0, 0, -8), Vector3(0, 0, 8), state, flight, director) == 0 and state.credits == prize, "A collected hoop cannot pay again")
+	var counts := {}
+	for roll in 100:
+		var amount: int = rings.prize(roll)
+		counts[amount] = counts.get(amount, 0) + 1
+	check(counts == {100: 60, 200: 23, 350: 11, 500: 5, 1000: 1}, "The most common hoop is worth 100 and the rarest is worth 1,000")
+	rings.free()
 
 func verify_frost() -> void:
 	for fps in [30, 45, 120]:

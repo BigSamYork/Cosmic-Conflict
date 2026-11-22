@@ -71,10 +71,8 @@ func advance(delta: float, previous: Vector3, pilot: Vector3, campaign: Campaign
 		var message: String = supply.advance(delta, previous, pilot, route.selected, campaign, flight)
 		if not message.is_empty():
 			messages.append(message)
-	var bonus: int = route.claim_bonus(flight.distance, flight.hull > 0)
-	if bonus > 0:
-		campaign.reward(bonus)
-		messages.append("HAZARD TRENCH COMPLETE / +100 CR / REJOINING MAIN ROUTE")
+	if route.finish_hazard(flight.distance, flight.hull > 0):
+		messages.append("HAZARD TRENCH COMPLETE / REJOINING MAIN ROUTE")
 	return messages
 
 func objective(distance: float) -> String:
@@ -83,7 +81,7 @@ func objective(distance: float) -> String:
 	if distance >= GroundRoute.REJOIN:
 		return "MAIN ROUTE / BOSS APPROACH"
 	if route.selected:
-		return "HAZARD TRENCH / COLLECT SUPPLIES / +100 CR AT REJOIN"
+		return "HAZARD TRENCH / COLLECT SUPPLIES"
 	if route.locked:
-		return "SAFE ROUTE / STANDARD REWARDS"
+		return "SAFE ROUTE / MAIN CANYON"
 	return "FORK: FLY LEFT FOR SAFE / RIGHT FOR HAZARD"

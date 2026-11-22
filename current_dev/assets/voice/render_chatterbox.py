@@ -116,7 +116,7 @@ def main():
                               text_sha256=digest(text.encode()), audio_sha256=digest(wav.read_bytes()),
                               seconds=round(len(pcm) / model.sr, 3), bytes=wav.stat().st_size))
             print(f"VOICE_CLIP {key} {len(pcm) / model.sr:.2f}s", flush=True)
-        index = "generated-opening.json" if opening else "generated-voice.json"
+        index = f"generated-{args.catalog.stem}.json" if opening else "generated-voice.json"
         proof = dict(model=MODEL, revision=REVISION, voice=data.get("voice", "opening cast"),
                      catalog_sha256=digest(source), rate=model.sr, channels=1, clips=clips)
         (stage / index).write_text(json.dumps(proof, indent=2) + "\n", encoding="utf-8")

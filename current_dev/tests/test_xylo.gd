@@ -165,7 +165,7 @@ func verify_world() -> void:
 	game.campaign.stats["shots"] += 1
 	game._strike({"collider": cargo, "position": cargo.global_position}, cargo.armor)
 	game._strike({"collider": cargo, "position": cargo.global_position}, 10)
-	check(game.campaign.stats["eggs"] == 1 and game.campaign.credits == 8 and game.campaign.stats["asteroids"] == 0 and game.rock_fragments.is_empty() and game.mineral_pickups.size() == 1 and game.mineral_pickups[0].biological, "Egg cargo pays once and releases a biological pickup without stone fragments")
+	check(game.campaign.stats["eggs"] == 1 and game.campaign.credits == 0 and game.campaign.stats["asteroids"] == 0 and game.rock_fragments.is_empty() and game.mineral_pickups.size() == 1 and game.mineral_pickups[0].biological, "Egg cargo grants no cash and releases a biological pickup without stone fragments")
 	var brood: EggShip
 	for target in game.targets:
 		if target is EggShip and target.infested:

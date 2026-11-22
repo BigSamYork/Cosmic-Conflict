@@ -260,6 +260,15 @@ func verify_frequency() -> void:
 	voice.stop_speech()
 	voice.policy.advance(3.99)
 	check(not voice.say_route(false), "A 100 percent route saying still respects its four-second quiet interval")
+	voice.stop_speech(true)
+	for quarter in 4:
+		for fitted in [false, true]:
+			var name := String(CampaignState.SKY_TIMES[quarter]).to_lower()
+			check(voice.say_arrival(quarter, fitted) and voice.last_line == name + "_vale" and voice.player.bus == "Master", "Vale opens the %s arrival" % name)
+			voice._finished()
+			var reply := "midnight_fitted" if quarter == 3 and fitted else name + "_lark"
+			check(voice.last_line == reply and voice.player.bus == voice.bus_name and voice.player.stream.get_length() > 0, "Lark answers with recorded cue %s" % reply)
+			voice.stop_speech(true)
 	voice.free()
 
 func check(condition: bool, description: String) -> void:

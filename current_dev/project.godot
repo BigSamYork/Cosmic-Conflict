@@ -30,5 +30,12 @@ environment/defaults/default_clear_color=Color(0.008, 0.012, 0.025, 1)
 [physics]
 common/physics_ticks_per_second=60
 
+[shader_globals]
+
+sector_ambient={
+"type": "vec3",
+"value": Vector3(1, 1, 1)
+}
+
 [audio]
 driver/enable_input=false

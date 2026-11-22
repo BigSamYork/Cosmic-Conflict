@@ -1,0 +1,91 @@
+{
+  "model": "ResembleAI/chatterbox-turbo",
+  "revision": "749d1c1a46eb10492095d68fbcf55691ccf137cd",
+  "voice": "opening cast",
+  "catalog_sha256": "8630492046da757a19360e7a2d47efbe41a946216b5834890195190c4e1a19e4",
+  "rate": 24000,
+  "channels": 1,
+  "clips": [
+    {
+      "id": "twilight_vale",
+      "speaker": "vale",
+      "event": "",
+      "text_sha256": "422635c8ac6ee7d99070f9a0ea053b1060c603ecbdbd164e1c231db2407d2cab",
+      "audio_sha256": "dc92f975838925770c778407ba0546ae9121f3561787415558ce22799d9b9ed1",
+      "seconds": 3.977,
+      "bytes": 190938
+    },
+    {
+      "id": "twilight_lark",
+      "speaker": "lark",
+      "event": "",
+      "text_sha256": "a85cd97a65bc127d0ba830144a6aaa7e6f36b92b2608cd7d87f9171db398bfb9",
+      "audio_sha256": "a198e01e3064ea772080255f385642e31e460597b3bf26fef746fcba99979e9d",
+      "seconds": 4.541,
+      "bytes": 218006
+    },
+    {
+      "id": "morning_vale",
+      "speaker": "vale",
+      "event": "",
+      "text_sha256": "a488613c8a12a637d724ee5ae136f704d442e0559b7f7d1d10f6123de68a018e",
+      "audio_sha256": "5aac753898c24e9581b2e148492d1009f9114594f17ff4a2df77e6c40f4e9bc1",
+      "seconds": 2.576,
+      "bytes": 123672
+    },
+    {
+      "id": "morning_lark",
+      "speaker": "lark",
+      "event": "",
+      "text_sha256": "bace4d44b56eb03b1f71f80d99c571b532b2e89fb32e243c4535145a345e7fac",
+      "audio_sha256": "7a147e32be5c7b4a0abf32949efc0150545de7de1d826e7552a1b749ffccf56f",
+      "seconds": 3.532,
+      "bytes": 169592
+    },
+    {
+      "id": "day_vale",
+      "speaker": "vale",
+      "event": "",
+      "text_sha256": "2b737ff51a1a34221a93d968bb771f98dfabdb890673fb2e295929953e074992",
+      "audio_sha256": "0017b047aee036d94e3a8fd298adf4a496c7d42ed295f1907f85c1ed0e35f037",
+      "seconds": 4.939,
+      "bytes": 237114
+    },
+    {
+      "id": "day_lark",
+      "speaker": "lark",
+      "event": "",
+      "text_sha256": "c82811699585e1aa6eb36f8fbf6f5c2ead2aaad89732ef4822625ca9be3df967",
+      "audio_sha256": "43dc588106c3f02d6dcb80308d117caac0958e9c22e0a3b13aba1397069f243d",
+      "seconds": 4.783,
+      "bytes": 229622
+    },
+    {
+      "id": "midnight_vale",
+      "speaker": "vale",
+      "event": "",
+      "text_sha256": "03edbec77d544fb08e6d1feaca38940712f7e028bc419adff416d3477e7ac87f",
+      "audio_sha256": "e8119e858bbe475163741ca3f32b94132a7c9e97c3cae3ab7de8b967c70bd31e",
+      "seconds": 4.236,
+      "bytes": 203370
+    },
+    {
+      "id": "midnight_lark",
+      "speaker": "lark",
+      "event": "",
+      "text_sha256": "ee55c599ad4e7c65d9d52e0e4520698e6df3d6976ccfda2aca1bd362083e9813",
+      "audio_sha256": "ebd4ea8ba6f36fe1532a7eb82fe0890641fd95ff7e931f976fb0c4f7421d9f4e",
+      "seconds": 4.797,
+      "bytes": 230290
+    },
+    {
+      "id": "midnight_fitted",
+      "speaker": "lark",
+      "event": "",
+      "text_sha256": "364ee4e4aba95d949d4ae56db88f41436bd7f4cda9ed24b2640320acf6cb8160",
+      "audio_sha256": "5057751395e883d85d1d4170ca836bddd9853304809d97c7437c88d6297dd5bf",
+      "seconds": 4.174,
+      "bytes": 200382
+    }
+  ]
+}

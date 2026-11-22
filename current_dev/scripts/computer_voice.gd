@@ -59,6 +59,7 @@ var volume_percent: int = 70
 var suppressed: bool = true
 var paused: bool = false
 var pending_recon := ""
+var arrival_reply: Dictionary = {}
 var playback_available: bool = false
 
 func _ready() -> void:
@@ -166,6 +167,8 @@ func say(event: String) -> bool:
 			return false
 		streams[id] = stream
 	player.stop()
+	arrival_reply.clear()
+	player.bus = bus_name
 	player.stream = streams[id]
 	player.play()
 	policy.started(event, rule.x, rule.y)
@@ -173,6 +176,32 @@ func say(event: String) -> bool:
 	last_line = id
 	speaking_changed.emit(true)
 	line_started.emit(id, selected["text"], event)
+	return true
+
+func say_arrival(quarter: int, headlight: bool) -> bool:
+	if not enabled() or paused or policy.speaking:
+		return false
+	var name := String(CampaignState.SKY_TIMES[quarter]).to_lower()
+	var answer := "midnight_fitted" if name == "midnight" and headlight else name + "_lark"
+	var book: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://assets/voice/arrival.json"))
+	var pilot: Dictionary = {}
+	for cue: Dictionary in book.cues:
+		if cue.id == name + "_vale":
+			pilot = cue
+		elif cue.id == answer:
+			arrival_reply = cue
+	return _play_arrival_line(pilot)
+
+func _play_arrival_line(cue: Dictionary) -> bool:
+	if cue.is_empty():
+		return false
+	player.stream = load("res://assets/arrival/%s.wav" % cue.id)
+	player.bus = "Master" if cue.speaker == "vale" else bus_name
+	player.play()
+	policy.started("sector_arrival", 40, 0)
+	last_line = cue.id
+	speaking_changed.emit(true)
+	line_started.emit(cue.id, cue.text, "sector_arrival")
 	return true
 
 func _choose_line(event: String) -> Dictionary:
@@ -197,6 +226,7 @@ func cancel_group(group: String) -> void:
 		stop_speech()
 
 func stop_speech(reset: bool = false) -> void:
+	arrival_reply.clear()
 	pending_recon = ""
 	if player != null:
 		player.stop()
@@ -210,6 +240,11 @@ func stop_speech(reset: bool = false) -> void:
 		speaking_changed.emit(false)
 
 func _finished() -> void:
+	if not arrival_reply.is_empty() and enabled():
+		var reply := arrival_reply
+		arrival_reply = {}
+		_play_arrival_line(reply)
+		return
 	policy.finished()
 	speaking_changed.emit(false)
 

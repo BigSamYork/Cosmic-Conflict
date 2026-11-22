@@ -107,7 +107,7 @@ func run() -> void:
 	check(game.campaign.credits == credited and game.flight.hits == hits and game.campaign.combo_kills == 0, "Chain reactions cannot duplicate rewards or inflate accuracy/combat streaks")
 	var core: MineralPickup = game.mineral_pickups[0]
 	game._advance_salvage(0.01, core.global_position, core.global_position)
-	check(game.campaign.stats["minerals"] == 1 and game.campaign.credits == credited + MineralPickup.VALUE, "Mineral credits are paid on collection, separately from the rock reward")
+	check(game.campaign.stats["minerals"] == 1 and game.campaign.credits == credited, "Mineral collection records salvage and leaves the wallet alone")
 	game._clear_stage()
 	check(game.mineral_pickups.is_empty() and game.volatile_blasts.is_empty(), "Phase cleanup removes uncollected cores and outstanding blasts")
 	game.queue_free()

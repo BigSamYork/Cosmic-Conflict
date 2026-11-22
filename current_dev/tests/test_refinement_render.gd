@@ -58,7 +58,7 @@ func run() -> void:
 	await physics_frame
 	for _i in range(fragment.armor):
 		game.fire_primary()
-	check(fragment.destroyed and game.campaign.credits == 8 and game.campaign.stats["asteroids"] == 1, "Native shots destroy child rocks without duplicating the original payout")
+	check(fragment.destroyed and game.campaign.credits == 0 and game.campaign.stats["asteroids"] == 1, "Native shots destroy child rocks without awarding combat credits")
 	game._clear_stage()
 	game.world = Node3D.new()
 	game.add_child(game.world)

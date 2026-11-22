@@ -45,7 +45,7 @@
       "lines": [
         {"id":"streaks_01","event":"streak_gain","added":false,"chance_percent":100,"cooldown_seconds":0,"text":"Combat multiplier active! Try not to scratch the paint; it resets the bonus."},
         {"id":"streaks_02","event":"streak_break","added":false,"chance_percent":100,"cooldown_seconds":0,"text":"Hull damage detected. Streak broken. There goes my commission."},
-        {"id":"streaks_03","event":"streak_ten","added":false,"chance_percent":100,"cooldown_seconds":0,"text":"Ten-kill streak! Four-times credit multiplier! Please survive long enough to spend them."},
+        {"id":"streaks_03","event":"streak_ten","added":false,"chance_percent":100,"cooldown_seconds":0,"text":"Ten-kill streak! Four times the combat score. I suppose you want applause, too."},
         {"id":"streaks_04","event":"streak_gain","added":false,"chance_percent":100,"cooldown_seconds":0,"text":"Combat streak rising. Our financial department is starting to respect you."},
         {"id":"streaks_05","event":"interception","added":false,"chance_percent":100,"cooldown_seconds":0,"text":"Threat intercepted. My sensors are thoroughly unimpressed but functionally relieved."},
         {"id":"streaks_06","event":"streak_gain","added":true,"chance_percent":100,"cooldown_seconds":0,"text":"Bonus multiplier increased. Apparently panic can be profitable."},

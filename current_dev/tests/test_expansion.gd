@@ -364,8 +364,8 @@ func verify_boss_radars() -> void:
 			for _i in range(6):
 				game._strike(contact, 1)
 			check(radar.destroyed and radar.collision_layer == 0 and not radar.visible, "Six actual baseline hits destroy the radar, hide it and remove collision")
-			check(game.campaign.credits == credits + 30 and game.campaign.stats["enemies"] == enemies and game.campaign.combo_kills == streak and not boss.core.unlocked, "One radar gives a single reward and leaves the core sealed")
-			check(not game._strike({"collider": radar, "position": radar.aim_point()}, 10) and game.campaign.credits == credits + 30, "Destroyed radar cannot be rewarded again")
+			check(game.campaign.credits == credits and game.campaign.stats["enemies"] == enemies and game.campaign.combo_kills == streak and not boss.core.unlocked, "Destroying a radar awards no cash and leaves the core sealed")
+			check(not game._strike({"collider": radar, "position": radar.aim_point()}, 10) and game.campaign.credits == credits, "Destroyed radar cannot be rewarded again")
 			boss.advance(0.01, game.camera.global_position, Vector3.ZERO)
 			check(boss.turrets[0].interval_multiplier == 1.25, "One radar loss slows turret cadence by the agreed interval multiplier")
 			boss.radars[1].receive_hit(boss.radars[1].armor)

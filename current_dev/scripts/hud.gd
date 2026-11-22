@@ -26,6 +26,7 @@ const CYAN := Color("#70e2e7")
 var flight: FlightState
 var mode: String = "title"
 var cursor: Vector2 = Vector2(960, 540)
+var show_target_ranges := false
 var contacts: Array[Dictionary] = []
 var radar_contacts: Array[Dictionary] = []
 var sensors := FlightDeckSensors.new()
@@ -143,6 +144,7 @@ func _process(_delta: float) -> void:
 			instrument_canvas.autopilot = autopilot
 			instrument_canvas.transit_seconds = transit_seconds
 			instrument_canvas.boss_fraction = boss_fraction
+			instrument_canvas.show_target_ranges = show_target_ranges
 			instrument_canvas.radar_contacts = radar_contacts
 			instrument_canvas.scope_range = sensors.range_m
 			instrument_canvas.intercept_seconds = sensors.intercept_seconds
@@ -351,6 +353,7 @@ func show_market(state: CampaignState, error: String = "") -> void:
 		"emp": ["EMP Nova", "Clear visible missiles; stun systems for 2s.\n220m range / 3 ordnance. Includes 3 units."],
 		"ammo": ["Shared ordnance reload", "Add up to 6 units, limited by the same bay.\nConcussion 1 / Swarm 2 / EMP 3 per use."],
 		"cooling": ["Cooling vents / Lv %d of 2" % state.heat_sink_level, "-18% base heat per volley per level.\nTransfers with hull swaps; lost on ejection."],
+		"headlight": ["Forward headlight", "Projects a wide beam ahead of the ship.\nActivates automatically in flight."],
 		"tractor": ["Tractor beam", "Pulls mineral cores within 32m if unobstructed.\nAutomatic. Transfers with hull; lost on ejection."],
 		"armor": ["Hull plating / Lv %d of 2" % state.hull_armor_level, "+25 maximum hull per level. Two tiers.\nTransfers with hull swaps; lost on ejection."],
 		"countermeasures": ["Chaff / flare pod", "C diverts up to 4 nearby missiles; 8s cooldown.\nIncludes 3 separate charges; does not use ordnance."],
@@ -377,15 +380,15 @@ func show_market(state: CampaignState, error: String = "") -> void:
 		_add_label(details, descriptions[item][1], 16, MUTED)
 		var item_id: String = item
 		var button: Button = _add_button(details, "BUY / %d CR" % state.price(item), func() -> void: purchase_requested.emit(item_id))
-		var fitted: bool = item == state.ship or (item == "secondary" and state.secondary) or (item == "tractor" and state.tractor) or (item == "swarm" and state.swarm_launcher) or (item == "emp" and state.emp_launcher) or (item == "countermeasures" and state.countermeasures)
+		var fitted: bool = item == state.ship or (item == "secondary" and state.secondary) or (item == "tractor" and state.tractor) or (item == "headlight" and state.headlight) or (item == "swarm" and state.swarm_launcher) or (item == "emp" and state.emp_launcher) or (item == "countermeasures" and state.countermeasures)
 		var maximum: bool = (item == "primary" and state.primary_level >= 2) or (item == "shield" and state.shield_level >= 2) or (item == "cooling" and state.heat_sink_level >= 2) or (item == "armor" and state.hull_armor_level >= 2)
 		if fitted or maximum:
 			button.text = "EQUIPPED" if fitted else "MAXIMUM LEVEL"
 			button.disabled = true
 	_add_label(stack, "Enemies %d    Bosses %d    Asteroids %d    Ejections %d    Earned %d / Spent %d%s" % [state.stats["enemies"], state.stats["bosses"], state.stats["asteroids"], state.stats["ejections"], state.earned, state.spent, "    DEVELOPER-ASSISTED" if state.assisted else ""], 17, MUTED)
-	_add_label(stack, "SCORE %d / BEST STREAK %d / BONUS CR %d\nMINERAL CORES %d / MINERAL CR %d / CHAIN SHATTERS %d" % [state.combat_score, state.best_streak, state.combo_bonus_credits, state.stats["minerals"], state.mineral_credits, state.stats["chain_rocks"]], 17, AMBER)
+	_add_label(stack, "SCORE %d / BEST STREAK %d / MINERAL CORES %d\nFLY THROUGH GREEN $ HOOPS TO EARN CREDITS" % [state.combat_score, state.best_streak, state.stats["minerals"]], 17, AMBER)
 	var accuracy: float = minf(100.0, 100.0 * state.debrief["hits"] / state.debrief["shots"]) if state.debrief["shots"] > 0 else 0.0
-	_add_label(stack, "LAST SORTIE: %d SHOTS / %.1f%% ACCURACY\nBONUSES ALREADY PAID: COMPLETION %d / HULL %d / ACCURACY %d\nRADARS %d / WEBS DISABLED %d / PIRATES %d" % [state.debrief["shots"], accuracy, state.debrief["completion"], state.debrief["hull"], state.debrief["accuracy"], state.stats["radars"], state.stats["webs"], state.stats["pirates"]], 16, MUTED)
+	_add_label(stack, "LAST SORTIE: %d SHOTS / %.1f%% ACCURACY\nRADARS %d / WEBS DISABLED %d / PIRATES %d" % [state.debrief["shots"], accuracy, state.stats["radars"], state.stats["webs"], state.stats["pirates"]], 16, MUTED)
 	_add_label(stack, "TOUR %d / SECTORS CLEARED %d / %d / ENEMY HEALTH %.0f%%" % [state.tour, state.cleared_sectors.size(), state.required_sectors.size(), state.health_multiplier() * 100], 17, CYAN)
 	var actions := HBoxContainer.new()
 	stack.add_child(actions)
@@ -443,7 +446,8 @@ func show_sector_map(state: CampaignState = null) -> void:
 		heading.add_child(icon)
 		var labels := VBoxContainer.new()
 		heading.add_child(labels)
-		_add_label(labels, SectorCatalog.name_for(id).to_upper(), 23, SectorCatalog.ACCENTS[id])
+		var cleared: bool = state != null and state.cleared_sectors.has(id)
+		_add_label(labels, SectorCatalog.name_for(id).to_upper() + ("  ✓ COMPLETED" if cleared else ""), 23, Color("#7ee9aa") if cleared else SectorCatalog.ACCENTS[id])
 		var description: Label = _add_label(labels, SectorCatalog.DESCRIPTIONS[id], 16, MUTED)
 		description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		description.custom_minimum_size.x = 380
@@ -451,7 +455,6 @@ func show_sector_map(state: CampaignState = null) -> void:
 		request.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		request.custom_minimum_size.x = 380
 		var available: bool = SectorCatalog.AVAILABLE.has(id)
-		var cleared: bool = state != null and state.cleared_sectors.has(id)
 		var permitted: bool = available and (state == null or state.can_visit(id))
 		var destination: String = id
 		var button: Button = _add_button(contents, "IN DEVELOPMENT" if not available else "REPLAY SECTOR" if cleared and permitted else "CLEARED / FINISH REMAINING SECTOR" if cleared else "SELECT SECTOR", func() -> void: sector_selected.emit(destination))
@@ -518,7 +521,7 @@ func show_campaign_result(record: Dictionary, actions: Array[Dictionary], final_
 		var complete: bool = record["damage_complete" if key == "totals" else "lifetime_damage_complete"]
 		_add_label(grid, "%.1f%s" % [record[key]["hull_damage"], "" if complete else " (since upgrade only)"], 19, WHITE)
 	var parts: Dictionary = CampaignHonors.score_parts(record["totals"], record["damage_complete"])
-	_add_label(stack, "RATING: ACCURACY %d/300 + COMBAT %d/300 + SURVIVAL %d/250 + STREAK %d/150\nSpending credits never reduces your rank. Bonuses were already paid at docking." % [parts["accuracy"], parts["combat"], parts["survival"], parts["streak"]], 18, AMBER)
+	_add_label(stack, "RATING: ACCURACY %d/300 + COMBAT %d/300 + SURVIVAL %d/250 + STREAK %d/150\nSpending credits never reduces your rank." % [parts["accuracy"], parts["combat"], parts["survival"], parts["streak"]], 18, AMBER)
 	if not record["damage_complete"]:
 		_add_label(stack, "LEGACY SAVE: earlier hull damage was not tracked. Survival points unavailable this tour.", 17, MUTED)
 	var buttons := GridContainer.new()
@@ -587,7 +590,7 @@ func show_debug(god_mode: bool, zero_heat: bool = false, infinite_ammo: bool = f
 	var actions := GridContainer.new()
 	actions.columns = 2
 	stack.add_child(actions)
-	for entry in [["credits", "+1,000 CREDITS"], ["credits_large", "+10,000 CREDITS"], ["reset_credits", "RESET WALLET TO ZERO"], ["refill", "REFILL HULL / SHIELDS / ALL AMMO"], ["max", "MAX EQUIPMENT"], ["god", "GOD MODE: " + ("ON" if god_mode else "OFF")], ["zero_heat", "ZERO HEAT: " + ("ON" if zero_heat else "OFF")], ["infinite_ammo", "INFINITE ORDNANCE: " + ("ON" if infinite_ammo else "OFF")], ["one_hit", "ONE-HIT EXPOSED TARGETS: " + ("ON" if one_hit else "OFF")], ["kill_boss", "DEFEAT CURRENT BOSS"], ["rook", "EQUIP ROOK"], ["hawk", "EQUIP HAWK"]]:
+	for entry in [["reset_credits", "RESET WALLET TO ZERO"], ["refill", "REFILL HULL / SHIELDS / ALL AMMO"], ["max", "MAX EQUIPMENT"], ["god", "GOD MODE: " + ("ON" if god_mode else "OFF")], ["zero_heat", "ZERO HEAT: " + ("ON" if zero_heat else "OFF")], ["infinite_ammo", "INFINITE ORDNANCE: " + ("ON" if infinite_ammo else "OFF")], ["one_hit", "ONE-HIT EXPOSED TARGETS: " + ("ON" if one_hit else "OFF")], ["kill_boss", "DEFEAT CURRENT BOSS"], ["rook", "EQUIP ROOK"], ["hawk", "EQUIP HAWK"]]:
 		var action: String = entry[0]
 		_add_button(actions, entry[1], func() -> void: debug_action.emit(action))
 	var grid := GridContainer.new()
@@ -689,7 +692,7 @@ func _add_settings(stack: VBoxContainer) -> void:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 16)
 	stack.add_child(row)
-	for item in [["reduced_effects", "Reduced effects"], ["mute", "Mute audio"], ["shake", "Camera motion"]]:
+	for item in [["reduced_effects", "Reduced effects"], ["mute", "Mute audio"], ["shake", "Camera motion"], ["target_ranges", "Target brackets and distances"]]:
 		var check := CheckBox.new()
 		check.text = item[1]
 		check.button_pressed = bool(settings.get(item[0], false))
@@ -915,6 +918,8 @@ func _draw() -> void:
 		var label: String = contact.get("label", "")
 		if not label.is_empty():
 			_text(screen + Vector2(-60, -30), label, 13, tint)
+		if not show_target_ranges:
+			continue
 		tint.a = 0.65
 		if contact.get("boss_part", false):
 			if contact["shielded"]:
@@ -935,7 +940,7 @@ func _draw() -> void:
 		draw_polyline(PackedVector2Array([marker + Vector2(0, -18), marker + Vector2(18, 0), marker + Vector2(0, 18), marker + Vector2(-18, 0), marker + Vector2(0, -18)]), VectorArt.HOSTILE, 1.5, true)
 	for location in salvage_contacts:
 		draw_arc(location, 15, 0, TAU, 24, CYAN, 1.5, true)
-		_text(location + Vector2(21, 5), "CORE +%d" % MineralPickup.VALUE, 14, CYAN)
+		_text(location + Vector2(21, 5), "SALVAGE CORE", 14, CYAN)
 	var center := Vector2(width * 0.5, height * 0.5)
 	_draw_flight_path(center)
 	draw_circle(center, 3, Color(CYAN, 0.25), false, 1, true)

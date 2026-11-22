@@ -176,12 +176,13 @@ func run() -> void:
 	game.campaign = CampaignState.new()
 	game.store = CampaignStore.new(debug_path)
 	game.is_campaign = true
+	game.hud.campaign = game.campaign
 	game.flight.configure_campaign(game.campaign)
 	game.flight.elapsed = 12.0
 	game.flight.hull = 73.0
 	game._toggle_debug()
 	game._debug_action("credits")
-	check(game.campaign.credits == 1000 and game.flight.hull == 73.0, "Credit cheats do not silently repair the ship")
+	check(game.campaign.credits == 0 and game.flight.hull == 73.0, "Retired credit cheat leaves wallet and hull alone")
 	check(game.flight.elapsed == 12.0 and game.mode == game.Mode.DEBUG, "Non-warp debug actions preserve the running phase")
 	game._debug_action("close")
 	check(game.mode == game.Mode.PAUSE, "Closing debug restores an existing pause instead of resuming combat")
@@ -364,10 +365,10 @@ func run() -> void:
 	game.normal_save_path = debug_path
 	game.flight.ammo = 5
 	game._toggle_debug()
-	game._debug_action("credits")
+	game._debug_action("rook")
 	await process_frame
 	await process_frame
-	check(game.campaign.credits == 1000 and game.campaign.ammo == 0 and not game.campaign.secondary and game.campaign.assisted, "A fresh debug operation cannot inherit stale ammunition from another flight")
+	check(game.campaign.credits == 0 and game.campaign.ammo == 0 and not game.campaign.secondary and game.campaign.assisted, "A fresh debug operation cannot inherit stale ammunition from another flight")
 	DirAccess.remove_absolute(debug_path)
 	if FileAccess.file_exists(debug_path + ".tmp"):
 		DirAccess.remove_absolute(debug_path + ".tmp")

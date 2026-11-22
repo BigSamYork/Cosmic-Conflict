@@ -1,4 +1,5 @@
 shader_type spatial;
+global uniform vec3 sector_ambient;
 render_mode ambient_light_disabled, specular_disabled, cull_disabled;
 
 // The game uses an unlit world. A broad key and cool reflected light give the
@@ -91,6 +92,7 @@ void fragment() {
         }
         color = paint * (1.45 + pulse * pulse_strength);
     }
+    if (finish < 0.69) { color *= sector_ambient; }
     EMISSION = OUTPUT_IS_SRGB ? pow(max(color, vec3(0.0)), vec3(1.0 / 2.2)) : color;
     ALBEDO = paint;
     ROUGHNESS = 1.0;

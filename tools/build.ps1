@@ -38,6 +38,8 @@ $voiceCatalog = Get-Content -LiteralPath (Join-Path $voiceFolder 'lines.json') -
 Assert-VoiceRecordings $voiceFolder 'generated-voice.json' @($voiceCatalog.sections.lines) $voiceCatalog.voice
 $opening = Get-Content -LiteralPath (Join-Path $voiceFolder 'opening.json') -Raw -Encoding UTF8 | ConvertFrom-Json
 Assert-VoiceRecordings (Join-Path $project 'assets/opening') 'generated-opening.json' $opening.cues 'opening cast'
+$arrival = Get-Content -LiteralPath (Join-Path $voiceFolder 'arrival.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+Assert-VoiceRecordings (Join-Path $project 'assets/arrival') 'generated-arrival.json' $arrival.cues 'opening cast'
 $release = Join-Path $root "releases\$Version"
 $app = Join-Path $release 'app'
 New-Item -ItemType Directory -Force -Path $app | Out-Null

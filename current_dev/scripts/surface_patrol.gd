@@ -97,14 +97,13 @@ func _finish(message: String, campaign: CampaignState, paid: bool = false) -> St
 	if storm_hull != null:
 		storm_hull.collision_layer = 0
 		storm_hull = null
-	var reward: int = REWARDS[current] if paid else 0
-	if reward:
-		campaign.reward(reward)
+	if paid:
+		campaign.combat_score += REWARDS[current] * 10
 	main_model.hide()
 	main_model.queue_free()
 	current = -1
 	prompt = ""
-	return message + (" / +%d CR" % reward if reward else "")
+	return message
 
 func lose_carrier(campaign: CampaignState) -> String:
 	return _finish("SUPPORT SHIP LOST TO LIGHTNING / CONTRACT CLOSED", campaign)

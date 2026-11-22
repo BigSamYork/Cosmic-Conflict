@@ -1,8 +1,10 @@
 class_name CampaignState
 extends RefCounted
 
-const SCHEMA: int = 12
-const MINERAL_VALUE: int = 50
+const SCHEMA: int = 13
+const SKY_TIMES := ["Twilight", "Morning", "Day", "Midnight"]
+var sky_quarter := 2
+var headlight := false
 const FLARE_CAPACITY: int = 3
 const SECONDARIES: Dictionary = {
 	"concussion": {"name": "Concussion", "ammo": 1},
@@ -103,9 +105,7 @@ func record_combat_kill(base_credits: int) -> int:
 	best_streak = maxi(best_streak, combo_kills)
 	tour_best_streak = maxi(tour_best_streak, combo_kills)
 	var payout: int = base_credits * combo_multiplier()
-	reward(payout)
 	combat_score += payout * 10
-	combo_bonus_credits += payout - base_credits
 	return payout
 
 func break_combo() -> void:
@@ -113,19 +113,11 @@ func break_combo() -> void:
 
 func collect_mineral() -> void:
 	stats["minerals"] += 1
-	mineral_credits += MINERAL_VALUE
-	reward(MINERAL_VALUE)
 
 func dock(completed: bool) -> void:
 	if settled_sortie_id != sortie_id:
 		debrief = {"completion": 0, "hull": 0, "accuracy": 0, "shots": stats["shots"] - sortie_start_shots, "hits": stats["hits"] - sortie_start_hits}
 		if completed:
-			debrief["completion"] = 350
-			debrief["hull"] = int(hull)
-			if debrief["shots"] >= 20:
-				debrief["accuracy"] = floori(clampf(float(debrief["hits"]) / debrief["shots"], 0, 1) * 200)
-			accuracy_bonus_credits += debrief["accuracy"]
-			reward(debrief["completion"] + debrief["hull"] + debrief["accuracy"])
 			stats["sorties"] += 1
 			if not cleared_sectors.has(sector):
 				cleared_sectors.append(sector)
@@ -199,6 +191,7 @@ func eject() -> void:
 		return
 	stats["ejections"] += 1
 	ship = ""
+	headlight = false
 	primary_level = 0
 	shield_level = 0
 	heat_sink_level = 0
@@ -229,6 +222,7 @@ func depart(destination: String) -> String:
 	if not can_visit(destination):
 		return "Clear the remaining available sectors before starting a replay."
 	sector = destination
+	select_sky(Time.get_time_dict_from_system().second)
 	sortie_id += 1
 	phase = "launch"
 	last_result = "departed"
@@ -236,6 +230,9 @@ func depart(destination: String) -> String:
 	sortie_start_shots = stats["shots"]
 	sortie_start_hits = stats["hits"]
 	return ""
+
+func select_sky(second: int) -> void:
+	sky_quarter = clampi(second, 0, 59) / 15
 
 func price(item: String) -> int:
 	match item:
@@ -250,6 +247,7 @@ func price(item: String) -> int:
 		"flare_reload": return 60
 		"ammo": return 75
 		"tractor": return 400
+		"headlight": return 200
 		"armor": return 240 + hull_armor_level * 120
 	return -1
 
@@ -281,6 +279,8 @@ func purchase(item: String) -> String:
 		return "That secondary weapon station is already fitted."
 	if item == "tractor" and tractor:
 		return "Tractor beam is already fitted."
+	if item == "headlight" and headlight:
+		return "Forward headlight is already fitted."
 	if item == "countermeasures" and countermeasures:
 		return "Countermeasure pod is already fitted."
 	if item == "flare_reload" and not countermeasures:
@@ -319,6 +319,8 @@ func purchase(item: String) -> String:
 		ammo = mini(ammo + 6, int(SHIPS[ship]["ammo"]))
 	elif item == "tractor":
 		tractor = true
+	elif item == "headlight":
+		headlight = true
 	elif item == "armor":
 		hull_armor_level += 1
 	elif item == "countermeasures":
@@ -331,7 +333,7 @@ func purchase(item: String) -> String:
 	return ""
 
 func to_dict() -> Dictionary:
-	return {"schema": SCHEMA, "phase": phase, "sector": sector, "cleared_sectors": cleared_sectors.duplicate(), "replays_unlocked": replays_unlocked, "ship": ship, "credits": credits, "earned": earned, "spent": spent,
+	return {"schema": SCHEMA, "phase": phase, "sector": sector, "sky_quarter": sky_quarter, "headlight": headlight, "cleared_sectors": cleared_sectors.duplicate(), "replays_unlocked": replays_unlocked, "ship": ship, "credits": credits, "earned": earned, "spent": spent,
 		"primary_level": primary_level, "shield_level": shield_level, "heat_sink_level": heat_sink_level, "power_mode": power_mode, "secondary": secondary, "ammo": ammo,
 		"hull": hull, "shields": shields, "sortie_id": sortie_id, "settled_sortie_id": settled_sortie_id,
 		"last_result": last_result, "assisted": assisted, "stats": stats.duplicate(),
@@ -414,6 +416,13 @@ func restore(source: Dictionary) -> String:
 			data["required_sectors"] = SectorCatalog.LEGACY.duplicate()
 		elif source_schema < 11 and data.get("phase") == "market" and data.get("cleared_sectors") is Array and data["cleared_sectors"].size() == 4 and data.get("ship", "") != "":
 			data["required_sectors"] = SectorCatalog.LEGACY.duplicate()
+	if source_schema < 13:
+		data["sky_quarter"] = 2
+		data["headlight"] = false
+	if not _whole(data.get("sky_quarter")) or data["sky_quarter"] > 3 or not data.get("headlight") is bool:
+		return "Invalid sector lighting or headlight."
+	if data["headlight"] and data.get("ship") == "":
+		return "Headlight requires a ship."
 	data["schema"] = SCHEMA
 	for key in ["phase", "sector", "ship", "last_result", "power_mode", "selected_secondary"]:
 		if not data.has(key) or not data[key] is String:
@@ -511,6 +520,8 @@ func restore(source: Dictionary) -> String:
 			return "Destroyed ship outside recovery."
 	phase = data["phase"]
 	sector = data["sector"]
+	sky_quarter = int(data["sky_quarter"])
+	headlight = data["headlight"]
 	cleared_sectors.assign(seen)
 	required_sectors.assign(data["required_sectors"])
 	replays_unlocked = data["replays_unlocked"]

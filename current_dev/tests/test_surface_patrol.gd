@@ -91,7 +91,7 @@ func verify_job(job: int) -> void:
 				check(is_equal_approx(flight.shields, shields - 12), "Restart transfers twelve shield units")
 			elif job == SurfacePatrol.Job.COOLANT:
 				check(flight.heat == 0 and flight.overheat_remaining == 0, "Coolant brings overheated guns back online")
-	check(patrol.current < 0 and campaign.credits == before + SurfacePatrol.REWARDS[job], "Contract settles once: " + SurfacePatrol.LABELS[job])
+	check(patrol.current < 0 and campaign.credits == before and campaign.combat_score == SurfacePatrol.REWARDS[job] * 10, "Contract score and wallet settle correctly for " + SurfacePatrol.LABELS[job])
 	patrol.free()
 
 func verify_failure_paths() -> void:
