@@ -63,7 +63,7 @@ static func terrain_chunk(start: float, sector: String, branching: bool) -> Node
 		nearby.append_array(_rigs(start + VectorArt.CHUNK_LENGTH, branching))
 		var result := Node3D.new()
 		result.add_child(_sea_surface(start, nearby))
-		GroundArt.finish_chunk(result, terrain, scenery, sector)
+		GroundArt.finish_chunk(result, terrain, scenery, sector, start, branching)
 		return VectorArt.remember_model(key, result) if start < VectorArt.TERRAIN_CACHE_CHUNKS * 128 else result
 	var arches: Array[Transform3D] = []
 	for row in range(16):
@@ -87,7 +87,7 @@ static func terrain_chunk(start: float, sector: String, branching: bool) -> Node
 			scenery.append(GroundArt.placement(at, Vector3(1, layout.randf_range(0.69, 1.35) + i * 0.18, 1), layout.randf_range(-1.2, 1.2)))
 			if i == 0 and layout.randf() < 0.29:
 				arches.append(GroundArt.placement(at + Vector3(0, 0, 30), Vector3(0.95, layout.randf_range(0.72, 1.21), 1), layout.randf_range(-0.52, 0.52)))
-	var chunk := GroundArt.finish_chunk(batch.build(), terrain, scenery, sector)
+	var chunk := GroundArt.finish_chunk(batch.build(), terrain, scenery, sector, start, branching)
 	GroundArt.add_landmarks(chunk, "ruin_arch", arches)
 	return VectorArt.remember_model(key, chunk) if start < VectorArt.TERRAIN_CACHE_CHUNKS * 128 else chunk
 

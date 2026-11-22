@@ -92,7 +92,7 @@ static func terrain_chunk(start: float, branching: bool = false) -> Node3D:
 		batch.truss(Vector3(center.x - 81, 58, center.z), Vector3(center.x + 81, 58, center.z), 5, NEON, 18)
 		for side in [-1.0, 1.0]:
 			batch.line(Vector3(center.x - 81, 54.2, center.z + side * 3), Vector3(center.x + 81, 54.2, center.z + side * 3), SIGNAL)
-	var chunk := GroundArt.finish_chunk(batch.build(), terrain, scenery, "vespera")
+	var chunk := GroundArt.finish_chunk(batch.build(), terrain, scenery, "vespera", start, branching)
 	return VectorArt.remember_model(key, chunk) if start < VectorArt.TERRAIN_CACHE_CHUNKS * VectorArt.CHUNK_LENGTH else chunk
 
 static func floor_point(x: float, travel: float) -> Vector3:

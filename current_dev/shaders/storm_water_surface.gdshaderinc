@@ -1,6 +1,6 @@
 #include "palette.gdshaderinc"
 #include "arrival_curve.gdshaderinc"
-uniform float wave_time = 0.0;
+#include "sea_swell.gdshaderinc"
 uniform sampler2D sea_detail : repeat_enable, filter_linear_mipmap_anisotropic;
 #ifdef RIG_REFLECTION
 uniform sampler2D scene_color : hint_screen_texture, repeat_disable, filter_linear;
@@ -36,24 +36,11 @@ uniform float effect_opacity = 1.0;
 varying vec2 water_position;
 varying vec3 swell; // Course-space height derivatives and crest compression.
 
-void wave(vec2 p, vec2 dir, float k, float amplitude, float phase_offset,
-		inout vec3 displacement, inout vec3 gradient) {
-	float phase = dot(dir, p) * k - sqrt(9.81 * k) * wave_time + phase_offset;
-	float s = sin(phase);
-	float c = cos(phase);
-	displacement += amplitude * vec3(0.47 * dir.x * c, s, 0.47 * dir.y * c);
-	gradient.xy += dir * (amplitude * k * c);
-	gradient.z += amplitude * k * s;
-}
-
 void vertex() {
 	water_position = VERTEX.xz;
-	vec3 offset = vec3(0.0);
 	swell = vec3(0.0);
 	if (VERTEX.y > -8.0) {
-		wave(water_position, vec2(0.60, 0.80), 0.084, 1.16, 0.3, offset, swell);
-		wave(water_position, vec2(-0.28, 0.96), 0.152, 0.64, 2.1, offset, swell);
-		wave(water_position, vec2(0.91, 0.415), 0.256, 0.28, 4.7, offset, swell);
+		vec3 offset = sea_swell(water_position, swell);
 		float edge = 1.0 - smoothstep(218.0, 288.0, abs(VERTEX.x));
 		VERTEX += offset * edge;
 		swell *= edge;

@@ -80,7 +80,7 @@ func attach_ground(ground: Node3D, horizon: Node3D = null) -> void:
 		assert(original is StandardMaterial3D or original is ShaderMaterial)
 		if not copies.has(original):
 			var material: ShaderMaterial
-			if original == FleetArt.hull_material:
+			if original == FleetArt.hull_material or original == GroundArt.foliage_material:
 				material = ShaderMaterial.new()
 				material.shader = GROUND_SHADER
 				material.set_shader_parameter("use_vertex_color", true)

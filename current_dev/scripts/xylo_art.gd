@@ -130,7 +130,7 @@ static func terrain_chunk(start: float, branching: bool = false) -> Node3D:
 		var reed: Vector3 = floor_point(side * 16, travel)
 		for blade in range(4):
 			batch.line(reed + Vector3(blade * 0.3, 0, 0), reed + Vector3((blade - 1) * 0.7, 3 + blade * 0.5, 1), ACID.darkened(0.2))
-	var chunk := GroundArt.finish_chunk(batch.build(), terrain, scenery, "xylo")
+	var chunk := GroundArt.finish_chunk(batch.build(), terrain, scenery, "xylo", start, branching)
 	return VectorArt.remember_model(key, chunk) if start < VectorArt.TERRAIN_CACHE_CHUNKS * VectorArt.CHUNK_LENGTH else chunk
 
 static func horizon() -> Node3D:

@@ -37,6 +37,7 @@ func run() -> void:
 		game._update_contacts()
 		game.surface_weather.advance(3.2)
 		check(game.surface_weather.visible and game.surface_weather.climate == sector, sector + " has its own cockpit weather")
+		verify_population(game, sector)
 		await snapshot("surface-" + sector + ".png")
 	game.settings["reduced_effects"] = true
 	game._apply_settings()
@@ -67,6 +68,27 @@ func run() -> void:
 	scene.free()
 	print("SURFACE_WEATHER_RENDER_FAILURES=", failures)
 	quit(failures)
+
+func verify_population(game: Node3D, sector: String) -> void:
+	var buildings := {}
+	var plants := {}
+	for id: String in GroundArt.BUILDINGS[sector]:
+		buildings[FleetArt.mesh_for(sector + "_" + id, "ground")] = false
+	for id: String in GroundArt.PLANTS[sector]:
+		plants[FleetArt.mesh_for(sector + "_" + id, "ground")] = false
+	for chunk in game.ground_chunks:
+		for node in chunk.get_children():
+			if node is MultiMeshInstance3D:
+				var mesh: Mesh = node.multimesh.mesh
+				if plants.has(mesh) and node.material_override == GroundArt.foliage_material and node.multimesh.instance_count > 0:
+					plants[mesh] = true
+				if sector != "thalassa" and buildings.has(mesh):
+					buildings[mesh] = true
+			elif node is OffshorePlatform:
+				var deck: Mesh = node.get_child(0).mesh
+				if buildings.has(deck) and node.collision_layer == 1:
+					buildings[deck] = true
+	check(not buildings.values().has(false) and not plants.values().has(false), sector + " streams all three new buildings and all three plants")
 
 func verify_water_reflection(scene: Node3D, camera: Camera3D) -> void:
 	camera.position = Vector3(0, 4, 0)

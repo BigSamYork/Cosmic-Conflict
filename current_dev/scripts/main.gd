@@ -386,8 +386,8 @@ func _build_world(training: bool = true) -> void:
 	add_child(world)
 	if sector == "thalassa":
 		ocean_material = ShaderMaterial.new()
-		ocean_material.shader = FrontierArt.WATER if settings["reduced_effects"] else FrontierArt.WATER_REFLECTION
 		ocean_age = 0
+		_configure_ocean_material()
 	if not training:
 		ground_horizon = FrontierArt.horizon(sector) if FrontierArt.is_frontier(sector) else XyloArt.horizon() if sector == "xylo" else VesperaArt.horizon() if sector == "vespera" else VectorArt.ground_horizon(icy)
 		world.add_child(ground_horizon)
@@ -2016,8 +2016,7 @@ func _apply_settings() -> void:
 	VectorArt.set_reduced_effects(bool(settings["reduced_effects"]))
 	combat_lights.reduced = settings["reduced_effects"]
 	if ocean_material != null:
-		ocean_material.shader = FrontierArt.WATER if combat_lights.reduced else FrontierArt.WATER_REFLECTION
-		ocean_material.set_shader_parameter("wave_time", ocean_age)
+		_configure_ocean_material()
 	if combat_lights.reduced:
 		combat_lights.clear()
 	if get_world_3d().environment != null:
@@ -2133,6 +2132,8 @@ func _add_ground_cover(chunk: Node3D) -> void:
 	body.collision_layer = 1 # Shared by the swept pilot probe and missile cover ray.
 	body.collision_mask = 0
 	for surface in chunk.get_children():
+		if surface is MultiMeshInstance3D and surface.material_override == GroundArt.foliage_material:
+			continue
 		var mesh: Mesh
 		var transforms: Array[Transform3D] = []
 		if surface is MultiMeshInstance3D:
@@ -2162,6 +2163,13 @@ func _add_ground_cover(chunk: Node3D) -> void:
 			body.add_child(collider)
 	chunk.add_child(body)
 
+func _configure_ocean_material() -> void:
+	# The orbital globe is still in the screen texture during descent. Reflect
+	# local geometry once the flight scene owns the entire background.
+	var reflect_scene: bool = launch_approach == null and not settings["reduced_effects"]
+	ocean_material.shader = FrontierArt.WATER_REFLECTION if reflect_scene else FrontierArt.WATER
+	ocean_material.set_shader_parameter("wave_time", ocean_age)
+
 func _bind_ocean(node: Node3D) -> void:
 	if ocean_material == null:
 		return
@@ -2171,6 +2179,7 @@ func _bind_ocean(node: Node3D) -> void:
 
 func _advance_ocean(delta: float) -> void:
 	surface_weather.advance(delta)
+	GroundArt.foliage_material.set_shader_parameter("wave_time", ocean_age + delta if ocean_material != null else surface_weather.age)
 	if ocean_material == null:
 		return
 	ocean_age += delta

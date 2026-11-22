@@ -24,7 +24,8 @@ static func cached_model(key: String) -> Node3D:
 		if item["mesh"] is MultiMesh:
 			instance = MultiMeshInstance3D.new()
 			instance.multimesh = item["mesh"]
-			instance.set_instance_shader_parameter(&"weathered", true)
+			if item["material"] == FleetArt.hull_material:
+				instance.set_instance_shader_parameter(&"weathered", true)
 		else:
 			instance = MeshInstance3D.new()
 			instance.mesh = item["mesh"]
@@ -263,7 +264,7 @@ static func terrain_chunk(start: float, branching: bool = false, icy: bool = fal
 		var size := Vector3(1.0, 0.72 + (i % 3) * 0.36, 1.0)
 		scenery.append(GroundArt.placement(center, size, travel * 0.47))
 	var station: Vector3 = ground_point(-28.0 if branching or int(start / CHUNK_LENGTH) % 2 == 0 else 28.0, start + 64.0)
-	var chunk := GroundArt.finish_chunk(batch.build(), terrain, scenery, "ignis")
+	var chunk := GroundArt.finish_chunk(batch.build(), terrain, scenery, "ignis", start, branching)
 	GroundArt.add_landmarks(chunk, "canyon_substation", [GroundArt.placement(station, Vector3.ONE)])
 	return remember_model(key, chunk) if start < TERRAIN_CACHE_CHUNKS * CHUNK_LENGTH else chunk
 
@@ -304,5 +305,5 @@ static func _ice_chunk(start: float, branching: bool) -> Node3D:
 		var at: Vector3 = ground_point(x, travel, branching)
 		var height := (18.0 + i % 4 * 7) / 22.0
 		scenery.append(GroundArt.placement(at, Vector3(1, height, 1), travel * 0.23))
-	var chunk := GroundArt.finish_chunk(batch.build(), terrain, scenery, "cryo")
+	var chunk := GroundArt.finish_chunk(batch.build(), terrain, scenery, "cryo", start, branching)
 	return remember_model(key, chunk) if start < TERRAIN_CACHE_CHUNKS * CHUNK_LENGTH else chunk
