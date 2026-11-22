@@ -35,6 +35,8 @@ var lane_sign := 1.0
 var main_model: Node3D
 var gate: Node3D
 var carrier: Node3D
+var storm_hull: StaticBody3D
+const STORM_LAYER := 8
 var lamp: Label3D
 var stage := 0
 var progress := 0.0
@@ -63,6 +65,19 @@ func _begin(sector: String, flight_number: int) -> void:
 		carrier.scale *= 0.57
 		main_model.add_child(carrier)
 		carrier.position = Vector3(5.8 * lane_sign, 0, -1.0)
+		if sector == "thalassa":
+			var mesh := FleetArt.mesh_for("traffic")
+			if not mesh.has_meta("storm_shape"):
+				var shape := mesh.create_trimesh_shape()
+				shape.backface_collision = true
+				mesh.set_meta("storm_shape", shape)
+			storm_hull = StaticBody3D.new()
+			storm_hull.collision_layer = STORM_LAYER
+			storm_hull.collision_mask = 0
+			var collider := CollisionShape3D.new()
+			collider.shape = mesh.get_meta("storm_shape")
+			storm_hull.add_child(collider)
+			carrier.add_child(storm_hull)
 	else:
 		carrier = null
 	lamp = Label3D.new()
@@ -77,6 +92,9 @@ func _begin(sector: String, flight_number: int) -> void:
 	prompt = BRIEFS[current]
 
 func _finish(message: String, campaign: CampaignState, paid: bool = false) -> String:
+	if storm_hull != null:
+		storm_hull.collision_layer = 0
+		storm_hull = null
 	var reward: int = REWARDS[current] if paid else 0
 	if reward:
 		campaign.reward(reward)
@@ -85,6 +103,9 @@ func _finish(message: String, campaign: CampaignState, paid: bool = false) -> St
 	current = -1
 	prompt = ""
 	return message + (" / +%d CR" % reward if reward else "")
+
+func lose_carrier(campaign: CampaignState) -> String:
+	return _finish("SUPPORT SHIP LOST TO LIGHTNING / CONTRACT CLOSED", campaign)
 
 func _pose(distance: float, side: float, route: GroundRoute) -> Transform3D:
 	var frame := GroundRoute.frame(distance) if route.selected else FlightState.rail_frame(distance)

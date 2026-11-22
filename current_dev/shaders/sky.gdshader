@@ -7,6 +7,8 @@ uniform float ocean_mix : hint_range(0.0, 1.0) = 0.0;
 uniform float desert_mix : hint_range(0.0, 1.0) = 0.0;
 uniform float atmosphere_mix : hint_range(0.0, 1.0) = 0.0;
 uniform float weather_time = 0.0;
+uniform vec3 storm_direction = vec3(0.0, 1.0, 0.0);
+uniform float storm_glow = 0.0;
 uniform float surface_time = 0.0;
 uniform sampler2D cloud_atlas : hint_default_black, repeat_enable, filter_linear_mipmap;
 uniform float planet_visibility : hint_range(0.0, 1.0) = 1.0;
@@ -109,6 +111,9 @@ void sky() {
 	float cloud = smoothstep(0.2, 0.75, storm) * smoothstep(-0.15, 0.2, EYEDIR.y);
 	COLOR = mix(COLOR, mix(vec3(0.055, 0.11, 0.15), vec3(0.17, 0.24, 0.29), cloud),
 		ocean_mix * atmosphere_mix * (0.65 + cloud * 0.35));
+	float separation = max(0.0, 1.0 - dot(EYEDIR, storm_direction));
+	float sheet = exp(-separation * 13.0) * (0.17 + 0.53 * air.r + 0.30 * cloud);
+	COLOR += vec3(0.28, 0.34, 0.53) * sheet * storm_glow * atmosphere_mix * ocean_mix;
 	COLOR = lunar_disc(COLOR, EYEDIR);
 	COLOR = palette_to_output(COLOR);
 }

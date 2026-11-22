@@ -473,8 +473,12 @@ func _build_world(training: bool = true) -> void:
 		if sector == "thalassa":
 			for i in range(10):
 				var lightning := StormLightning.new()
+				lightning.site = i
 				lightning.phase = i * 1.1
 				lightning.position = FrontierArt.floor_point(-8 if i % 2 == 0 else 8, 460 + i * 320)
+				lightning.aim_requested.connect(_storm_aim)
+				lightning.contact.connect(_storm_contact)
+				lightning.grounded.connect(_storm_grounded)
 				world.add_child(lightning)
 				lightning_fields.append(lightning)
 		elif sector == "vespera":
@@ -793,9 +797,8 @@ func _physics_process(delta: float) -> void:
 		if frost.advance(delta, previous, camera.position) and _apply_pilot_damage("CRYO FROST", FrostField.DAMAGE):
 			_apply_frost()
 	_advance_ocean(delta)
-	for lightning in lightning_fields:
-		if lightning.advance(delta, previous, camera.position):
-			_apply_pilot_damage("STORM LIGHTNING", 18)
+	if not lightning_fields.is_empty():
+		_advance_storm(delta, previous)
 	for ice in falling_ice:
 		if ice.advance(delta, previous, camera.position, flight.collision_radius):
 			_apply_pilot_damage("FALLING RUIN" if ice is RuinFall else "FALLING ICE", FallingIce.DAMAGE)
@@ -1457,6 +1460,84 @@ func _start_boss_destruction() -> void:
 	explosions.append(effect)
 	sound.play_sound(sound.impact)
 
+func _advance_storm(delta: float, previous: Vector3) -> void:
+	var glow := 0.0
+	var source := Vector3.UP
+	for field in lightning_fields:
+		field.reduced = settings["reduced_effects"]
+		field.pilot_radius = 0.0 if flight.roll_remaining > 0.0 or god_mode else flight.collision_radius
+		if field.advance(delta, previous, camera.global_position):
+			if _apply_pilot_damage("STORM LIGHTNING", flight.hull + flight.shields):
+				_storm_blast(camera.global_position - camera.global_basis.z * 3.0, 5.0)
+		var brightness := field.cloud_brightness() * (1.0 - smoothstep(180.0, field.VIEW_RANGE, field.global_position.distance_to(camera.global_position)))
+		if brightness > glow:
+			glow = brightness
+			source = camera.global_position.direction_to(field.to_global(field.paths[0][0]))
+	var sky: ShaderMaterial = get_world_3d().environment.sky.sky_material
+	sky.set_shader_parameter("storm_direction", source)
+	sky.set_shader_parameter("storm_glow", glow)
+
+func _storm_aim(field: StormLightning, cycle: int) -> void:
+	# A leader picks a vicinity during warning. The actual discharge ray can
+	# miss a moving fighter or be intercepted by another object on the way down.
+	var kind := posmod(cycle + field.site, 4)
+	if kind == 0:
+		return
+	var best := 125.0 * 125.0
+	var candidates: Array = get_tree().get_nodes_in_group(&"offshore_platforms") if kind == 1 else towers if kind == 2 else targets
+	for candidate in candidates:
+		if candidate.is_queued_for_deletion() or not candidate.is_visible_in_tree():
+			continue
+		var at: Vector3
+		if candidate is OffshorePlatform:
+			at = candidate.to_global(Vector3.UP * 2.0)
+		elif candidate is RangeTarget and not candidate.destroyed:
+			if kind == 3 and (not candidate is EnemyFighter or candidate.expired):
+				continue
+			at = candidate.aim_point()
+		else:
+			continue
+		var distance := field.global_position.distance_squared_to(at)
+		if distance < best:
+			best = distance
+			field.landing = field.to_local(at) + Vector3.DOWN
+
+func _storm_grounded(at: Vector3) -> void:
+	combat_lights.flash(at + Vector3.UP * 4, Color("#a7caff"), 82.0, 0.43, 7.0)
+	if camera.global_position.distance_to(at) < 360.0:
+		sound.play_thunder()
+
+func _storm_contact(body: CollisionObject3D, at: Vector3, direction: Vector3) -> void:
+	# Weather kills never enter the player's weapon-hit and bounty pipeline.
+	if body is OffshorePlatform:
+		if body.collision_layer == 0:
+			return
+		_spawn_breakup(body, true)
+		body.collision_layer = 0
+		body.hide()
+		_storm_blast(at, 10.0)
+	elif body is DestructibleTower:
+		if body.receive_hit_at(body.armor, at, direction):
+			_storm_blast(at, 4.5)
+	elif body is EnemyFighter or body is GroundTurret or body is RadarDish:
+		if body.receive_hit(body.armor):
+			_spawn_breakup(body, true)
+			_storm_blast(at, 5.5)
+	elif ground_branch != null and body == ground_branch.patrol.storm_hull:
+		var patrol := ground_branch.patrol
+		_spawn_breakup(patrol.carrier, true)
+		_storm_blast(at, 5.5)
+		hud.show_message(patrol.lose_carrier(campaign))
+
+func _storm_blast(at: Vector3, radius: float) -> void:
+	var blast := DestructionEffect.new()
+	blast.reduced = settings["reduced_effects"]
+	blast.position = at
+	blast.size = radius
+	add_child(blast)
+	explosions.append(blast)
+	sound.play_sound(sound.impact)
+
 func _tower_fractured(tower: DestructibleTower) -> void:
 	var effect := BreakupEffect.new()
 	add_child(effect)
@@ -1766,9 +1847,10 @@ func _update_contacts() -> void:
 		if (frost.warning() or frost.active(frost.age)) and camera.global_position.distance_to(frost.global_position) < 120 and not camera.is_position_behind(frost.global_position):
 			hud.frost_warning = true
 	for lightning in lightning_fields:
-		if (lightning.warning() or lightning.active(lightning.age)) and camera.global_position.distance_to(lightning.global_position) < 240 and not camera.is_position_behind(lightning.global_position):
+		var strike_point := lightning.to_global(lightning.landing)
+		if (lightning.warning() or lightning.active(lightning.age)) and camera.global_position.distance_to(strike_point) < 240 and not camera.is_position_behind(strike_point):
 			hud.lightning_warning = true
-			hud.contacts.append({"screen": camera.unproject_position(lightning.global_position + Vector3.UP * 8), "distance": camera.global_position.distance_to(lightning.global_position), "color": VectorArt.AMBER, "label": "LIGHTNING / CENTER LANE CLEAR"})
+			hud.contacts.append({"screen": camera.unproject_position(strike_point + Vector3.UP * 3), "distance": camera.global_position.distance_to(strike_point), "color": VectorArt.AMBER, "label": "LIGHTNING / CLEAR STRIKE POINT"})
 	for turret in turrets:
 		if not turret.destroyed:
 			hud.radar_jam = maxf(hud.radar_jam, turret.tracking_jammed)
@@ -1985,6 +2067,8 @@ func _clear_stage() -> void:
 	thermal_sweeps.clear()
 	heat_vents.clear()
 	frost_fields.clear()
+	if not lightning_fields.is_empty():
+		get_world_3d().environment.sky.sky_material.set_shader_parameter("storm_glow", 0.0)
 	lightning_fields.clear()
 	ocean_material = null
 	falling_ice.clear()
@@ -2063,6 +2147,14 @@ func _add_ground_cover(chunk: Node3D) -> void:
 			var shape: ConcavePolygonShape3D = mesh.create_trimesh_shape()
 			shape.backface_collision = true
 			mesh.set_meta("ground_cover", shape)
+		if surface is MultiMeshInstance3D and campaign.sector == "thalassa":
+			for placement in transforms:
+				var platform := OffshorePlatform.new()
+				platform.configure(mesh, placement)
+				chunk.add_child(platform)
+			chunk.remove_child(surface)
+			surface.free()
+			continue
 		for placement in transforms:
 			var collider := CollisionShape3D.new()
 			collider.shape = mesh.get_meta("ground_cover")

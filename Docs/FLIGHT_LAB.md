@@ -58,9 +58,10 @@ station music continues. Asteroid artwork now takes less time to generate.
   to the next playable phase, even across multiple autopilot maneuvers.
 
 - **Thalassa Reach / storm ocean:** animated waves, offshore platform settlements,
-  dockside cranes, marine defense pylons and manta interceptors. Amber side-lane
-  rings warn before lightning strikes; contact deals 18 shield-first damage once
-  per cycle without frost or damage over time. Stay near the clear center route.
+  dockside cranes, marine defense pylons and manta interceptors. An amber ring
+  marks the next strike. Watch for the branching leader and steer clear or
+  barrel roll through the discharge. A direct hit can destroy your ship, a manta
+  or a platform. A structure that intercepts the bolt can shelter a ship below it.
   Tempest Walker and Storm Ark are the ground/orbital bosses. The ocean-themed
   orbital escape retains mining, salvage and optional pirates.
 - **Kharon Dunes / desert ruins:** undulating dunes, broken arches, engraved
