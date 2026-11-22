@@ -45,6 +45,8 @@ static func terrain_chunk(start: float, sector: String, branching: bool) -> Node
 	var batch := GeometryBatch.new()
 	var terrain := GeometryBatch.new()
 	var scenery: Array[Transform3D] = []
+	var layout := RandomNumberGenerator.new()
+	layout.seed = hash(Vector2i(roundi(start / VectorArt.CHUNK_LENGTH), sector.hash()))
 	if sector == "thalassa":
 		for row in range(16):
 			for column in range(24):
@@ -57,10 +59,14 @@ static func terrain_chunk(start: float, sector: String, branching: bool) -> Node
 		water.shader = WATER
 		result.get_child(0).material_override = water
 		for side in [-1.0, 1.0]:
-			var at: Vector3 = floor_point(side * 57, start + 64)
-			if branching and absf(side * 57 - GroundRoute.lateral_offset(start + 64)) < 40:
+			var travel := start + layout.randf_range(22.0, 106.0)
+			var lateral: float = side * layout.randf_range(46.0, 96.0)
+			var at: Vector3 = floor_point(lateral, travel)
+			if branching and absf(lateral - GroundRoute.lateral_offset(travel)) < 40:
 				at.x += side * 75
-			scenery.append(GroundArt.placement(at, Vector3.ONE, PI if side > 0 else 0.0))
+			if layout.randf() > 0.19:
+				var footprint := layout.randf_range(0.87, 1.23)
+				scenery.append(GroundArt.placement(at, Vector3(footprint, layout.randf_range(0.8, 1.18), footprint), layout.randf_range(-0.6, 0.6) + (PI if side > 0 else 0.0)))
 		terrain.box(floor_point(0, start + 64) + Vector3(0, -0.5, 0), Vector3(24, 0.6, 128), OCEAN, Color.WHITE)
 		GroundArt.finish_chunk(result, terrain, scenery, sector)
 		return VectorArt.remember_model(key, result) if start < VectorArt.TERRAIN_CACHE_CHUNKS * 128 else result
@@ -78,12 +84,14 @@ static func terrain_chunk(start: float, sector: String, branching: bool) -> Node
 			terrain.surface(points, PackedInt32Array([0, 1, 2, 0, 2, 3]), Color.WHITE)
 	for side in [-1.0, 1.0]:
 		for i in range(3):
-			var at: Vector3 = floor_point(side * (44 + i * 27), start + 20 + i * 38, sector)
-			if branching and absf(side * (44 + i * 27) - GroundRoute.lateral_offset(start + 20 + i * 38)) < 35:
+			var lateral: float = side * (layout.randf_range(36.0, 63.0) + i * 27.0)
+			var travel := start + layout.randf_range(10.0, 30.0) + i * 39.0
+			var at: Vector3 = floor_point(lateral, travel, sector)
+			if branching and absf(lateral - GroundRoute.lateral_offset(travel)) < 35:
 				continue
-			scenery.append(GroundArt.placement(at, Vector3(1, 1 + i * 0.18, 1), side * i * 0.25))
-			if i == 0:
-				arches.append(GroundArt.placement(at + Vector3(0, 0, 30), Vector3.ONE))
+			scenery.append(GroundArt.placement(at, Vector3(1, layout.randf_range(0.69, 1.35) + i * 0.18, 1), layout.randf_range(-1.2, 1.2)))
+			if i == 0 and layout.randf() < 0.29:
+				arches.append(GroundArt.placement(at + Vector3(0, 0, 30), Vector3(0.95, layout.randf_range(0.72, 1.21), 1), layout.randf_range(-0.52, 0.52)))
 	var chunk := GroundArt.finish_chunk(batch.build(), terrain, scenery, sector)
 	GroundArt.add_landmarks(chunk, "ruin_arch", arches)
 	return VectorArt.remember_model(key, chunk) if start < VectorArt.TERRAIN_CACHE_CHUNKS * 128 else chunk
@@ -101,29 +109,7 @@ static func turret_base(sector: String) -> Node3D:
 static func boss(sector: String, orbital: bool) -> Node3D:
 	if orbital:
 		return FleetArt.model("ark" if sector == "thalassa" else "sovereign")
-	if sector == "thalassa":
-		return FleetArt.model("tempest_walker", "ground")
-	var key: String = sector + "-ground-boss"
-	var cached: Node3D = VectorArt.cached_model(key)
-	if cached != null:
-		return cached
-	var batch := GeometryBatch.new()
-	var tint := SAND
-	for i in range(3):
-		batch.box(Vector3(0, i * 5, -4), Vector3(30 - i * 7, 5, 30 - i * 6), tint, Color("#45382c"))
-	for side in [-1.0, 1.0]:
-		batch.box(Vector3(side * 19, -4, -5), Vector3(8, 7, 35), tint)
-		for i in range(6):
-			batch.ring(Vector3(side * 19, -4, 13 - i * 5), 2.5, Color("#68c5c6"))
-		batch.crystal(Vector3(side * 11, 5, -13), 3, 18, tint)
-	batch.box(Vector3(0, 15, -4), Vector3(10, 2, 12), Color("#68c5c6"))
-	for side in [-1.0, 1.0]:
-		for row in range(2):
-			var at := Vector3(side * (19 if row == 0 else 30), 10 if row == 0 else 8, 14 if row == 0 else -4)
-			var root := Vector3(side * 12, 3, at.z - 5)
-			batch.limb(root, at - Vector3.UP, 2.2, 1.3, tint)
-			batch.box(at - Vector3.UP * 0.6, Vector3(9, 1.2, 9), tint)
-	return VectorArt.remember_model(key, batch.build())
+	return FleetArt.model("tempest_walker" if sector == "thalassa" else "sunforge_colossus", "ground")
 
 static func player_ship(id: String) -> Node3D:
 	var model := FleetArt.model(id if CampaignState.SHIPS.has(id) else "rook")

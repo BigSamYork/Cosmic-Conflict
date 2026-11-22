@@ -75,11 +75,14 @@ Title/trademark clearance remains a distribution task.
 
 | Input | Current behavior |
 | --- | --- |
-| Mouse | Aim immediately; steer within a bounded local flight corridor |
+| Mouse | Aim and steer along a surface route or turn the ship during an orbital dogfight |
 | LMB | Fire primary weapon; live sorties generate heat |
 | Space | Fire the selected owned secondary station |
 | RMB / Escape | Pause/status overlay; owned secondary selection is available while paused |
-| Shift | Gentle banking side-dash; not a full barrel roll |
+| Shift / B | Side-dash or barrel roll using the shared maneuver capacitor |
+| WASD / hold F | Independent thrusters or hold the current line while aiming |
+| V / X | Toggle the thermal governor or discharge the shield surge bank |
+| R / I | Cycle scope range or repeat boss recon |
 | 1 / 2 / 3 / 0 | Weapons / Shields / Engines / Balanced reactor routing |
 | C | Deploy an equipped chaff/flare charge during active combat |
 | Backtick | Developer testing panel |

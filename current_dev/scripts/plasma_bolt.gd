@@ -30,6 +30,7 @@ func advance(delta: float) -> void:
 	if not hit.is_empty():
 		global_position = hit["position"]
 		active = false
+		hit["direction"] = direction
 		impacted.emit(hit)
 	else:
 		global_position = next

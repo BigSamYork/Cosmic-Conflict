@@ -23,6 +23,10 @@ var objective: String = ""
 var incoming_count: int = 0
 var boss_fraction: float = -1.0
 var radar_contacts: Array[Dictionary] = []
+var scope_range := 360.0
+var intercept_seconds := INF
+var collision_seconds := INF
+var escape_side := 1.0
 var fps: float = 60.0
 var blast_warning: bool = false
 var tractor_active: bool = false
@@ -88,6 +92,12 @@ func _combiner() -> void:
 	_text(Vector2(40, 92), "%02d:%02d" % [seconds / 60, seconds % 60], 29)
 	if autopilot:
 		_text(Vector2(146, 88), "AUTOPILOT / TIME TO ARRIVAL", 14, CYAN)
+	elif flight.roll_remaining > 0:
+		_text(Vector2(146, 88), "BARREL ROLL / DEFLECTING", 16, CYAN)
+	elif intercept_seconds < 2.5:
+		_text(Vector2(146, 88), "MISSILE %.1fs / BREAK OR ROLL [B]" % intercept_seconds, 15, VectorArt.HOSTILE)
+	elif collision_seconds < 1.9:
+		_text(Vector2(146, 88), "PULL %s / IMPACT %.1fs" % ["LEFT" if escape_side < 0 else "RIGHT", collision_seconds], 15, AMBER)
 	elif blast_warning:
 		_text(Vector2(146, 88), "VOLATILE BLAST / CLEAR THE AREA", 15, Color("#f3a2ee"))
 	elif thermal_warning:
@@ -114,8 +124,10 @@ func _combiner() -> void:
 		_text(Vector2(146, 88), "TURRET TRACKING JAMMED / %.1fs" % radar_jam, 14, CYAN)
 	elif vent_warning:
 		_text(Vector2(146, 88), "HEAT VENT / KEEP CLEAR OF THE PLUME", 14, AMBER)
+	elif flight.precision_hold:
+		_text(Vector2(146, 88), "LINE HELD / GUNS FREE", 16, CYAN)
 	else:
-		_text(Vector2(150, 88), "WEAPONS READY / FLIGHT CORRIDOR ACTIVE", 12, MUTED)
+		_text(Vector2(150, 88), "FLIGHT DIRECTOR / PILOT CONTROL", 13, MUTED)
 	var progress: float = boss_fraction if boss_fraction >= 0.0 else flight.elapsed / flight.duration
 	draw_rect(Rect2(42, 108, 438, 4), Color("#264653"))
 	draw_rect(Rect2(42, 108, 438 * progress, 4), AMBER)
@@ -126,50 +138,89 @@ func _left_mfd() -> void:
 	draw_line(Vector2(18, 98), Vector2(232, 98), MUTED, 1)
 	_text(Vector2(17, 133), "HULL / SAFE" if flight.training else "HULL %03d / %03d" % [int(flight.hull), int(flight.max_hull)], 21)
 	var has_flares: bool = campaign != null and campaign.countermeasures and not flight.training
-	_text(Vector2(17, 170), "HITS %02d / FLARES %d" % [flight.impacts, campaign.flares] if has_flares else "%02d SHIELD HITS" % flight.impacts, 17, MUTED)
-	var evasion: String = "SHIFT / READY" if flight.evade_cooldown <= 0 else "SHIFT / %.1fs" % flight.evade_cooldown
+	var reserve := "SURGE [X] READY" if flight.surge_remaining <= 0 else "SURGE %.0fs" % ceilf(flight.surge_remaining)
+	if flight.training:
+		reserve = "%02d SHIELD HITS" % flight.impacts
+	elif flight.recharge_delay > 0.0 and flight.shields < flight.max_shields:
+		reserve = "DEFLECTOR RESTART %.1fs" % flight.recharge_delay
+	elif flight.shields < flight.max_shields:
+		reserve = "CHARGING / " + reserve
+	_text(Vector2(17, 170), reserve, 15, MUTED)
+	var evasion: String = "SHIFT / B READY" if flight.evade_cooldown <= 0 else "SHIFT / B %.1fs" % flight.evade_cooldown
 	if has_flares:
-		evasion = ("SHIFT RDY" if flight.evade_cooldown <= 0 else "SHIFT %.1f" % flight.evade_cooldown) + (" / C RDY" if flight.countermeasure_cooldown <= 0 else " / C %.1f" % flight.countermeasure_cooldown)
+		evasion += (" / C ×%d" % campaign.flares if flight.countermeasure_cooldown <= 0 else " / C %.1f" % flight.countermeasure_cooldown)
 	_text(Vector2(17, 201), evasion, 16, CYAN)
 
 func _right_mfd() -> void:
 	var primary: String = ["PULSE", "PLASMA", "TACHYON"][flight.primary_level]
-	_text(Vector2(17, 30), primary + (" / VENTING" if flight.overheat_remaining > 0 else " / ONLINE"), 21, CYAN)
+	_text(Vector2(17, 30), primary + (" / VENTING" if flight.overheat_remaining > 0 else " / BURST" if flight.heat_governor else " / ONLINE"), 21, CYAN)
 	_text(Vector2(17, 61), flight.primary_damage_label(), 24)
 	_text(Vector2(17, 90), "HEAT %02d%% / %.1fs" % [int(flight.heat), flight.overheat_remaining] if not flight.training else "TRAINING / NO HEAT", 17, VectorArt.HOSTILE if flight.overheat_remaining > 0 else AMBER)
 	var weapon: String = campaign.selected_secondary if campaign != null and not flight.training else "concussion"
 	var label: String = "SWARM" if weapon == "swarm" else "EMP" if weapon == "emp" else "CONC"
-	_text(Vector2(17, 119), "%s %02d / COST %d [SPACE]" % [label, flight.ammo, CampaignState.SECONDARIES[weapon]["ammo"]], 16)
+	var ammo_cost: int = CampaignState.SECONDARIES[weapon]["ammo"]
+	var launches := floori(float(flight.ammo) / ammo_cost)
+	_text(Vector2(17, 119), "%s ×%d / %02d AMMO" % [label, launches, flight.ammo], 17, AMBER if launches <= 1 else WHITE)
 	_text(Vector2(17, 149), "POWER / " + flight.power_mode.to_upper(), 16, CYAN)
 	var credits: int = campaign.credits if campaign != null and not flight.training else 0
 	_text(Vector2(17, 178), "%d CR" % credits, 20)
 	_text(Vector2(17, 208), "%02d m/s   %03d FPS" % [int(flight.speed), int(fps)], 16, MUTED)
 
 func _radar() -> void:
-	_text(Vector2(22, 30), "FLIGHT VECTOR", 21, CYAN)
-	var rect := Rect2(24, 48, 208, 140)
-	draw_rect(rect, Color("#315968"), false, 1.5)
-	draw_line(Vector2(128, 48), Vector2(128, 188), Color("#315968"))
-	draw_line(Vector2(24, 118), Vector2(232, 118), Color("#315968"))
-	for radius in [30.0, 55.0]:
-		draw_arc(rect.get_center(), radius, 0, TAU, 48, Color("#25434f"), 1, true)
-	var marker: Vector2 = rect.get_center() + Vector2(clampf(flight.offset.x / flight.lateral_limit, -1, 1) * 95, -flight.offset.y / FlightState.CORRIDOR.y * 62)
-	draw_colored_polygon(PackedVector2Array([marker + Vector2(0, -7), marker + Vector2(6, 5), marker + Vector2(-6, 5)]), CYAN)
+	var center := Vector2(128, 121)
+	var radii := Vector2(94, 62)
+	_text(Vector2(17, 29), "TAC / %dm" % roundi(scope_range), 22, CYAN)
+	_text(Vector2(195, 27), "[R]", 15, MUTED)
+	for i in range(1, 4):
+		var line := PackedVector2Array()
+		for j in range(49):
+			line.append(center + Vector2.from_angle(j * TAU / 48) * radii * (float(i) / 3.0))
+		draw_polyline(line, Color("#315462"), 1.2, true)
+	draw_line(center - Vector2(radii.x, 0), center + Vector2(radii.x, 0), Color("#315462"))
+	draw_line(center - Vector2(0, radii.y), center + Vector2(0, radii.y), Color("#315462"))
+	_text(Vector2(108, 49), "FWD", 12, MUTED)
+	var direction := Vector2.from_angle(fmod(flight.elapsed * 1.7, TAU))
+	draw_line(center, center + direction * radii, Color(CYAN, 0.3), 1.6, true)
+	draw_colored_polygon(PackedVector2Array([center + Vector2(0, -5), center + Vector2(4, 4), center + Vector2(-4, 4)]), WHITE)
 	if flight.radar_static_remaining > 0:
 		var tick: float = floorf(flight.elapsed * 12)
 		for i in range(28):
 			var x: float = 26 + fposmod(sin(i * 31.7 + tick) * 1371, 198)
 			var y: float = 51 + fposmod(sin(i * 13.9 - tick) * 913, 132)
 			draw_line(Vector2(x, y), Vector2(x + 5, y), Color("#80ad53"), 1.3)
-		_text(Vector2(23, 212), "RADAR / SPORE STATIC %.1fs" % flight.radar_static_remaining, 12, AMBER)
+		_text(Vector2(17, 212), "SPORE STATIC / %.1fs" % flight.radar_static_remaining, 15, AMBER)
 		return
-	for contact in radar_contacts:
-		var point: Vector2 = contact["point"]
-		var at: Vector2 = rect.get_center() + point * Vector2(94, 60)
-		draw_colored_polygon(PackedVector2Array([at + Vector2(0, -5), at + Vector2(4, 4), at + Vector2(-4, 4)]), Color("#ff465d"))
-		if contact["selected"]:
-			draw_arc(at, 8, 0, TAU, 20, AMBER, 1.2, true)
-	_text(Vector2(23, 212), "RED / HOSTILES  GOLD / LOCK" if not radar_contacts.is_empty() else "BOUNDED X / Y CONTROL", 12, MUTED)
+	for i in range(radar_contacts.size() - 1, -1, -1):
+		var contact := radar_contacts[i]
+		var point: Vector2 = contact.point
+		var at := center + point * radii
+		var kind: StringName = contact.get("kind", &"hostile")
+		var tint: Color = AMBER
+		match kind:
+			&"missile", &"hostile", &"danger":
+				tint = VectorArt.HOSTILE
+				draw_colored_polygon(PackedVector2Array([at + Vector2(0, -4), at + Vector2(4, 3), at + Vector2(-4, 3)]), tint)
+				if kind == &"missile":
+					draw_arc(at, 6, 0, TAU, 12, tint, 1.3, true)
+			&"salvage":
+				tint = Color("#81e7aa")
+				draw_line(at - Vector2(4, 0), at + Vector2(4, 0), tint, 1.8)
+				draw_line(at - Vector2(0, 4), at + Vector2(0, 4), tint, 1.8)
+			&"objective":
+				draw_rect(Rect2(at - Vector2(3.5, 3.5), Vector2(7, 7)), tint, false, 1.5)
+			_:
+				tint = MUTED
+				draw_circle(at, 2.5, tint)
+		if absf(contact.get("altitude", 0.0)) > 18.0:
+			draw_line(at + Vector2(4, 0), at + Vector2(4, -5 * signf(contact.altitude)), tint, 1.3)
+		if contact.get("selected", false):
+			draw_arc(at, 8, 0, TAU, 20, WHITE, 1.4, true)
+	var summary := "CLEAR"
+	if not radar_contacts.is_empty():
+		var first := radar_contacts[0]
+		summary = "%s %dm" % [String(first.get("kind", "TRACK")).to_upper(), roundi(first.get("distance", 0.0))]
+	_text(Vector2(17, 211), summary, 15, WHITE)
+	_text(Vector2(192, 211), "%02d" % radar_contacts.size(), 16, CYAN)
 
 func _gauges(fraction: float, tint: Color) -> void:
 	for i in range(5):

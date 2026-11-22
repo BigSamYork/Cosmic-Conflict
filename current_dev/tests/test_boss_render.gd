@@ -31,7 +31,7 @@ func run() -> void:
 	for argument in OS.get_cmdline_user_args():
 		if argument.begins_with("--capture-dir="):
 			game.screenshot_directory = argument.trim_prefix("--capture-dir=")
-	for encounter in [["ignis", false], ["ignis", true], ["thalassa", false], ["xylo", false]]:
+	for encounter in [["ignis", false], ["ignis", true], ["thalassa", false], ["xylo", false], ["cryo", false], ["vespera", false], ["kharon", false]]:
 		var orbital: bool = encounter[1]
 		var boss := BossEncounter.new()
 		boss.sector = encounter[0]

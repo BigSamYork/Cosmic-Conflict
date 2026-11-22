@@ -10,6 +10,9 @@ const WIDE_HALF_WIDTH: float = 60.0
 const RESPONSE_RATES: Array[float] = [5.0, 9.0, 14.0]
 const EVADE_DURATION: float = 0.65
 const EVADE_COOLDOWN: float = 6.0
+const ROLL_DURATION := 0.92
+const SURGE_RECHARGE := 16.0
+const SURGE_HEAT := 34.0
 const EMP_STUN_DURATION: float = 2.0
 const COUNTERMEASURE_COOLDOWN: float = 8.0
 const FROST_DURATION: float = 2.0
@@ -23,6 +26,11 @@ var distance: float = 0.0
 var offset: Vector2 = Vector2.ZERO
 var lateral_limit: float = CORRIDOR.x
 var aim: Vector2 = Vector2.ZERO
+var strafe := Vector2.ZERO
+var precision_hold := false
+var holding_line := false
+var held_offset := Vector2.ZERO
+var offset_velocity := Vector2.ZERO
 var response: float = 9.0
 var shields: float = 100.0
 var impacts: int = 0
@@ -39,6 +47,7 @@ var fire_cooldown: float = 0.0
 var impact_cooldown: float = 0.0
 var hit_flash: float = 0.0
 var damage_flash: float = 0.0
+var last_hit_hull := false
 var training: bool = true
 var duration: float = DURATION
 var speed: float = SPEED
@@ -64,6 +73,12 @@ var evade_start_x: float = 0.0
 var evade_target_x: float = 0.0
 var evade_bank: float = 0.0
 var evasions: int = 0
+var roll_remaining := 0.0
+var roll_side := 1.0
+var roll_count := 0
+var surge_remaining := 0.0
+var heat_governor := false
+var governor_cooling := false
 var deflections: int = 0
 var countermeasure_cooldown: float = 0.0
 var frost_remaining: float = 0.0
@@ -79,9 +94,23 @@ func advance(delta: float, firing: bool, active: bool = true) -> int:
 	var step: float = minf(delta, duration - elapsed)
 	elapsed = minf(duration, elapsed + step)
 	distance += step * speed
-	var bounded_aim: Vector2 = aim.clamp(Vector2(-1.0, -1.0), Vector2.ONE)
-	# Preserve fine aim near the reticle center; the outer stick reaches side terrain.
-	var desired := Vector2(bounded_aim.x * CORRIDOR.x + pow(bounded_aim.x, 3) * (lateral_limit - CORRIDOR.x), -bounded_aim.y * CORRIDOR.y)
+	var before := offset
+	var stick := flight_stick()
+	# A progressive throw preserves a quiet gunsight near centre and lets a half
+	# throw reach halfway to the outside route with a small additional push.
+	var travel_x := lerpf(stick.x, stick.x * stick.x * stick.x, 0.40)
+	if lateral_limit <= CORRIDOR.x:
+		travel_x = lerpf(stick.x, sin(stick.x * PI * 0.5), 0.38)
+	var lift_y := lerpf(stick.y, sin(stick.y * PI * 0.5), 0.38)
+	var desired := Vector2(travel_x * lateral_limit, -lift_y * CORRIDOR.y)
+	if precision_hold:
+		if not holding_line:
+			held_offset = offset
+		if strafe.x == 0.0:
+			desired.x = held_offset.x
+		if strafe.y == 0.0:
+			desired.y = held_offset.y
+	holding_line = precision_hold
 	var steering_response: float = response * (1.4 if power_mode == "engines" else 1.0)
 	var cold_time: float = minf(step, frost_remaining) if frost_slowdown else 0.0
 	radar_static_remaining = maxf(0, radar_static_remaining - step)
@@ -91,9 +120,19 @@ func advance(delta: float, firing: bool, active: bool = true) -> int:
 	if frost_remaining < 0.000001:
 		frost_remaining = 0.0
 	var free_steering_time: float = advance_evasion(step)
+	if roll_remaining > 0:
+		var angle := roll_progress() * TAU
+		desired += Vector2(roll_side * 2.8 * sin(angle), 1.4 * (1.0 - cos(angle)))
+		desired = desired.clamp(Vector2(-lateral_limit, -CORRIDOR.y), Vector2(lateral_limit, CORRIDOR.y))
 	var horizontal_cold: float = clampf(cold_time - (step - free_steering_time), 0, free_steering_time)
 	offset.x = lerpf(offset.x, desired.x, 1.0 - exp(-steering_response * (free_steering_time - horizontal_cold * (1.0 - FROST_RESPONSE))))
 	offset.y = lerpf(offset.y, desired.y, 1.0 - exp(-steering_response * (step - cold_time * (1.0 - FROST_RESPONSE))))
+	if step > 0.0:
+		offset_velocity = (offset - before) / step
+	if precision_hold and strafe.x != 0.0:
+		held_offset.x = offset.x
+	if precision_hold and strafe.y != 0.0:
+		held_offset.y = offset.y
 	impact_cooldown = maxf(0.0, impact_cooldown - step)
 	hit_flash = maxf(0.0, hit_flash - step)
 	damage_flash = maxf(0.0, damage_flash - step)
@@ -132,6 +171,51 @@ func request_evasion() -> String:
 	evasions += 1
 	return ""
 
+func flight_stick() -> Vector2:
+	# Manual thrusters on one axis leave the other axis under pointer control.
+	var stick := Vector2.ZERO if precision_hold else aim
+	if strafe.x != 0.0:
+		stick.x = strafe.x
+	if strafe.y != 0.0:
+		stick.y = strafe.y
+	return stick.clamp(-Vector2.ONE, Vector2.ONE)
+
+func request_barrel_roll() -> String:
+	if complete() or hull <= 0.0:
+		return "ROLL UNAVAILABLE"
+	if evade_cooldown > 0.000001:
+		return "MANEUVER CAPACITOR / %.1fs" % evade_cooldown
+	var horizontal := flight_stick().x
+	roll_side = signf(horizontal) if absf(horizontal) > 0.12 else (-1.0 if offset.x > 0 else 1.0)
+	roll_remaining = ROLL_DURATION
+	evade_cooldown = EVADE_COOLDOWN
+	roll_count += 1
+	return ""
+
+func roll_progress() -> float:
+	return 1.0 - roll_remaining / ROLL_DURATION
+
+func roll_bank(reduced_motion: bool) -> float:
+	if roll_remaining <= 0.0:
+		return 0.0
+	var progress := roll_progress()
+	return roll_side * (0.16 * sin(progress * TAU) if reduced_motion else TAU * smoothstep(0.0, 1.0, progress))
+
+func request_shield_surge() -> String:
+	if training or hull <= 0.0 or complete():
+		return "SHIELD SURGE / CAMPAIGN FLIGHT ONLY"
+	if shields >= max_shields - 0.01:
+		return "DEFLECTOR FULL"
+	if surge_remaining > 0:
+		return "SURGE BANK / %.1fs TO CHARGE" % surge_remaining
+	if overheat_remaining > 0.0 or heat + SURGE_HEAT >= 100.0:
+		return "SURGE INHIBITED / COOL WEAPONS"
+	var restored := minf(max_shields - shields, max_shields * 0.23)
+	shields += restored
+	add_external_heat(SURGE_HEAT)
+	surge_remaining = SURGE_RECHARGE
+	return "SHIELD SURGE / +%d SHIELD" % roundi(restored)
+
 func add_external_heat(amount: float) -> bool:
 	assert(amount >= 0)
 	if training or zero_heat or overheat_remaining > 0:
@@ -145,6 +229,10 @@ func add_external_heat(amount: float) -> bool:
 
 func advance_evasion(delta: float) -> float:
 	assert(delta >= 0.0)
+	surge_remaining = maxf(0.0, surge_remaining - delta)
+	roll_remaining = maxf(0.0, roll_remaining - delta)
+	if roll_remaining < 0.000001:
+		roll_remaining = 0.0
 	evade_cooldown = maxf(0.0, evade_cooldown - delta)
 	if evade_remaining <= 0.0:
 		evade_bank = 0.0
@@ -159,12 +247,18 @@ func advance_evasion(delta: float) -> float:
 	return delta - active_time
 
 func deflect_projectile() -> bool:
-	if evade_remaining <= 0.0 or hull <= 0.0:
+	if (evade_remaining <= 0.0 and roll_remaining <= 0.0) or hull <= 0.0:
 		return false
 	deflections += 1
 	return true
 
 func inherit_evasion(previous: FlightState) -> void:
+	roll_remaining = previous.roll_remaining
+	roll_side = previous.roll_side
+	roll_count = previous.roll_count
+	surge_remaining = previous.surge_remaining
+	heat_governor = previous.heat_governor
+	governor_cooling = previous.governor_cooling
 	evade_remaining = previous.evade_remaining
 	evade_cooldown = previous.evade_cooldown
 	evade_start_x = previous.evade_start_x
@@ -182,12 +276,23 @@ func advance_primary(delta: float, firing: bool) -> int:
 		overheat_remaining = 0.0
 	# Consume time up to firing/cooldown events, so the 2s vent is frame-rate independent.
 	while remaining > 0.0000001:
+		if not heat_governor or training or zero_heat or not firing:
+			governor_cooling = false
+		elif heat >= 76.0:
+			governor_cooling = true
 		if overheat_remaining > 0.0000001:
 			var vent_time: float = minf(remaining, overheat_remaining)
 			heat = maxf(0.0, heat - 50.0 * vent_time)
 			overheat_remaining = maxf(0.0, overheat_remaining - vent_time)
 			fire_cooldown = maxf(0.0, fire_cooldown - vent_time)
 			remaining -= vent_time
+		elif governor_cooling:
+			var cooling := maxf(60.0 * cooling_multiplier, 0.01)
+			var wait := minf(remaining, maxf(0.0, (heat - 35.0) / cooling))
+			heat = maxf(0.0, heat - cooling * wait)
+			fire_cooldown = maxf(0.0, fire_cooldown - wait)
+			remaining -= wait
+			governor_cooling = heat > 35.000001
 		elif fire_cooldown > 0.0000001:
 			var wait: float = minf(remaining, fire_cooldown)
 			heat = maxf(0.0, heat - (14.0 if firing else 60.0) * cooling_multiplier * wait)
@@ -219,8 +324,11 @@ func primary_damage_label() -> String:
 	return "4 x 1 / VOLLEY" if primary_level == 1 else "3 / BEAM TICK" if primary_level == 2 else "DAMAGE 1"
 
 func impact(reason: String = "PROXIMITY IMPACT", damage: float = 18.0, direct_hull: bool = false) -> bool:
+	if roll_remaining > 0.0 and not direct_hull:
+		return false
 	if impact_cooldown > 0.0 and not direct_hull:
 		return false
+	var previous_hull := hull
 	impacts += 1
 	if training:
 		shields = maxf(1.0, shields - damage)
@@ -234,6 +342,7 @@ func impact(reason: String = "PROXIMITY IMPACT", damage: float = 18.0, direct_hu
 		impact_cooldown = 2.0 if training else 0.7
 		recharge_delay = 2.0 if training else SHIELD_RECOVERY_DELAY
 	damage_flash = 0.35
+	last_hit_hull = hull < previous_hull
 	last_impact = reason
 	return true
 

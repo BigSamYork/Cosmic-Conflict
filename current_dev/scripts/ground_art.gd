@@ -30,7 +30,22 @@ static func finish_chunk(model: Node3D, floor_mesh: GeometryBatch, props: Array[
 	var floor_surface := VectorArt.solid(floor_mesh.vertices, floor_mesh.indices, Color.WHITE, floor_mesh.face_colors)
 	floor_surface.material_override = materials[sector]
 	model.add_child(floor_surface)
-	add_landmarks(model, "landmark_" + sector, props)
+	var familiar: Array[Transform3D] = []
+	var landmarks: Array[Transform3D] = []
+	for pose in props:
+		# Broad districts change the mix, with irregular transitions inside each district.
+		var at := pose.origin
+		var district := sin(at.z * 0.0061 + sector.length()) + cos(at.z * 0.0022)
+		var seed_value := hash(Vector2i(roundi(at.x * 4), roundi(at.z * 4)))
+		var fraction := float(posmod(seed_value, 997)) / 997.0
+		if fraction < clampf(0.43 + district * 0.17, 0.13, 0.78):
+			var size := 0.83 + fraction * 0.36
+			pose.basis = pose.basis.rotated(Vector3.UP, (fraction - 0.31) * 0.92).scaled_local(Vector3(size, 0.79 + 0.43 * (1.0 - fraction), size))
+			landmarks.append(pose)
+		else:
+			familiar.append(pose)
+	add_landmarks(model, "landmark_" + sector, familiar)
+	add_landmarks(model, "vista_" + sector, landmarks)
 	return model
 
 static func add_landmarks(model: Node3D, id: String, props: Array[Transform3D]) -> void:

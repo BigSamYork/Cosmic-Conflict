@@ -21,43 +21,10 @@ static func fighter() -> Node3D:
 	return FleetArt.model("vespera")
 
 static func overlord() -> Node3D:
-	var cached: Node3D = VectorArt.cached_model("vespera_overlord")
-	if cached != null:
-		return cached
-	var batch := GeometryBatch.new()
-	batch.box(Vector3(0, -2, -4), Vector3(30, 4, 32), NEON, HULL)
-	for level in range(5):
-		var y: float = 1 + level * 4.5
-		var radius: float = 10.0 if level % 2 == 0 else 8.0
-		for face in range(12):
-			var a: float = face * TAU / 12
-			var b: float = (face + 1) * TAU / 12
-			var p := Vector3(cos(a) * radius, y, -4 + sin(a) * radius)
-			var q := Vector3(cos(b) * radius, y, -4 + sin(b) * radius)
-			var quad := PackedVector3Array([p, q, q + Vector3.UP * 4, p + Vector3.UP * 4])
-			batch.surface(quad, PackedInt32Array([0, 1, 2, 0, 2, 3]), HULL if face % 2 == 0 else PANEL)
-			batch.outline(quad, NEON)
-			batch.line(p.lerp(q, 0.3) + Vector3.UP, p.lerp(q, 0.3) + Vector3.UP * 3, SIGNAL)
-	for side in [-1.0, 1.0]:
-		batch.truss(Vector3(side * 10, 4, -4), Vector3(side * 30, 7, -4), 2.5, SIGNAL, 6)
-		batch.box(Vector3(side * 19, 7, 14), Vector3(8, 2, 8), NEON, HULL)
-	return VectorArt.remember_model("vespera_overlord", batch.build())
+	return FleetArt.model("overlord_spire", "ground")
 
 static func core_ring() -> Node3D:
-	var cached: Node3D = VectorArt.cached_model("vespera_core_ring")
-	if cached != null:
-		return cached
-	var batch := GeometryBatch.new()
-	for radius in [13.0, 15.0]:
-		var points := PackedVector3Array()
-		for i in range(48):
-			var angle: float = i * TAU / 48
-			points.append(Vector3(cos(angle) * radius, 0, sin(angle) * radius))
-		batch.outline(points, SIGNAL if radius == 13 else NEON)
-	for i in range(12):
-		var angle: float = i * TAU / 12
-		batch.box(Vector3(cos(angle) * 14, 0, sin(angle) * 14), Vector3(2.6, 1, 1.2), SIGNAL, HULL, Basis(Vector3.UP, -angle))
-	return VectorArt.remember_model("vespera_core_ring", batch.build())
+	return FleetArt.model("induction_carousel", "ground")
 
 static func nyx() -> Node3D:
 	return FleetArt.model("nyx")
@@ -66,14 +33,7 @@ static func traffic_pod() -> Node3D:
 	return FleetArt.model("traffic")
 
 static func gate_emitter() -> Node3D:
-	var cached: Node3D = VectorArt.cached_model("vespera_gate_post")
-	if cached != null:
-		return cached
-	var batch := GeometryBatch.new()
-	batch.box(Vector3(0, 2, 0), Vector3(1.8, 22, 2.8), NEON, HULL)
-	for i in range(11):
-		batch.box(Vector3(0, -8 + i * 2, 1.5), Vector3(1.2, 0.7, 0.4), SIGNAL, PANEL)
-	return VectorArt.remember_model("vespera_gate_post", batch.build())
+	return FleetArt.model("gate_projector", "ground")
 
 static func terrain_chunk(start: float, branching: bool = false) -> Node3D:
 	branching = branching and start + VectorArt.CHUNK_LENGTH > GroundRoute.FORK and start < GroundRoute.REJOIN
@@ -84,6 +44,8 @@ static func terrain_chunk(start: float, branching: bool = false) -> Node3D:
 	var batch := GeometryBatch.new()
 	var terrain := GeometryBatch.new()
 	var scenery: Array[Transform3D] = []
+	var district := RandomNumberGenerator.new()
+	district.seed = hash(Vector2i(roundi(start / VectorArt.CHUNK_LENGTH), 81961))
 	for row in range(8):
 		var travel: float = start + row * 16
 		for column in range(32):
@@ -113,16 +75,18 @@ static func terrain_chunk(start: float, branching: bool = false) -> Node3D:
 				batch.line(a, d, SIGNAL.darkened(0.25))
 				batch.line(b, c, NEON)
 	for row in range(3):
-		var travel: float = start + 20 + row * 42
 		for side in [-1.0, 1.0]:
 			for tier in range(3):
-				var x: float = side * (43 + tier * 40 + (row % 2) * 8)
+				var travel: float = start + 20 + row * 42 + district.randf_range(-10.0, 10.0)
+				var x: float = side * (43 + tier * 40 + district.randf_range(0.0, 16.0))
 				if branching and absf(x - GroundRoute.lateral_offset(travel)) < 36:
 					continue
+				if tier == 0 and district.randf() < 0.23:
+					continue # Open squares expose the next block and the distant skyline.
 				var at: Vector3 = floor_point(x, travel)
-				var height: float = 54 + posmod(int(start / 128) * 13 + row * 7 + tier * 11, 80)
-				scenery.append(GroundArt.placement(at, Vector3(1, height / 60, 1), PI if side < 0 else 0.0))
-	if posmod(int(start / VectorArt.CHUNK_LENGTH), 3) == 1:
+				var height := district.randf_range(38.0, 134.0) + tier * 8.0
+				scenery.append(GroundArt.placement(at, Vector3(district.randf_range(0.81, 1.15), height / 60, 1), PI if side < 0 else 0.0))
+	if district.randf() < 0.28:
 		var center: Vector3 = FlightState.rail_point(start + 64)
 		batch.box(Vector3(center.x, 53, center.z), Vector3(162, 2.0, 12), SIGNAL, HULL)
 		batch.truss(Vector3(center.x - 81, 58, center.z), Vector3(center.x + 81, 58, center.z), 5, NEON, 18)
@@ -140,8 +104,14 @@ static func horizon() -> Node3D:
 		return cached
 	var batch := GeometryBatch.new()
 	batch.surface(PackedVector3Array([Vector3(-20000, -12, -20000), Vector3(20000, -12, -20000), Vector3(20000, -12, 20000), Vector3(-20000, -12, 20000)]), PackedInt32Array([0, 1, 2, 0, 2, 3]), Color("#100e20"))
-	for side in [-1.0, 1.0]:
-		for i in range(50):
-			var height: float = 100 + (i * 37) % 210
-			batch.box(Vector3(side * (260 + (i % 3) * 55), height * 0.5, 300 - i * 170), Vector3(70, height, 110), Color("#4b315f"), Color("#100e20"))
-	return VectorArt.remember_model("vespera_horizon", batch.build())
+	var model := batch.build()
+	for stretch in range(10):
+		var skyline: Array[Transform3D] = []
+		for side in [-1.0, 1.0]:
+			for j in range(5):
+				var i := stretch * 5 + j
+				var height := 100.0 + (i * 37) % 210
+				var at := Vector3(side * (260 + (i % 3) * 55), -12, 300 - i * 170)
+				skyline.append(GroundArt.placement(at, Vector3(3, height / 54, 3.6), side * (i % 3) * 0.25))
+		GroundArt.add_landmarks(model, "landmark_vespera" if stretch % 2 else "vista_vespera", skyline)
+	return VectorArt.remember_model("vespera_horizon", model)

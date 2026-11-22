@@ -5,6 +5,7 @@ var parked_ships: Array[Node3D] = []
 var radar_domes: Array[Node3D] = []
 var marine_radars: Array[Node3D] = []
 var gun_heads: Array[Node3D] = []
+var lifts: Array[AnimationPlayer] = []
 var age: float = 0.0
 
 func _ready() -> void:
@@ -20,36 +21,30 @@ func _ready() -> void:
 			var bay: Vector3 = EncounterArt.PARKING_BAYS[row]
 			ship.position = Vector3(side * bay.x, bay.y, bay.z)
 			ship.rotation.y = side * PI * 0.1
-			var gear := GeometryBatch.new()
-			for x in [-1.2, 1.2]:
-				for z in [-1.4, 1.4]:
-					gear.box(Vector3(x, -1.7, z), Vector3(0.3, 1.4, 0.3), EncounterArt.HULL)
-					gear.box(Vector3(x, -2.35, z), Vector3(0.9, 0.1, 0.8), EncounterArt.GOLD)
-			ship.add_child(gear.build())
+			ship.add_child(FleetArt.model("landing_gear", "ground"))
 			add_child(ship)
 			parked_ships.append(ship)
+		var service_light := OmniLight3D.new()
+		service_light.position = Vector3(side * 31, 11, -55)
+		service_light.light_color = Color("#9bc9d9") if side < 0 else Color("#f2bd82")
+		service_light.light_energy = 1.65
+		service_light.omni_range = 34.0
+		add_child(service_light)
+		var hoist := SurfaceRig.model("cargo_gantry")
+		hoist.position = Vector3(side * 30, 22.7, -32 if side > 0 else -59)
+		add_child(hoist)
+		lifts.append(SurfaceRig.start(hoist, &"Transfer", 2.1 if side < 0 else 0.0))
 	for i in range(6):
 		var angle: float = i * TAU / 6 + PI / 12
 		var mount := Node3D.new()
 		mount.position = Vector3(cos(angle) * 126, 4 + sin(angle) * 126, 94)
 		mount.rotation.z = angle - PI / 2
 		add_child(mount)
-		var dome := GeometryBatch.new()
-		var meridians := PackedVector3Array()
-		for arc in range(12):
-			var longitude: float = arc * TAU / 12
-			for step in range(8):
-				var a: float = step * PI / 16
-				var b: float = (step + 1) * PI / 16
-				meridians.append_array(PackedVector3Array([Vector3(cos(longitude) * cos(a) * 6, sin(a) * 6, sin(longitude) * cos(a) * 6), Vector3(cos(longitude) * cos(b) * 6, sin(b) * 6, sin(longitude) * cos(b) * 6)]))
-		for line in range(0, meridians.size(), 2):
-			dome.line(meridians[line], meridians[line + 1], EncounterArt.HULL)
-		dome.box(Vector3(0, -0.5, 0), Vector3(13, 1, 13), EncounterArt.GOLD)
-		mount.add_child(dome.build())
-		var rotor := GeometryBatch.new()
-		rotor.box(Vector3(0, 2.5, 0), Vector3(9, 0.8, 1.5), VectorArt.CYAN)
-		rotor.line(Vector3(0, 0, 0), Vector3(0, 5.5, 0), EncounterArt.GOLD)
-		var scanner: Node3D = rotor.build()
+		var pedestal := FleetArt.model("radar_pedestal", "ground")
+		pedestal.scale = Vector3(0.95, 0.34, 0.95)
+		mount.add_child(pedestal)
+		var scanner := FleetArt.model("survey_dish", "ground")
+		scanner.position.y = 4.4
 		mount.add_child(scanner)
 		radar_domes.append(scanner)
 	for i in range(4):
@@ -58,19 +53,11 @@ func _ready() -> void:
 		mount.position = Vector3(cos(angle) * 125, 4 + sin(angle) * 125, 90)
 		mount.rotation.z = angle - PI / 2
 		add_child(mount)
-		var tower := GeometryBatch.new()
-		tower.box(Vector3.ZERO, Vector3(8, 2, 8), EncounterArt.HULL)
-		tower.truss(Vector3.ZERO, Vector3(0, 14, 0), 2.0, EncounterArt.HULL, 7)
-		for side in [-1.0, 1.0]:
-			tower.line(Vector3(side * 3, 0, 0), Vector3(0, 11, 0), EncounterArt.GOLD)
-		mount.add_child(tower.build())
+		mount.add_child(EncounterArt.radar_mast(15.0, false))
 		for level in range(2):
-			var antenna := GeometryBatch.new()
-			antenna.box(Vector3.ZERO, Vector3(14 if level == 0 else 9, 0.9, 1.6), VectorArt.CYAN)
-			for slot in range(7):
-				antenna.box(Vector3((slot - 3) * (1.7 if level == 0 else 1.1), 0.7, 0), Vector3(0.3, 1.3, 0.5), EncounterArt.GOLD)
-			var scanner: Node3D = antenna.build()
-			scanner.position.y = 10 + level * 4
+			var scanner := FleetArt.model("fleet_dish", "ground")
+			scanner.scale = Vector3.ONE * (0.61 if level == 0 else 0.78)
+			scanner.position = Vector3(2.5 if level == 0 else 0.0, 8.0 if level == 0 else 15.0, 0)
 			mount.add_child(scanner)
 			marine_radars.append(scanner)
 	for i in range(8):
@@ -88,6 +75,8 @@ func _ready() -> void:
 
 func advance(delta: float) -> void:
 	age += delta
+	for lift in lifts:
+		lift.advance(delta)
 	for i in range(radar_domes.size()):
 		radar_domes[i].rotation.y = age * (0.55 + i * 0.07)
 	for i in range(marine_radars.size()):

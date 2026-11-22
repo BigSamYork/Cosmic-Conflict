@@ -15,7 +15,13 @@ func _ready() -> void:
 	collision_layer = 3
 	collision_mask = 0
 	armor = ceili(radius * 0.7)
-	appearance = FleetArt.model("brood_egg", "ground") if infested else XyloArt.egg_ship(2 if cargo else variant)
+	if infested:
+		appearance = FleetArt.model("brood_egg", "ground")
+	elif int(travel / 51.0) % 3 == 1:
+		appearance = FleetArt.model("clutch_%d" % (2 if cargo else variant))
+	else:
+		appearance = XyloArt.egg_ship(2 if cargo else variant)
+	appearance.get_child(0).set_instance_shader_parameter(&"living_shell", true)
 	add_child(appearance)
 	var shape := SphereShape3D.new()
 	shape.radius = collision_radius()

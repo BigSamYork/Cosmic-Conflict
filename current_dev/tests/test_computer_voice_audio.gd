@@ -44,6 +44,12 @@ func run() -> void:
 	check(voice.say_route(false) and voice.policy.event == "route_easy", "An eligible one-in-four route outcome starts after actual four-second silence")
 	voice.set_level(0, false)
 	check(not voice.player.playing and not voice.say("ejection"), "The voice volume control stops playback and keeps it off")
+	voice.set_level(70, false)
+	for sector in SectorCatalog.AVAILABLE:
+		for encounter in ["ground", "orbit"]:
+			voice.stop_speech(true)
+			var key: String = "recon_" + sector + "_" + encounter
+			check(voice.say(key) and voice.player.stream.get_length() > 3.0 and voice.policy.event == key, "Boss recon recording plays for " + key)
 	if not preview_path.is_empty():
 		voice.set_level(70, false)
 		voice.stop_speech(true)

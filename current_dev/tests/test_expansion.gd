@@ -230,12 +230,13 @@ func verify_boss_radars() -> void:
 			for _i in range(6):
 				game._strike(contact, 1)
 			check(radar.destroyed and radar.collision_layer == 0 and not radar.visible, "Six actual baseline hits destroy the radar, hide it and remove collision")
-			check(game.campaign.credits == credits + 30 and game.campaign.stats["enemies"] == enemies and game.campaign.combo_kills == streak and not boss.core.unlocked, "Radar gives one optional credit reward without combo, enemy kill or core unlock")
+			check(game.campaign.credits == credits + 30 and game.campaign.stats["enemies"] == enemies and game.campaign.combo_kills == streak and not boss.core.unlocked, "One radar gives a single reward and leaves the core sealed")
 			check(not game._strike({"collider": radar, "position": radar.aim_point()}, 10) and game.campaign.credits == credits + 30, "Destroyed radar cannot be rewarded again")
 			boss.advance(0.01, game.camera.global_position, Vector3.ZERO)
 			check(boss.turrets[0].interval_multiplier == 1.25, "One radar loss slows turret cadence by the agreed interval multiplier")
 			boss.radars[1].receive_hit(boss.radars[1].armor)
 			boss.advance(0.01, game.camera.global_position, Vector3.ZERO)
+			check(boss.core.unlocked == (sector == "vespera"), "Both shield radars expose the Vespera core, with other sector objectives still active")
 			check(boss.turrets[0].interval_multiplier == 1.5 and not game.explosions.is_empty() and not game.debris.is_empty(), "Both radars stack additively and real destruction includes explosion and hull-colored breakup")
 			var camera_before: Basis = game.camera.basis
 			var hull_before: Vector3 = boss.global_position

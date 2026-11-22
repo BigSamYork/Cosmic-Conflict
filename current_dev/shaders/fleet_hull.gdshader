@@ -1,5 +1,5 @@
 shader_type spatial;
-render_mode unshaded, cull_disabled;
+render_mode ambient_light_disabled, specular_disabled, cull_disabled;
 
 // The game uses an unlit world. A broad key and cool reflected light give the
 // curved armor a consistent volume even in the first-person hangar viewport.
@@ -10,6 +10,8 @@ uniform float pulse_strength : hint_range(0.0, 1.0) = 1.0;
 
 instance uniform bool parked = false;
 instance uniform bool weathered = false;
+instance uniform bool living_shell = false;
+instance uniform vec4 nav_tint : source_color = vec4(0.0);
 
 float surface_grain(vec3 p) {
     vec3 cell = floor(p);
@@ -24,6 +26,10 @@ float surface_grain(vec3 p) {
 void vertex() {
     hull_normal = normalize(MODEL_NORMAL_MATRIX * NORMAL);
     local_position = VERTEX;
+    if (living_shell) {
+        float breath = sin(TIME * 1.65 + VERTEX.y * 2.0 + float(INSTANCE_ID));
+        VERTEX.xz *= 1.0 + 0.018 * breath * pulse_strength;
+    }
 }
 
 void fragment() {
@@ -39,6 +45,15 @@ void fragment() {
     vec3 reflect_dir = reflect(-eye, n);
     float sky_band = smoothstep(-0.12, 0.08, reflect_dir.y) * (1.0 - smoothstep(0.28, 0.57, reflect_dir.y));
     vec3 paint = COLOR.rgb;
+    if (living_shell) {
+        float fleck = surface_grain(local_position * 9.5);
+        float membranes = surface_grain(local_position * vec3(14.0,6.0,13.0) + 1.15 * fleck);
+        float vein = 1.0 - smoothstep(0.012,0.067,abs(membranes - 0.48));
+        paint *= (0.69 + 0.52 * fleck) * mix(vec3(1.0), vec3(0.44,0.40,0.38), vein);
+    }
+    if (finish > 0.8 && nav_tint.a > 0.0) {
+        paint = nav_tint.rgb * 1.85;
+    }
     if (weathered && finish < 0.40) {
         float deposit = surface_grain(local_position * vec3(2.6, 0.68, 2.6));
         float coarse = surface_grain(local_position * 0.75);
@@ -66,5 +81,12 @@ void fragment() {
         }
         color = paint * (1.45 + pulse * pulse_strength);
     }
-    ALBEDO = OUTPUT_IS_SRGB ? pow(max(color, vec3(0.0)), vec3(1.0 / 2.2)) : color;
+    EMISSION = OUTPUT_IS_SRGB ? pow(max(color, vec3(0.0)), vec3(1.0 / 2.2)) : color;
+    ALBEDO = paint;
+    ROUGHNESS = 1.0;
+    SPECULAR = 0.0;
+}
+
+void light() {
+    DIFFUSE_LIGHT += LIGHT_COLOR * ATTENUATION * max(dot(NORMAL, LIGHT), 0.0) / PI;
 }

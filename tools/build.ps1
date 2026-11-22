@@ -68,7 +68,7 @@ try {
         }
     }
     Invoke-Godot @('--headless', '--path', $project, '--editor', '--import', '--quit')
-    foreach ($test in @('test_expansion.gd', 'test_flight.gd', 'test_combat.gd', 'test_campaign.gd', 'test_campaign_completion.gd', 'test_release_polish.gd', 'test_cockpit_layout.gd', 'test_gun_art.gd', 'test_continuous_flight.gd', 'test_orbital_arrival.gd', 'test_asteroid_mining.gd', 'test_encounter_objectives.gd', 'test_thermal_hazards.gd', 'test_radar_rocks_hangar.gd', 'test_secondary_systems.gd', 'test_launch.gd', 'test_countermeasures.gd', 'test_ground_routes.gd', 'test_primary_systems.gd', 'test_sectors.gd', 'test_vespera.gd', 'test_computer_voice.gd', 'test_voice_editor.gd', 'test_xylo.gd')) {
+    foreach ($test in @('test_expansion.gd', 'test_flight.gd', 'test_combat.gd', 'test_campaign.gd', 'test_campaign_completion.gd', 'test_release_polish.gd', 'test_cockpit_layout.gd', 'test_gun_art.gd', 'test_continuous_flight.gd', 'test_orbital_arrival.gd', 'test_asteroid_mining.gd', 'test_encounter_objectives.gd', 'test_thermal_hazards.gd', 'test_radar_rocks_hangar.gd', 'test_secondary_systems.gd', 'test_launch.gd', 'test_countermeasures.gd', 'test_ground_routes.gd', 'test_primary_systems.gd', 'test_sectors.gd', 'test_vespera.gd', 'test_computer_voice.gd', 'test_voice_editor.gd', 'test_xylo.gd', 'test_surface_patrol.gd', 'test_pilot_avionics.gd', 'test_siege_tactics.gd')) {
         Invoke-Godot @('--headless', '--path', $project, '--script', "res://tests/$test", '--quit-after', '600') -RequireTestCompletion
     }
     Invoke-Godot @('--headless', '--path', $project, '--script', 'res://tests/test_voice_editor.gd', '--', '--editor-exit-test') -RequireTestCompletion

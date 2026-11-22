@@ -112,15 +112,15 @@ func _test_game_sequences() -> void:
 	game.set_process(false)
 	game.start_flight()
 	var tower: DestructibleTower = game.towers[0]
-	var base: Vector3 = tower.aim_point()
+	var base: Vector3 = tower.to_global(Vector3(0, -4.5, 1.5))
 	var armor: int = tower.armor
-	game._strike({"collider": tower, "position": tower.to_global(Vector3(0, 4, 2))}, 10)
-	check(tower.armor == armor, "Tower armor rejects hits above its foundation")
+	game._strike({"collider": tower, "position": tower.to_global(Vector3(0, 4, 2))}, 1)
+	check(tower.armor == armor - 1, "A crown strike damages the whole tower")
 	for _i in range(6):
 		game._strike({"collider": tower, "position": base}, 1)
 	check(tower.destroyed and tower.collision_layer == 0 and flight_count(game) == 1, "Several foundation hits start one tower collapse and remove its collision")
 	tower.advance(0.8)
-	check(absf(tower.pivot.rotation.z) > 0.1 and tower.pivot.visible, "Tower visibly topples before fragmenting")
+	check(tower.pivot.basis.get_rotation_quaternion().get_angle() > 0.1 and tower.pivot.visible, "Tower visibly topples along the shot direction before fragmenting")
 	game.pause_flight()
 	var frozen: float = tower.collapse_time
 	game._physics_process(0.5)

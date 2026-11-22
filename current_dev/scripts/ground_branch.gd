@@ -8,8 +8,10 @@ var supplies: Array[SupplyPickup] = []
 var announced: bool = false
 var sector: String = "ignis"
 var health_scale: float = 1.0
+var patrol := SurfacePatrol.new()
 
 func _ready() -> void:
+	add_child(patrol)
 	var guides := GeometryBatch.new()
 	for distance in range(int(GroundRoute.FORK), int(GroundRoute.REJOIN), 12):
 		var current: Transform3D = GroundRoute.frame(distance)
@@ -59,6 +61,9 @@ func engages(target: RangeTarget, distance: float) -> bool:
 
 func advance(delta: float, previous: Vector3, pilot: Vector3, campaign: CampaignState, flight: FlightState) -> Array[String]:
 	var messages: Array[String] = []
+	var contract := patrol.advance(delta, previous, pilot, campaign, flight, route)
+	if not contract.is_empty():
+		messages.append(contract)
 	if not announced and flight.distance >= GroundRoute.FORK - 480:
 		announced = true
 		messages.append("FORK AHEAD / FLY LEFT FOR SAFE / RIGHT FOR HAZARD")
@@ -73,6 +78,8 @@ func advance(delta: float, previous: Vector3, pilot: Vector3, campaign: Campaign
 	return messages
 
 func objective(distance: float) -> String:
+	if not patrol.prompt.is_empty():
+		return patrol.prompt
 	if distance >= GroundRoute.REJOIN:
 		return "MAIN ROUTE / BOSS APPROACH"
 	if route.selected:

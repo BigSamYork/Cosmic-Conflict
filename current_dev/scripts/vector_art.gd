@@ -194,7 +194,6 @@ static func ground_horizon(icy: bool = false) -> Node3D:
 				var y: float = -22 - absf(sin(x * 0.002) * cos(z * 0.0015)) * 12
 				points.append(Vector3(x, y, z))
 			batch.surface(points, PackedInt32Array([0, 1, 2, 0, 2, 3]), Color("#152e44") if icy else Color("#21151c") if (row + column) % 3 == 0 else Color("#1b1520"))
-			batch.outline(points, Color("#335b76") if icy else Color("#38212c"))
 	return remember_model(key, batch.build())
 
 static func turret_base() -> Node3D:
@@ -204,16 +203,9 @@ static func turret_head() -> Node3D:
 	return FleetArt.model("battery", "ground")
 
 static func enemy_missile(tint: Color = HOSTILE) -> Node3D:
-	var batch := GeometryBatch.new()
-	var points := PackedVector3Array([Vector3(0, 0, -1.5), Vector3(-0.32, 0, 0.6), Vector3(0, 0.32, 0.6), Vector3(0.32, 0, 0.6), Vector3(0, -0.32, 0.6)])
-	batch.surface(points, PackedInt32Array([0, 1, 2, 0, 2, 3, 0, 3, 4, 0, 4, 1]), Color("#461d30"))
-	for i in range(1, 5):
-		batch.line(points[0], points[i], tint)
-	batch.ring(Vector3(0, 0, 0.65), 0.3, AMBER, 8)
-	for side in [-1.0, 1.0]:
-		batch.outline(PackedVector3Array([Vector3(side * 0.3, 0, 0), Vector3(side * 0.85, 0, 0.8), Vector3(side * 0.3, 0, 0.55)]), tint)
-	batch.line(Vector3(0, 0, 0.6), Vector3(0, 0, 3.8), AMBER)
-	return batch.build()
+	var projectile := FleetArt.model("interceptor_round")
+	projectile.get_child(0).set_instance_shader_parameter(&"nav_tint", tint)
+	return projectile
 
 static func terrain_chunk(start: float, branching: bool = false, icy: bool = false) -> Node3D:
 	if icy:

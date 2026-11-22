@@ -21,9 +21,13 @@ func build(rock: Asteroid, shattered: bool) -> void:
 		chunk.position = direction * rock.radius * 0.45
 		chunk.scale = Vector3.ONE * radius
 		for mesh: MeshInstance3D in chunk.get_children():
-			if mesh.material_override is StandardMaterial3D:
+			if mesh.mesh.has_meta("fragment_vertices"):
 				if solid_material == null:
-					solid_material = mesh.material_override.duplicate()
+					solid_material = StandardMaterial3D.new()
+					solid_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+					solid_material.cull_mode = BaseMaterial3D.CULL_DISABLED
+					solid_material.vertex_color_use_as_albedo = true
+					solid_material.vertex_color_is_srgb = true
 					solid_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 				mesh.material_override = solid_material
 			else:

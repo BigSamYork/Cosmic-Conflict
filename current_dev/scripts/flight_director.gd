@@ -40,14 +40,18 @@ func begin_phase(phase: String, entry: Transform3D, canyon_distance: float = 0.0
 	elif phase == "asteroids":
 		origin = entry * Transform3D(asteroid_frame(0).basis.inverse(), Vector3.ZERO)
 
-func advance(phase: String, delta: float, distance: float, elapsed: float, targets: Array[RangeTarget]) -> void:
+func advance(phase: String, delta: float, distance: float, elapsed: float, targets: Array[RangeTarget], stick: Vector2 = Vector2.ZERO, hold_heading: bool = false) -> void:
 	match phase:
 		"ground", "ground_boss":
 			frame = ground_course * (GroundRoute.frame(distance) if ground_route != null and ground_route.selected else FlightState.rail_frame(distance))
 		"orbit":
+			# Beyond the fine-aim zone, trade automatic pursuit for a deliberate
+			# turn. The new heading moves the actual ship and becomes the next
+			# tick's starting frame, so the pilot can break away from a chase.
+			var authority := smoothstep(0.32, 0.94, stick.length())
 			if not is_instance_valid(tracked) or tracked.destroyed or tracked.expired:
 				tracked = select_target(frame, targets)
-			if is_instance_valid(tracked):
+			if is_instance_valid(tracked) and not hold_heading:
 				var direction: Vector3 = tracked.global_position - frame.origin
 				if direction.length_squared() > 0.01:
 					var horizontal: float = Vector2(direction.x, direction.z).length()
@@ -57,7 +61,12 @@ func advance(phase: String, delta: float, distance: float, elapsed: float, targe
 					var desired: Quaternion = Basis.looking_at(direction.normalized(), Vector3.UP).get_rotation_quaternion()
 					var current: Quaternion = frame.basis.get_rotation_quaternion()
 					var angle: float = current.angle_to(desired)
-					frame.basis = Basis(current.slerp(desired, minf(1.0, TURN_RATE * delta / maxf(angle, 0.0001))))
+					frame.basis = Basis(current.slerp(desired, minf(1.0, (1.0 - authority) * TURN_RATE * delta / maxf(angle, 0.0001))))
+			if authority > 0.0 and not hold_heading:
+				var heading := -frame.basis.z
+				var yaw := atan2(-heading.x, -heading.z) - stick.x * delta * authority * 1.25
+				var pitch := clampf(asin(clampf(heading.y, -1, 1)) - stick.y * delta * authority, -1.16, 1.16)
+				frame.basis = Basis(Vector3.UP, yaw) * Basis(Vector3.RIGHT, pitch)
 			frame.origin -= frame.basis.z * DOGFIGHT_SPEED * delta
 		"orbit_boss":
 			frame = origin * Transform3D(Basis.IDENTITY, Vector3(0, 0, -elapsed * FlightState.SPEED))

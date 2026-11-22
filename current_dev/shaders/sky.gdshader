@@ -7,6 +7,8 @@ uniform float ocean_mix : hint_range(0.0, 1.0) = 0.0;
 uniform float desert_mix : hint_range(0.0, 1.0) = 0.0;
 uniform float atmosphere_mix : hint_range(0.0, 1.0) = 0.0;
 uniform float weather_time = 0.0;
+uniform float surface_time = 0.0;
+uniform sampler2D cloud_atlas : hint_default_black, repeat_enable, filter_linear_mipmap;
 uniform float planet_visibility : hint_range(0.0, 1.0) = 1.0;
 
 float hash(vec3 p) {
@@ -84,6 +86,23 @@ void sky() {
 	vec3 cell = floor(EYEDIR * 480.0);
 	float star = step(0.9987, hash(cell)) * pow(height, 0.3);
 	COLOR += vec3(0.38, 0.62, 0.74) * star;
+	vec2 drift = vec2(surface_time * 0.00065, 0.0) * atmosphere_mix;
+	float longitude = atan(EYEDIR.x, -EYEDIR.z);
+	vec3 air = texture(cloud_atlas, SKY_COORDS + drift).rgb;
+	vec3 wisps = texture(cloud_atlas, vec2(SKY_COORDS.x * 2.0 + 0.41, SKY_COORDS.y + 0.25) - drift * 0.55).rgb;
+	float ribbon = height - (0.27 + 0.17 * sin(longitude * 2.0 + 0.3) + 0.055 * cos(longitude * 5.0));
+	float nebula = exp(-ribbon * ribbon * 19.0) * smoothstep(0.33, 0.79, air.r) * (0.44 + 0.86 * wisps.g);
+	COLOR += mix(vec3(0.075, 0.065, 0.17), vec3(0.045, 0.14, 0.15), air.b) * nebula * (1.0 - 0.79 * atmosphere_mix);
+	float volcanic = max(0.0, 1.0 - icy_mix - city_mix - swamp_mix - ocean_mix - desert_mix);
+	float cloud_bank = smoothstep(0.27, 0.77, air.r * 0.74 + wisps.r * 0.26) * exp(-3.0 * height);
+	vec3 haze = volcanic * vec3(0.23, 0.085, 0.048) + desert_mix * vec3(0.26, 0.18, 0.105) +
+		swamp_mix * vec3(0.075, 0.16, 0.098) + city_mix * vec3(0.14, 0.074, 0.18) +
+		icy_mix * vec3(0.09, 0.16, 0.21) + ocean_mix * vec3(0.095, 0.15, 0.19);
+	COLOR += haze * cloud_bank * atmosphere_mix;
+	float curtain = exp(-abs(ribbon + (air.r - 0.5) * 0.39) * 15.0) * smoothstep(0.18, 0.82, air.b);
+	COLOR += atmosphere_mix * icy_mix * mix(vec3(0.045, 0.23, 0.17), vec3(0.13, 0.10, 0.23), wisps.r) * curtain;
+	float skyglow = exp(-height * 10.0) * max(0.0, cos(longitude * 8.0 + air.r * 6.0));
+	COLOR += atmosphere_mix * city_mix * skyglow * vec3(0.15, 0.061, 0.19);
 	COLOR = solar_disc(COLOR, EYEDIR);
 	float storm = 0.5 + 0.25 * sin(EYEDIR.x * 17.0 + EYEDIR.z * 11.0 + weather_time * 0.035)
 		+ 0.25 * sin(EYEDIR.y * 22.0 - EYEDIR.z * 9.0 + weather_time * 0.022);

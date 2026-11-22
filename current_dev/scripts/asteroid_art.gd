@@ -135,7 +135,15 @@ static func create(variant: int, tint: Color, distant: bool = false, icy: bool =
 			var b: int = 1 + ring * sectors + (sector + 1) % sectors
 			triangles.append_array(PackedInt32Array([a, b, a + sectors, b, b + sectors, a + sectors]))
 	var result := Node3D.new()
-	result.add_child(VectorArt.solid(vertices, triangles, Color.WHITE, colors))
+	var hull := VectorArt.solid(vertices, triangles, Color.WHITE, colors)
+	var stone := ShaderMaterial.new()
+	stone.shader = preload("res://shaders/regolith.gdshader")
+	stone.set_shader_parameter("geology", preload("res://assets/ground/regolith.png"))
+	stone.set_shader_parameter("formation", float(variant))
+	stone.set_shader_parameter("glacial", icy)
+	stone.set_shader_parameter("seam_color", tint)
+	hull.material_override = stone
+	result.add_child(hull)
 	for i in range(CRATERS.size()):
 		var center: Vector3 = crater_center(i, variant)
 		var u: Vector3 = center.cross(Vector3.UP).normalized()
@@ -149,14 +157,14 @@ static func create(variant: int, tint: Color, distant: bool = false, icy: bool =
 				var local_radius: float = angular_radius * (1.0 + 0.045 * sin(angle * 3.0 + i))
 				var direction: Vector3 = center * cos(local_radius) + (u * cos(angle) + v * sin(angle)) * sin(local_radius)
 				rim.append(_stroke_point(direction, vertices, rings, sectors))
-			batch.outline(rim, tint if band == 1.0 else tint.darkened(0.33))
+			batch.outline(rim, tint.darkened(0.59 if band == 1.0 else 0.73))
 		if not distant:
 			for spoke in range(5):
 				var angle: float = spoke * TAU / 5 + i
 				var radial: Vector3 = u * cos(angle) + v * sin(angle)
 				var a: Vector3 = center * cos(crater_radius(i)) + radial * sin(crater_radius(i))
 				var b: Vector3 = center * cos(crater_radius(i) * 0.7) + radial * sin(crater_radius(i) * 0.7)
-				batch.line(_stroke_point(a, vertices, rings, sectors), _stroke_point(b, vertices, rings, sectors), tint.darkened(0.45))
+				batch.line(_stroke_point(a, vertices, rings, sectors), _stroke_point(b, vertices, rings, sectors), tint.darkened(0.73))
 	for crack in range((12 if variant >= 3 else 18) if distant else 32):
 		var start: Vector3 = Vector3(sin(crack * 2.3), cos(crack * 1.7), sin(crack * 0.9 + 0.5)).normalized()
 		var tangent: Vector3 = start.cross(Vector3(0.3, 1, 0.2)).normalized()
@@ -165,7 +173,7 @@ static func create(variant: int, tint: Color, distant: bool = false, icy: bool =
 			var distance: float = segment * 0.075
 			var normal: Vector3 = (start * cos(distance) + tangent * sin(distance) + start.cross(tangent) * sin(segment * 1.8 + crack) * 0.02).normalized()
 			var current: Vector3 = _stroke_point(normal, vertices, rings, sectors)
-			batch.line(previous, current, tint.darkened(0.22))
+			batch.line(previous, current, tint.darkened(0.58))
 			previous = current
 	var outline: Node3D = batch.build()
 	var strokes: MeshInstance3D = outline.get_child(0)
