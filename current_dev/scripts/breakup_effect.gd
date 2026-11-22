@@ -72,10 +72,10 @@ func _upload(index: int, transform: Transform3D, opacity: float = 1.0) -> void:
 	line_instances.multimesh.set_instance_color(index, Color(edge, edge.a * opacity))
 
 func _collect(node: Node3D, output: Array[Dictionary]) -> void:
-	if node is MeshInstance3D and node.mesh != null and node.material_override is StandardMaterial3D:
+	if node is MeshInstance3D and node.mesh != null and (node.material_override is StandardMaterial3D or node.material_override == FleetArt.hull_material):
 		if node.mesh.has_meta("fragment_vertices"):
 			output.append({"vertices": node.mesh.get_meta("fragment_vertices"), "indices": node.mesh.get_meta("fragment_indices"), "transform": node.global_transform,
-				"colors": node.mesh.get_meta("fragment_colors", PackedColorArray()), "base_color": node.material_override.albedo_color,
+				"colors": node.mesh.get_meta("fragment_colors", PackedColorArray()), "base_color": node.material_override.albedo_color if node.material_override is StandardMaterial3D else Color.WHITE,
 				"edge_colors": node.mesh.get_meta("fragment_edge_colors", PackedColorArray())})
 		else:
 			push_warning("Breakup geometry has no CPU source: " + str(node.name))

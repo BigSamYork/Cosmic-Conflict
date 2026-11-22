@@ -18,10 +18,10 @@ func attach(model: Node3D) -> void:
 		var source: Material = child.material_override
 		assert(source is StandardMaterial3D or source is ShaderMaterial)
 		var material: ShaderMaterial
-		if source is StandardMaterial3D:
+		if source is StandardMaterial3D or source == FleetArt.hull_material:
 			material = ShaderMaterial.new()
 			material.shader = SURFACE
-			material.set_shader_parameter("hull_tint", source.albedo_color)
+			material.set_shader_parameter("hull_tint", source.albedo_color if source is StandardMaterial3D else Color.WHITE)
 		else:
 			material = source.duplicate()
 		meshes.append(child)

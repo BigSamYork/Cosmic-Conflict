@@ -57,7 +57,7 @@ func _ready() -> void:
 		cloak.phase = phase
 		cloak.attach(get_child(0))
 	if heavy and sector != "xylo":
-		var plating := VectorArt.box(Vector3(3.4, 1.5, 2.8), VectorArt.HOSTILE)
+		var plating := FleetArt.model("heavy_armor")
 		add_child(plating)
 	if has_directional_shield():
 		shield_visual = _create_shield()

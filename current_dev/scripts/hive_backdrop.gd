@@ -35,6 +35,6 @@ func build_hive(course: Transform3D, arrival: PackedVector3Array) -> void:
 				axes.append(velocity.normalized())
 				speeds.append(velocity.length())
 				rocks.append({"position": course * at, "radius": envelope / 1.3, "peripheral": true, "kind": "mother" if mother else "egg"})
-			var model: Node3D = XyloArt.hive_mother() if mother else XyloArt.egg_ship(kind - 1, true)
+			var model: Node3D = XyloArt.hive_mother(true) if mother else XyloArt.egg_ship(kind - 1, true)
 			_add_batch(model, transforms, axes, speeds, course * FlightDirector.asteroid_point(section * 480 + 240))
 			batches[-1]["kind"] = "mother" if mother else "egg"

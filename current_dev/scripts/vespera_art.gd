@@ -38,20 +38,7 @@ static func turret_base() -> Node3D:
 	return VectorArt.remember_model("vespera_turret", batch.build())
 
 static func fighter() -> Node3D:
-	var cached: Node3D = VectorArt.cached_model("vespera_fighter")
-	if cached != null:
-		return cached
-	var batch := GeometryBatch.new()
-	batch.ship_hull(Vector3.ZERO, [Vector3(0.18, 0.16, -4.5), Vector3(1.15, 0.66, -0.5), Vector3(0.68, 0.34, 1.5)], NEON, HULL)
-	for side in [-1.0, 1.0]:
-		# Bent cloak vanes fold down at the elbow, then rise towards the tail.
-		var vane := PackedVector3Array([Vector3(side * 0.4, 0.25, -3), Vector3(side * 4.15, -0.7, -0.8), Vector3(side * 2.2, 0.75, 3), Vector3(side * 1.85, 0.2, 0.4), Vector3(side * 0.7, 0.1, 0.8)])
-		batch.surface(vane, PackedInt32Array([0, 1, 3, 1, 2, 3, 0, 3, 4]), PANEL)
-		batch.outline(vane, NEON)
-		batch.box(Vector3(side * 2.1, 0.2, 1.3), Vector3(0.8, 0.9, 2.8), SIGNAL, PANEL)
-		batch.ring(Vector3(side * 2.1, 0.2, 2.75), 0.35, NEON, 12)
-		batch.line(Vector3(side * 2.1, 0.2, 2.8), Vector3(side * 2.1, 0.2, 4.5), SIGNAL)
-	return VectorArt.remember_model("vespera_fighter", batch.build())
+	return FleetArt.model("vespera")
 
 static func overlord() -> Node3D:
 	var cached: Node3D = VectorArt.cached_model("vespera_overlord")
@@ -93,42 +80,10 @@ static func core_ring() -> Node3D:
 	return VectorArt.remember_model("vespera_core_ring", batch.build())
 
 static func nyx() -> Node3D:
-	var cached: Node3D = VectorArt.cached_model("vespera_nyx")
-	if cached != null:
-		return cached
-	var batch := GeometryBatch.new()
-	var hull := PackedVector3Array([Vector3(0, 0, 31), Vector3(-15, -4, 23), Vector3(15, -4, 23), Vector3(-13, 8, -12), Vector3(13, 8, -12), Vector3(-10, -4, -39), Vector3(10, -4, -39), Vector3(0, 12, -24), Vector3(0, -6, -2)])
-	batch.surface(hull, PackedInt32Array([0, 3, 4, 0, 1, 3, 0, 4, 2, 0, 8, 1, 0, 2, 8, 1, 8, 5, 2, 6, 8, 3, 5, 7, 4, 7, 6, 3, 7, 4, 5, 6, 7, 5, 8, 6, 1, 5, 3, 2, 4, 6]), HULL)
-	for pair in [[0, 1], [0, 2], [0, 3], [0, 4], [1, 3], [2, 4], [3, 7], [4, 7], [3, 5], [4, 6], [5, 6], [5, 7], [6, 7], [1, 5], [2, 6]]:
-		batch.line(hull[pair[0]], hull[pair[1]], NEON)
-	for side in [-1.0, 1.0]:
-		var wing := PackedVector3Array([Vector3(side * 12, 2, 20), Vector3(side * 24, 7, 28), Vector3(side * 40, 11, 8), Vector3(side * 61, 15, -26), Vector3(side * 45, 7, -34), Vector3(side * 13, -1, -24)])
-		batch.surface(wing, PackedInt32Array([0, 1, 2, 0, 2, 5, 2, 3, 4, 2, 4, 5]), PANEL)
-		batch.outline(wing, NEON)
-		batch.line(wing[0], wing[2], SIGNAL)
-		batch.line(wing[2], wing[5], SIGNAL)
-		batch.line(wing[2], wing[4], SIGNAL)
-		for row in range(3):
-			var at := Vector3(side * (22 + row * 16), 7 + row * 4, 27 - row * 22)
-			batch.box(at, Vector3(8, 2, 8), NEON, HULL)
-		for i in range(7):
-			var z: float = -30 + i * 7
-			batch.line(Vector3(side * 3, 9 - i, z), Vector3(side * 6, 7 - i, z + 2), SIGNAL)
-	for x in [-6.0, 0.0, 6.0]:
-		batch.tube(Vector3(x, -1, -38), 2.3, 6, NEON, 12)
-		batch.ring(Vector3(x, -1, -41.1), 1.8, SIGNAL, 16)
-	return VectorArt.remember_model("vespera_nyx", batch.build())
+	return FleetArt.model("nyx")
 
 static func traffic_pod() -> Node3D:
-	var cached: Node3D = VectorArt.cached_model("vespera_traffic")
-	if cached != null:
-		return cached
-	var batch := GeometryBatch.new()
-	batch.box(Vector3.ZERO, Vector3(4, 1.6, 7), SIGNAL, HULL)
-	batch.box(Vector3(0, 1.1, -0.8), Vector3(2.7, 0.8, 3.2), NEON, PANEL)
-	for side in [-1.0, 1.0]:
-		batch.line(Vector3(side * 1.5, 0, 3.5), Vector3(side * 1.5, 0, 9), SIGNAL)
-	return VectorArt.remember_model("vespera_traffic", batch.build())
+	return FleetArt.model("traffic")
 
 static func gate_emitter() -> Node3D:
 	var cached: Node3D = VectorArt.cached_model("vespera_gate_post")

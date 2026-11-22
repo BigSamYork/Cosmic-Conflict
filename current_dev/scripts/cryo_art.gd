@@ -46,19 +46,7 @@ static func tank_base() -> Node3D:
 	return VectorArt.remember_model("cryo_tank", batch.build())
 
 static func fighter() -> Node3D:
-	var cached: Node3D = VectorArt.cached_model("cryo_fighter")
-	if cached != null:
-		return cached
-	var batch := GeometryBatch.new()
-	# Raised pressure cabin on two long ice runners; daylight under the bridge.
-	batch.ship_hull(Vector3(0, 0.45, 0), [Vector3(0.7, 0.32, -2.2), Vector3(1.4, 0.7, -0.6), Vector3(1.2, 0.55, 2.3)], ICE, HULL)
-	for side in [-1.0, 1.0]:
-		var x: float = side * 3.25
-		batch.ship_hull(Vector3(x, -0.36, 0), [Vector3(0.22, 0.18, -3.5), Vector3(0.8, 0.64, -0.4), Vector3(0.65, 0.54, 3.1)], STEEL, HULL)
-		for z in [-0.75, 1.45]:
-			batch.limb(Vector3(side, 0.48, z), Vector3(x, -0.2, z + 0.4), 0.32, 0.24, ICE, 5)
-		batch.ring(Vector3(x, -0.36, 3.12), 0.41, VectorArt.CYAN, 10)
-	return VectorArt.remember_model("cryo_fighter", batch.build())
+	return FleetArt.model("cryo")
 
 static func bore_mech() -> Node3D:
 	var cached: Node3D = VectorArt.cached_model("cryo_bore_mech")
@@ -97,25 +85,7 @@ static func drill() -> Node3D:
 	return VectorArt.remember_model("cryo_drill", batch.build())
 
 static func hydra() -> Node3D:
-	var cached: Node3D = VectorArt.cached_model("cryo_hydra")
-	if cached != null:
-		return cached
-	var batch := GeometryBatch.new()
-	batch.box(Vector3(0, 0, -3), Vector3(29, 12, 72), ICE, HULL)
-	batch.box(Vector3(0, 10, -14), Vector3(13, 8, 36), STEEL, Color("#294157"))
-	for side in [-1.0, 1.0]:
-		for row in range(3):
-			var at := Vector3(side * (24 + row * 15), 5 + row * 4, 24 - row * 22)
-			batch.box(at, Vector3(14, 8, 23), ICE, HULL)
-			batch.truss(Vector3(side * 13, 2, at.z), at, 3, STEEL, 5)
-			batch.box(at + Vector3(0, 0, 12), Vector3(9, 4, 0.4), VectorArt.CYAN, Color("#0c1e30"))
-			for rib in range(4):
-				batch.box(at + Vector3(0, 4.3, -8 + rib * 5), Vector3(12, 0.6, 1.1), STEEL, Color("#3d5f73"))
-			batch.ring(at + Vector3(0, 0, -12), 2.7, VectorArt.CYAN, 16)
-		for i in range(9):
-			batch.box(Vector3(side * 14.8, 1, -33 + i * 8), Vector3(0.5, 5, 4), STEEL, Color("#3b586e"))
-			batch.line(Vector3(side * 4.5, 14.1, -27 + i * 5), Vector3(side * 4.5, 14.1, -24 + i * 5), VectorArt.CYAN)
-	return VectorArt.remember_model("cryo_hydra", batch.build())
+	return FleetArt.model("hydra")
 
 static func drone_bay() -> Node3D:
 	var cached: Node3D = VectorArt.cached_model("cryo_drone_bay")

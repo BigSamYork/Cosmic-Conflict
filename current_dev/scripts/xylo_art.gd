@@ -51,23 +51,7 @@ static func spitter_head() -> Node3D:
 	return VectorArt.remember_model("xylo_spitter_head", batch.build())
 
 static func insect() -> Node3D:
-	var cached: Node3D = VectorArt.cached_model("xylo_insect")
-	if cached != null:
-		return cached
-	var batch := GeometryBatch.new()
-	batch.ellipsoid(Vector3(0, 0, 0.7), Vector3(1.2, 0.9, 2.2), SHELL)
-	batch.ellipsoid(Vector3(0, 0.2, -1.7), Vector3(1, 0.8, 1.2), LEAF)
-	for side in [-1.0, 1.0]:
-		batch.limb(Vector3(side * 0.5, 0.3, -2.2), Vector3(side * 1.5, 0.8, -3.4), 0.16, 0.03, ACID, 6)
-		# Paired membranes with an open notch between the fore and hind wings.
-		for i in range(2):
-			var root := Vector3(side * 0.68, 0.32, -1.3 + i * 1.6)
-			var tip := Vector3(side * (4.15 - i * 1.1), 0.9 - i * 1.5, -1.5 + i * 4.2)
-			var wing := PackedVector3Array([root, tip, tip + Vector3(-side * 0.8, -0.15, 1), root + Vector3.BACK * 1.1])
-			batch.surface(wing, PackedInt32Array([0, 1, 2, 0, 2, 3]), Color("#284633"))
-			batch.outline(wing, LEAF)
-			batch.line(root, wing[2], SHELL)
-	return VectorArt.remember_model("xylo_insect", batch.build())
+	return FleetArt.model("insect")
 
 static func insect_leg() -> Node3D:
 	var cached: Node3D = VectorArt.cached_model("xylo_insect_leg")
@@ -112,60 +96,16 @@ static func goliath_leg() -> Node3D:
 	return VectorArt.remember_model("xylo_goliath_leg", batch.build())
 
 static func leviathan() -> Node3D:
-	var cached: Node3D = VectorArt.cached_model("xylo_leviathan")
-	if cached != null:
-		return cached
-	var batch := GeometryBatch.new()
-	batch.ellipsoid(Vector3(0, 0, 9), Vector3(18, 15, 20), SHELL, 12, 18)
-	for i in range(6):
-		batch.ellipsoid(leviathan_segment(i), Vector3(13 - i * 1.3, 11 - i, 11), LEAF if i % 2 == 0 else SHELL, 8, 12)
-	for side in [-1.0, 1.0]:
-		batch.limb(Vector3(side * 11, -7, 20), Vector3(side * 15, -12, 31), 2.5, 0.2, ACID)
-		for row in range(3):
-			var at := Vector3(side * (22 + row * 16), 7 + row * 4, 27 - row * 22)
-			batch.limb(Vector3(side * 11, 2, at.z - 10), at, 3.0, 2.0, LEAF)
-			batch.ellipsoid(at, Vector3(5, 2, 5), SHELL)
-	return VectorArt.remember_model("xylo_leviathan", batch.build())
+	return FleetArt.model("leviathan")
 
 static func leviathan_segment(index: int) -> Vector3:
 	return Vector3(sin(index * 0.36) * 18, 10 + index * 7, -18 - index * 14)
 
-static func hive_mother() -> Node3D:
-	var cached: Node3D = VectorArt.cached_model("xylo_hive_mother")
-	if cached != null:
-		return cached
-	var batch := GeometryBatch.new()
-	batch.ellipsoid(Vector3(0, 0.1, 0.45), Vector3(0.9, 0.65, 1.1), SHELL)
-	for i in range(3):
-		batch.ellipsoid(Vector3(sin(i * 0.7) * 0.2, 0.1 + i * 0.2, -0.9 - i * 0.6), Vector3(0.8 - i * 0.15, 0.5 - i * 0.08, 0.7), LEAF, 6, 10)
-	for side in [-1.0, 1.0]:
-		batch.ellipsoid(Vector3(side * 0.45, 0.3, 1.25), Vector3(0.17, 0.16, 0.18), ACID, 4, 6)
-		batch.limb(Vector3(side * 0.5, -0.3, 1), Vector3(side * 0.8, -0.6, 1.75), 0.15, 0.02, ACID, 6)
-		batch.ellipsoid(Vector3(side * 0.84, -0.26, -0.35), Vector3(0.61, 0.52, 1.16), SHELL, 5, 8)
-		for i in range(3):
-			batch.limb(Vector3(side * 0.7, 0, -0.3 - i * 0.7), Vector3(side * 1.8, 0.3, -0.8 - i * 0.4), 0.14, 0.02, LEAF, 6)
-	return VectorArt.remember_model("xylo_hive_mother", batch.build())
+static func hive_mother(distant: bool = false) -> Node3D:
+	return FleetArt.model("hive_mother_far" if distant else "hive_mother")
 
 static func egg_ship(variant: int = 0, distant: bool = false) -> Node3D:
-	var key: String = "xylo_egg_%d_%s" % [variant, distant]
-	var cached: Node3D = VectorArt.cached_model(key)
-	if cached != null:
-		return cached
-	var batch := GeometryBatch.new()
-	var tint: Color = ACID if variant == 2 else SHELL if variant == 0 else LEAF
-	batch.ellipsoid(Vector3.ZERO, Vector3(0.85, 1.28, 0.8), tint, 8 if distant else 12, 12 if distant else 16)
-	var ribs: int = 6 if distant else 8
-	var steps: int = 12 if distant else 16
-	for i in range(ribs):
-		var angle: float = i * TAU / ribs
-		var points := PackedVector3Array()
-		for row in range(steps + 1):
-			var latitude: float = PI * row / steps
-			var r: float = sin(latitude)
-			points.append(Vector3(cos(angle) * r * 0.87, cos(latitude) * 1.3, sin(angle) * r * 0.82))
-		batch.outline(points, ACID if variant == 2 else LEAF, false)
-	batch.ring(Vector3(0, 0, 0.81), 0.22, ACID, 12)
-	return VectorArt.remember_model(key, batch.build())
+	return FleetArt.model("egg_%d%s" % [clampi(variant, 0, 2), "_far" if distant else ""])
 
 static func rover() -> Node3D:
 	var cached: Node3D = VectorArt.cached_model("xylo_rover")
