@@ -212,8 +212,7 @@ func show_menu(next_mode: String, current_settings: Dictionary) -> void:
 		return
 	var stack: VBoxContainer = _menu_stack(620, 140 if mode == "pause" else 180)
 	if mode == "credits":
-		_add_label(stack, "ORIGINAL SIGNALS", 30, AMBER)
-		_add_label(stack, "Ships, landscape, HUD and synthesized effects created for Cosmic Conflict.", 20, WHITE)
+		_add_label(stack, "CREDITS & LICENSES", 30, AMBER)
 		var legal := TextEdit.new()
 		legal.custom_minimum_size = Vector2(550, 310)
 		legal.editable = false

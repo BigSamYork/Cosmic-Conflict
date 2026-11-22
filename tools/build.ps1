@@ -32,16 +32,6 @@ if (Test-Path -LiteralPath (Join-Path $project 'scripts\computer_voice.gd')) {
         if (-not (Test-Path -LiteralPath $clipPath) -or (Get-Item -LiteralPath $clipPath).Length -ne $clip.bytes) { throw "Voice recording is missing or changed: $clipPath" }
     }
 }
-if (Test-Path -LiteralPath (Join-Path $project 'scripts\ambient_music.gd')) {
-    $musicIndex = Join-Path $project 'assets\music\generated-music.json'
-    if (-not (Test-Path -LiteralPath $musicIndex)) { throw 'Original music is missing. Run Godot with --headless --path current_dev --script tools\generate-music.gd (absolute script path).' }
-    $musicProof = Get-Content -LiteralPath $musicIndex -Raw | ConvertFrom-Json
-    if ($musicProof.generator_sha256 -ne (Get-FileHash -LiteralPath (Join-Path $PSScriptRoot 'generate-music.gd')).Hash) { throw 'Music generator changed. Regenerate the original recordings before building.' }
-    foreach ($track in $musicProof.tracks) {
-        $trackPath = Join-Path $project ("assets\music\{0}.wav" -f $track.id)
-        if (-not (Test-Path -LiteralPath $trackPath) -or (Get-FileHash -LiteralPath $trackPath).Hash -ne $track.sha256) { throw "Original music is missing or changed: $trackPath" }
-    }
-}
 $release = Join-Path $root "releases\$Version"
 $app = Join-Path $release 'app'
 New-Item -ItemType Directory -Force -Path $app | Out-Null

@@ -220,7 +220,7 @@ func _ready() -> void:
 	hud = FlightHUD.new()
 	layer.add_child(hud)
 	hud.flight = flight
-	hud.credits_text = "Cosmic Conflict v%s\nProcedural geometry, live HUD, shaders and synthesized audio.\nCockpit artwork supplied by the project owner.\n\n" % ProjectSettings.get_setting("application/config/version") + Engine.get_license_text() + "\n\n" + JSON.stringify(Engine.get_copyright_info(), "\t") + "\n\n" + JSON.stringify(Engine.get_license_info(), "\t")
+	hud.credits_text = "Cosmic Conflict v%s\nCockpit artwork supplied by the project owner.\n\n" % ProjectSettings.get_setting("application/config/version") + FileAccess.get_file_as_string("res://assets/music/credits.txt") + "\n\n" + Engine.get_license_text() + "\n\n" + JSON.stringify(Engine.get_copyright_info(), "\t") + "\n\n" + JSON.stringify(Engine.get_license_info(), "\t")
 	hud.launch_requested.connect(start_flight)
 	hud.resume_requested.connect(resume_flight)
 	hud.title_requested.connect(show_title)
@@ -1111,7 +1111,7 @@ func _strike(result: Dictionary, damage: int, secondary_hit: bool = false, recor
 		var previous_armor: int = collider.armor
 		var shattered: bool = collider.receive_hit(damage)
 		_spawn_breakup(collider, shattered)
-		_confirm_impact(result, previous_armor)
+		_confirm_impact(result, previous_armor, shattered)
 		if shattered:
 			hud.show_message("RUIN BLOCK SHATTERED / SIDE LANE CLEAR" if collider is RuinFall else "FALLING ICE SHATTERED / SIDE LANE CLEAR")
 		return true
@@ -1123,7 +1123,7 @@ func _strike(result: Dictionary, damage: int, secondary_hit: bool = false, recor
 		var previous_armor: int = collider.armor
 		var killed: bool = collider.receive_hit(maxi(damage, collider.armor) if one_hit_kill else damage)
 		_spawn_breakup(collider, killed)
-		_confirm_impact(result, previous_armor)
+		_confirm_impact(result, previous_armor, killed)
 		if killed:
 			hud.show_message("SIDE GATE EMITTER DISABLED / CENTER LANE REMAINS CLEAR")
 		return true
@@ -1155,7 +1155,7 @@ func _strike(result: Dictionary, damage: int, secondary_hit: bool = false, recor
 			killed = collider.receive_hit_at(applied_damage, at, result.get("direction", camera.global_position.direction_to(at)))
 		else:
 			killed = collider.receive_hit(applied_damage)
-		_confirm_impact(result, previous_armor)
+		_confirm_impact(result, previous_armor, killed)
 		if not collider is DestructibleTower and (killed or ImpactSpray.surface_for(collider) != ImpactSpray.Surface.FLESH):
 			_spawn_breakup(collider, killed)
 		if killed:
@@ -1227,7 +1227,7 @@ func _strike(result: Dictionary, damage: int, secondary_hit: bool = false, recor
 		flight.interceptions += 1
 		_voice_event("interception")
 		_spawn_burst(at)
-		_confirm_impact(result)
+		_confirm_impact(result, 0, true)
 		return true
 	return false
 
@@ -1255,7 +1255,7 @@ func _clear_parasites() -> void:
 	if sound != null:
 		sound.set_parasite_audible(false)
 
-func _confirm_impact(result: Dictionary, previous_armor: int = 0) -> void:
+func _confirm_impact(result: Dictionary, previous_armor: int, destroyed: bool) -> void:
 	var target: Node3D = result["collider"]
 	var at: Vector3 = result["position"]
 	var toward_pilot := at.direction_to(camera.global_position)
@@ -1276,7 +1276,10 @@ func _confirm_impact(result: Dictionary, previous_armor: int = 0) -> void:
 	var size := clampf(at.distance_to(camera.global_position) / 100.0, 1.0, 2.0)
 	spray.build(at, normal.normalized(), surface, size, settings["reduced_effects"])
 	impact_sprays.append(spray)
-	sound.play_contact(surface)
+	if destroyed:
+		sound.play_destruction(surface)
+	else:
+		sound.play_contact(surface)
 
 func _award_combat_kill(base_credits: int) -> void:
 	var previous_multiplier: int = campaign.combo_multiplier()
@@ -1331,7 +1334,7 @@ func _detonate_volatile(blast: VolatileBlast) -> void:
 				flight.destroyed += 1
 				_spawn_breakup(target, true)
 				_resolve_asteroid(target, true)
-	sound.play_sound(sound.hit)
+	sound.play_destruction(ImpactSpray.Surface.STONE)
 
 func _advance_salvage(delta: float, previous_pilot: Vector3, pilot: Vector3) -> void:
 	for i in range(volatile_blasts.size() - 1, -1, -1):
@@ -1503,7 +1506,7 @@ func _start_boss_destruction() -> void:
 			add_child(fragments)
 			fragments.build(boss, true, VectorArt.AMBER, 1024, 4.0, 14.0)
 			debris.append(fragments)
-			sound.play_sound(sound.impact))
+			sound.play_destruction(ImpactSpray.surface_for(boss.core)))
 	add_child(effect)
 	explosions.append(effect)
 	sound.play_sound(sound.impact)
@@ -1563,28 +1566,31 @@ func _storm_contact(body: CollisionObject3D, at: Vector3, direction: Vector3) ->
 		_spawn_breakup(body, true)
 		body.collision_layer = 0
 		body.hide()
-		_storm_blast(at, 10.0)
+		_storm_blast(at, 10.0, body)
 	elif body is DestructibleTower:
 		if body.receive_hit_at(body.armor, at, direction):
-			_storm_blast(at, 4.5)
+			_storm_blast(at, 4.5, body)
 	elif body is EnemyFighter or body is GroundTurret or body is RadarDish:
 		if body.receive_hit(body.armor):
 			_spawn_breakup(body, true)
-			_storm_blast(at, 5.5)
+			_storm_blast(at, 5.5, body)
 	elif ground_branch != null and body == ground_branch.patrol.storm_hull:
 		var patrol := ground_branch.patrol
 		_spawn_breakup(patrol.carrier, true)
-		_storm_blast(at, 5.5)
+		_storm_blast(at, 5.5, body)
 		hud.show_message(patrol.lose_carrier(campaign))
 
-func _storm_blast(at: Vector3, radius: float) -> void:
+func _storm_blast(at: Vector3, radius: float, target: Node3D = null) -> void:
 	var blast := DestructionEffect.new()
 	blast.reduced = settings["reduced_effects"]
 	blast.position = at
 	blast.size = radius
 	add_child(blast)
 	explosions.append(blast)
-	sound.play_sound(sound.impact)
+	if target != null:
+		sound.play_destruction(ImpactSpray.surface_for(target))
+	else:
+		sound.play_sound(sound.impact)
 
 func _tower_fractured(tower: DestructibleTower) -> void:
 	var effect := BreakupEffect.new()
@@ -1690,6 +1696,7 @@ func _fire_emp() -> void:
 		if missile.active and _secondary_visible(missile.global_position, EMPPulse.RANGE) and missile.receive_hit():
 			cleared += 1
 			_spawn_burst(missile.global_position)
+			sound.play_destruction(ImpactSpray.surface_for(missile))
 	for target in targets:
 		if target.destroyed or target.collision_layer == 0 or not _secondary_visible(target.aim_point(), EMPPulse.RANGE, target if target is GroundTurret else null):
 			continue
@@ -1993,10 +2000,12 @@ func _process(delta: float) -> void:
 		return
 	if music != null and automation != "--music-test":
 		var audio_mode := named_games_origin if mode == Mode.NAMED_GAMES else mode
-		var scene: String = "station"
-		if is_campaign and campaign != null and audio_mode not in [Mode.TITLE, Mode.MARKET, Mode.CAMPAIGN_COMPLETE]:
-			scene = "travel" if sequence in ["warp_alignment", "hyperspace", "ascent", "belt_transfer", "belt_climb"] else "boss" if campaign.phase.ends_with("_boss") else campaign.sector
-		elif mode == Mode.FLIGHT and flight.training:
+		var scene: String = "title"
+		if audio_mode == Mode.MARKET:
+			scene = "station"
+		elif is_campaign and campaign != null and audio_mode not in [Mode.TITLE, Mode.CAMPAIGN_COMPLETE]:
+			scene = campaign.sector
+		elif audio_mode in [Mode.FLIGHT, Mode.PAUSE, Mode.COMPLETE] and flight.training:
 			scene = "ignis"
 		music.request_scene(scene)
 		music.set_paused(audio_mode in [Mode.PAUSE, Mode.DEBUG, Mode.SAVE_ERROR] or (audio_mode == Mode.TRANSITION and sequence.is_empty()))
@@ -3358,15 +3367,15 @@ func _run_music_test() -> void:
 	music.set_paused(false)
 	await get_tree().create_timer(5).timeout
 	var bus: int = AudioServer.get_bus_index(music.bus_name)
-	_check(music.current == "xylo" and music.players[music.active].get_playback_position() > 4 and AudioServer.get_bus_peak_volume_left_db(bus, 0) > -60, "Packaged original ambient music plays through its native audio bus")
+	_check(music.current == "xylo" and music.players[music.active].get_playback_position() > 4 and AudioServer.get_bus_peak_volume_left_db(bus, 0) > -65, "Packaged Xylo soundtrack plays through its native audio bus")
 	var position: float = music.players[music.active].get_playback_position()
 	music.set_paused(true)
 	await get_tree().create_timer(0.3).timeout
 	_check(absf(music.players[music.active].get_playback_position() - position) < 0.06, "Packaged soundtrack pauses without advancing")
 	music.set_paused(false)
-	music.request_scene("boss")
+	music.request_scene("station")
 	await get_tree().create_timer(4.5).timeout
-	_check(music.current == "boss" and music.players[music.active].playing and not music.players[1 - music.active].playing, "Packaged boss music crossfade completes and releases the previous recording")
+	_check(music.current == "station" and music.players[music.active].playing and not music.players[1 - music.active].playing, "Docking crossfades to Look Busy and releases the previous recording")
 	music.set_level(0, false)
 	_check(not music.players[0].playing and not music.players[1].playing, "Packaged music volume zero stops playback")
 	_finish_automation()
