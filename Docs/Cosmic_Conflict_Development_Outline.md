@@ -89,8 +89,8 @@ Title/trademark clearance remains a distribution task.
 | F11 | Fullscreen toggle |
 
 Six live cockpit instruments show objectives, timers, damage, ammunition,
-heat, radar, warnings and credits. Rook Scout and Vector Hawk use their supplied
-cockpit variants, as do the Aegis Titan and Nova Bastion player battleships.
+heat, radar, warnings and credits. All five flyable ships use individual
+canopy frames, exterior paint colors and views of their Blender-built hulls.
 Instrument textures refresh at 30 Hz; aiming and world
 rendering remain full-rate.
 

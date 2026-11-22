@@ -677,10 +677,10 @@ Developer assistance remains marked for the entire operation, including later to
 - Atomic checkpoint saves, resumable campaigns, and a developer testing panel.
 - User-supplied RGBA cockpit artwork, with the 3D world behind it and live
   instruments perspective-mapped onto all six supplied display areas.
-- Rook Scout uses the light-fighter cockpit; Vector Hawk uses the interceptor
-  cockpit. Buying a hull changes its cockpit without moving the instruments.
-  The Rescue Skiff shares the scout artwork. The three heavier classes are
-  reserved for a later milestone, and the current ship names are retained.
+- Each of the five flyable hulls has its own canopy, paint and view over the
+  bow. The port sill carries the hull name. From the Rescue Skiff’s offset
+  seat you can see the recovery pod to starboard. Buying or resuming a hull
+  restores its cockpit and equipped guns together.
 - Quad Plasma and Tachyon Beam reuse the supplied plasma-shroud and outboard
   autocannon artwork. The guns sit behind the canopy/consoles, preserving the
   MFD screens; artwork is composited once per hull/tier rather than every frame.

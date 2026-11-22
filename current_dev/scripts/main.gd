@@ -10,7 +10,33 @@ var combat_lights := CombatLighting.new()
 var surface_weather := SurfaceWeather.new()
 var surface_flight := false
 var cockpit_artwork: TextureRect
+var cockpit_foredeck: TextureRect
+var cockpit_livery := ShaderMaterial.new()
+var hull_plate := Label.new()
+var hull_plate_mount := Node2D.new()
 var cockpit_skin: String = ""
+const COCKPITS := {
+	"rook": {
+		"frame": preload("res://assets/cockpits/rook.png"), "deck": preload("res://assets/cockpits/foredecks/rook.png"),
+		"enamel": Color("#d3dcd7"), "stripe": Color("#e84a29"), "bands": Vector3(18, 24, 1),
+	},
+	"hawk": {
+		"frame": preload("res://assets/cockpits/hawk.png"), "deck": preload("res://assets/cockpits/foredecks/hawk.png"),
+		"enamel": Color("#89a8be"), "stripe": Color("#f6b544"), "bands": Vector3(4, 10, 2),
+	},
+	"titan": {
+		"frame": preload("res://assets/cockpits/titan.png"), "deck": preload("res://assets/cockpits/foredecks/titan.png"),
+		"enamel": Color("#566d83"), "stripe": Color("#e79143"), "bands": Vector3(12, 22, 3),
+	},
+	"bastion": {
+		"frame": preload("res://assets/cockpits/bastion.png"), "deck": preload("res://assets/cockpits/foredecks/bastion.png"),
+		"enamel": Color("#8a82ae"), "stripe": Color("#dcc98f"), "bands": Vector3(6, 15, 2),
+	},
+	"emergency": {
+		"frame": preload("res://assets/cockpits/emergency.png"), "deck": preload("res://assets/cockpits/foredecks/emergency.png"),
+		"enamel": Color("#ef923e"), "stripe": Color("#f1e3c5"), "bands": Vector3(15, 29, 3),
+	},
+}
 var gun_level_displayed: int = 0
 var rotor_mount := Node2D.new()
 var rotors: Array[Sprite2D] = []
@@ -301,6 +327,13 @@ func _build_cockpit() -> void:
 	layer.name = "CockpitArtworkLayer"
 	layer.layer = 1
 	add_child(layer)
+	cockpit_foredeck = TextureRect.new()
+	cockpit_foredeck.name = "Foredeck"
+	cockpit_foredeck.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	cockpit_foredeck.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	cockpit_foredeck.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.add_child(cockpit_foredeck)
+	cockpit_foredeck.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var artwork := TextureRect.new()
 	cockpit_artwork = artwork
 	artwork.name = "CockpitArtwork"
@@ -310,6 +343,17 @@ func _build_cockpit() -> void:
 	artwork.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	layer.add_child(artwork)
 	artwork.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	cockpit_livery.shader = preload("res://shaders/cockpit_livery.gdshader")
+	artwork.add_child(hull_plate_mount)
+	hull_plate_mount.add_child(hull_plate)
+	# The port sill stays clear of the warning strip above the central gauges.
+	hull_plate.position = Vector2(102, 688)
+	hull_plate.rotation = deg_to_rad(-23)
+	hull_plate.size = Vector2(118, 18)
+	hull_plate.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hull_plate.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	hull_plate.add_theme_font_size_override("font_size", 13)
+	hull_plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	artwork.add_child(rotor_mount)
 	rotor_mount.show_behind_parent = true
 	for right in [false, true]:
@@ -321,12 +365,14 @@ func _build_cockpit() -> void:
 		rotor.flip_h = right
 		rotor_mount.add_child(rotor)
 		rotors.append(rotor)
-	artwork.resized.connect(_place_rotors)
-	_place_rotors()
+	artwork.resized.connect(_place_cockpit_fittings)
+	_place_cockpit_fittings()
 	_set_cockpit("rook")
 
-func _place_rotors() -> void:
-	rotor_mount.transform = CockpitInstruments.artwork_transform(cockpit_artwork.size)
+func _place_cockpit_fittings() -> void:
+	var placement := CockpitInstruments.artwork_transform(cockpit_artwork.size)
+	rotor_mount.transform = placement
+	hull_plate_mount.transform = placement
 
 func _advance_rotors(delta: float, firing: bool) -> void:
 	if not rotor_mount.visible:
@@ -337,29 +383,26 @@ func _advance_rotors(delta: float, firing: bool) -> void:
 		rotor.frame = floori(rotor_phase * rotor.hframes * rotor.vframes)
 
 func _set_cockpit(ship: String, primary_level: int = 0) -> void:
-	match ship:
-		"rook", "emergency":
-			cockpit_skin = "rook"
-			cockpit_artwork.texture = preload("res://assets/cockpits/rook.png")
-		"hawk":
-			cockpit_skin = "hawk"
-			cockpit_artwork.texture = preload("res://assets/cockpits/hawk.png")
-		"titan":
-			cockpit_skin = "titan"
-			cockpit_artwork.texture = preload("res://assets/cockpits/titan.png")
-		"bastion":
-			cockpit_skin = "bastion"
-			cockpit_artwork.texture = preload("res://assets/cockpits/bastion.png")
-		"":
-			cockpit_skin = ""
-			cockpit_artwork.texture = preload("res://assets/cockpit_overlay.png")
-		_:
-			push_error("No cockpit is defined for ship: " + ship)
-			return
-	var equipped: int = 0 if cockpit_skin.is_empty() else primary_level
-	var combined: Texture2D = GunAppearance.texture_for(cockpit_artwork.texture, equipped)
+	var skin: Dictionary = COCKPITS.get(ship, {})
+	if skin.is_empty() and not ship.is_empty():
+		push_error("No cockpit is defined for ship: " + ship)
+		return
+	var frame: Texture2D = skin.get("frame", preload("res://assets/cockpit_overlay.png"))
+	var equipped: int = 0 if ship.is_empty() else primary_level
+	var combined: Texture2D = GunAppearance.texture_for(frame, equipped)
 	if combined == null:
 		return
+	cockpit_skin = ship
+	cockpit_foredeck.texture = skin.get("deck")
+	cockpit_artwork.material = null if skin.is_empty() else cockpit_livery
+	if skin.is_empty():
+		hull_plate.text = ""
+	else:
+		cockpit_livery.set_shader_parameter("enamel", skin.enamel)
+		cockpit_livery.set_shader_parameter("stripe", skin.stripe)
+		cockpit_livery.set_shader_parameter("bands", skin.bands)
+		hull_plate.text = String(CampaignState.SHIPS[ship].name).to_upper()
+		hull_plate.add_theme_color_override("font_color", skin.stripe)
 	cockpit_artwork.texture = combined
 	gun_level_displayed = equipped
 	rotor_mount.visible = equipped == 1
@@ -3764,7 +3807,7 @@ func _run_mission_automation() -> void:
 		_check(campaign.ship.is_empty() and campaign.primary_level == 0 and campaign.ammo == 0 and campaign.heat_sink_level == 0 and campaign.hull_armor_level == 0 and not campaign.tractor and not campaign.swarm_launcher and not campaign.emp_launcher and not campaign.countermeasures and campaign.flares == 0, "Ejection removes ship, weapon stations, flare pod and all charges")
 		_market_purchase("emergency")
 		_check(campaign.ship == "emergency" and campaign.credits == 0, "No-money pilot receives a free emergency ship")
-		_check(cockpit_skin == "rook", "Emergency replacement selects the scout cockpit")
+		_check(cockpit_skin == "emergency", "Emergency replacement selects the Rescue Skiff cockpit")
 		print("MISSION_PHASE_LOG ", phase_log)
 		_finish_automation()
 
