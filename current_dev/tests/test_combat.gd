@@ -44,6 +44,10 @@ func run() -> void:
 	await physics_frame
 	game.fire_primary()
 	check(target.armor == 1 and game.flight.hits == 1, "Reticle ray damages a visible drone")
+	check(game.impact_sprays.size() == 1 and target.scar_surfaces.size() == 1 and game.sound.last_contact_usec >= 0, "A surviving hull shows an impact burst, carries a scorch mark, and confirms the hit by sound")
+	check(game.targets[1].scar_surfaces.is_empty(), "Hulls that share the training mesh do not share damage")
+	if DisplayServer.get_name() != "headless":
+		check(game.sound.voices.any(func(voice: AudioStreamPlayer) -> bool: return voice.stream == game.sound.contact_thuds[game.ImpactSpray.Surface.HULL]), "Native audio schedules the hull thud alongside the laser")
 	check(not game.debris.is_empty() and game.debris[-1].pieces.size() == 1, "A nonlethal hit sheds a hull fragment")
 	var initial_transform: Transform3D = game.debris[-1].pieces[0]["transform"]
 	game.debris[-1].advance(0.1)
@@ -77,8 +81,33 @@ func run() -> void:
 	root.add_child(cover)
 	await physics_frame
 	await physics_frame
+	var feedback_before: int = game.impact_sprays.size()
+	var sound_before: int = game.sound.last_contact_usec
 	game.fire_primary()
 	check(target.armor == 2, "Solid cover blocks fire before the target")
+	check(game.impact_sprays.size() == feedback_before and game.sound.last_contact_usec == sound_before, "A shot into cover produces no target damage or confirmation thud")
+	target.reset()
+	check(target.scar_surfaces.is_empty() and target.get_child(0).get_child(0).material_overlay == null, "Resetting a training ship removes its scorch marks")
+	var tower := DestructibleTower.new()
+	game.add_child(tower)
+	game._strike({"collider": tower, "position": tower.global_position}, 1)
+	check(game.impact_sprays.size() == feedback_before and tower.scar_surfaces.is_empty(), "The armored tower top does not confirm a damaging hit")
+	game._strike({"collider": tower, "position": tower.aim_point()}, 1)
+	check(game.impact_sprays.size() == feedback_before + 1 and not tower.scar_surfaces.is_empty() and game.ImpactSpray.surface_for(tower) == game.ImpactSpray.Surface.STONE, "A vulnerable tower base sheds grit and takes a lasting mark")
+	tower.free()
+	var organ := BossPart.new()
+	organ.biological = true
+	game.add_child(organ)
+	game.settings["reduced_effects"] = true
+	for i in range(game.ImpactSpray.MAX_BURSTS + 2):
+		organ.armor = 20
+		game._strike({"collider": organ, "position": organ.aim_point()}, 1)
+	check(organ.scar_surfaces[0].material_overlay.get_shader_parameter("organic") and game.ImpactSpray.surface_for(organ) == game.ImpactSpray.Surface.FLESH, "Living boss organs retain wounds and emit blood")
+	check(game.impact_sprays.size() == game.ImpactSpray.MAX_BURSTS and game.impact_sprays[-1].multimesh.instance_count == 9, "Rapid fire caps active bursts and honors reduced effects")
+	game._advance_debris(1.0)
+	check(game.impact_sprays.is_empty() and not organ.scar_surfaces.is_empty(), "Wounds remain after the spray clears")
+	game.settings["reduced_effects"] = false
+	organ.free()
 	var intercept := EnemyMissile.new()
 	intercept.position = Vector3(0, 0, -6)
 	game.add_child(intercept)

@@ -61,6 +61,8 @@ var blocked_primary_hits: int = 0
 var stunned_gunships: int = 0
 var missiles: Array[EnemyMissile] = []
 var debris: Array[BreakupEffect] = []
+const ImpactSpray := preload("res://scripts/impact_spray.gd")
+var impact_sprays: Array[ImpactSpray] = []
 var torpedoes: Array[PlayerTorpedo] = []
 var emp_pulses: Array[EMPPulse] = []
 var flare_clouds: Array[FlareCloud] = []
@@ -1017,9 +1019,10 @@ func _strike(result: Dictionary, damage: int, secondary_hit: bool = false, recor
 			return false
 		if record_hit:
 			_record_weapon_hit()
+		var previous_armor: int = collider.armor
 		var shattered: bool = collider.receive_hit(damage)
 		_spawn_breakup(collider, shattered)
-		sound.play_sound(sound.hit)
+		_confirm_impact(result, previous_armor)
 		if shattered:
 			hud.show_message("RUIN BLOCK SHATTERED / SIDE LANE CLEAR" if collider is RuinFall else "FALLING ICE SHATTERED / SIDE LANE CLEAR")
 		return true
@@ -1028,13 +1031,16 @@ func _strike(result: Dictionary, damage: int, secondary_hit: bool = false, recor
 			return false
 		if record_hit:
 			_record_weapon_hit()
+		var previous_armor: int = collider.armor
 		var killed: bool = collider.receive_hit(maxi(damage, collider.armor) if one_hit_kill else damage)
 		_spawn_breakup(collider, killed)
-		sound.play_sound(sound.hit)
+		_confirm_impact(result, previous_armor)
 		if killed:
 			hud.show_message("SIDE GATE EMITTER DISABLED / CENTER LANE REMAINS CLEAR")
 		return true
 	if collider is RangeTarget and not collider.destroyed:
+		if (collider is EnemyFighter or collider is PirateSkirmisher) and collider.expired:
+			return false
 		if collider is BossPart and not collider.unlocked:
 			hud.show_message("PURSUIT / CLOSE TO ENGAGE" if boss != null and not boss.parts[0].unlocked else "CORE SHIELDED / DESTROY BOTH AMBER GENERATORS")
 			return false
@@ -1057,8 +1063,10 @@ func _strike(result: Dictionary, damage: int, secondary_hit: bool = false, recor
 		if record_hit:
 			_record_weapon_hit()
 		var applied_damage: int = maxi(damage, collider.armor) if one_hit_kill and is_campaign else damage
+		var previous_armor: int = collider.armor
 		var killed: bool = collider.receive_hit(applied_damage)
-		if not collider is DestructibleTower:
+		_confirm_impact(result, previous_armor)
+		if not collider is DestructibleTower and (killed or ImpactSpray.surface_for(collider) != ImpactSpray.Surface.FLESH):
 			_spawn_breakup(collider, killed)
 		if killed:
 			flight.destroyed += 1
@@ -1111,7 +1119,6 @@ func _strike(result: Dictionary, damage: int, secondary_hit: bool = false, recor
 				else:
 					campaign.stats["enemies"] += 1
 					_award_combat_kill(25 if collider is GroundTurret else 35 if collider is EnemyFighter and collider.has_directional_shield() else 20)
-			sound.play_sound(sound.hit)
 			_spawn_burst(at)
 		return true
 	elif collider is EnemyMissile and collider.receive_hit():
@@ -1120,9 +1127,30 @@ func _strike(result: Dictionary, damage: int, secondary_hit: bool = false, recor
 		flight.interceptions += 1
 		_voice_event("interception")
 		_spawn_burst(at)
-		sound.play_sound(sound.hit)
+		_confirm_impact(result)
 		return true
 	return false
+
+func _confirm_impact(result: Dictionary, previous_armor: int = 0) -> void:
+	var target: Node3D = result["collider"]
+	var at: Vector3 = result["position"]
+	var toward_pilot := at.direction_to(camera.global_position)
+	if toward_pilot.is_zero_approx():
+		toward_pilot = camera.global_basis.z
+	var normal: Vector3 = result.get("normal", Vector3.ZERO)
+	if normal.is_zero_approx():
+		normal = toward_pilot
+	var surface := ImpactSpray.surface_for(target)
+	if target is RangeTarget and not target.destroyed:
+		target.mark_impact(at, -toward_pilot, surface == ImpactSpray.Surface.FLESH, previous_armor)
+	if impact_sprays.size() >= ImpactSpray.MAX_BURSTS:
+		impact_sprays.pop_front().queue_free()
+	var spray := ImpactSpray.new()
+	add_child(spray)
+	var size := clampf(at.distance_to(camera.global_position) / 100.0, 1.0, 2.0)
+	spray.build(at, normal.normalized(), surface, size, settings["reduced_effects"])
+	impact_sprays.append(spray)
+	sound.play_contact(surface)
 
 func _award_combat_kill(base_credits: int) -> void:
 	var previous_multiplier: int = campaign.combo_multiplier()
@@ -1257,6 +1285,12 @@ func _spawn_breakup(source: Node3D, destroyed: bool) -> void:
 	debris.append(effect)
 
 func _advance_debris(delta: float) -> void:
+	for i in range(impact_sprays.size() - 1, -1, -1):
+		var spray := impact_sprays[i]
+		spray.advance(delta)
+		if spray.age >= ImpactSpray.LIFETIME:
+			spray.queue_free()
+			impact_sprays.remove_at(i)
 	for i in range(rock_debris.size() - 1, -1, -1):
 		rock_debris[i].advance(delta)
 		if rock_debris[i].complete():
@@ -1269,6 +1303,9 @@ func _advance_debris(delta: float) -> void:
 			debris.remove_at(i)
 
 func _clear_debris() -> void:
+	for spray in impact_sprays:
+		spray.queue_free()
+	impact_sprays.clear()
 	for effect in rock_debris:
 		effect.queue_free()
 	rock_debris.clear()

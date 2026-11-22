@@ -53,6 +53,9 @@ func refresh() -> void:
 		if not is_instance_valid(meshes[i]):
 			continue
 		meshes[i].material_override = veils[i] if cloaked else originals[i]
+		var scars := meshes[i].material_overlay as ShaderMaterial
+		if scars != null and scars.get_shader_parameter("cloaked") != cloaked:
+			scars.set_shader_parameter("cloaked", cloaked)
 		if not cloaked:
 			continue
 		if veils[i].shader == SURFACE:
