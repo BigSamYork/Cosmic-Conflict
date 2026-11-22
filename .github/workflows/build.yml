@@ -7,10 +7,10 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
-  group: build-${{ github.ref }}
+  group: build-release
   cancel-in-progress: false
 
 jobs:
@@ -27,13 +27,28 @@ jobs:
         run: git config --global core.autocrlf true
 
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha || github.sha }}
 
       - name: Read toolchain
         id: toolchain
         run: |
           $config = Get-Content tools/toolchain.json -Raw | ConvertFrom-Json
           "godot=$($config.godot)" >> $env:GITHUB_OUTPUT
-          "version=$($config.game_version)" >> $env:GITHUB_OUTPUT
+
+      # Next version = game_version from toolchain.json, or one patch above the newest
+      # existing vMAJOR.MINOR.x tag if that version has already been released.
+      - name: Determine release version
+        id: version
+        run: |
+          $base = [version](Get-Content tools/toolchain.json -Raw | ConvertFrom-Json).game_version
+          $refs = git ls-remote --tags --refs origin 'v*'
+          if ($LASTEXITCODE -ne 0) { throw 'Could not list existing tags.' }
+          $released = @($refs | ForEach-Object { if ($_ -match 'refs/tags/v(\d+\.\d+\.\d+)$') { [version]$Matches[1] } } |
+            Where-Object { $_.Major -eq $base.Major -and $_.Minor -eq $base.Minor } | Sort-Object -Descending)
+          $next = if ($released.Count -and $released[0] -ge $base) { [version]::new($base.Major, $base.Minor, $released[0].Build + 1) } else { $base }
+          Write-Host "Release version: $next"
+          "version=$next" >> $env:GITHUB_OUTPUT
 
       - name: Cache Godot engine and export templates
         uses: actions/cache@v6
@@ -58,18 +73,37 @@ jobs:
           "iscc=$iscc" >> $env:GITHUB_OUTPUT
 
       - name: Test, export and package
-        run: ./tools/build.ps1 -Iscc '${{ steps.inno.outputs.iscc }}'
+        run: ./tools/build.ps1 -Iscc '${{ steps.inno.outputs.iscc }}' -Version '${{ steps.version.outputs.version }}'
 
       - name: Upload installer
         uses: actions/upload-artifact@v7
         with:
-          name: CosmicConflict-${{ steps.toolchain.outputs.version }}-Setup-${{ github.sha }}
-          path: releases/${{ steps.toolchain.outputs.version }}/CosmicConflict-${{ steps.toolchain.outputs.version }}-Setup.exe
+          name: CosmicConflict-${{ steps.version.outputs.version }}-Setup-${{ github.sha }}
+          path: releases/${{ steps.version.outputs.version }}/CosmicConflict-${{ steps.version.outputs.version }}-Setup.exe
           if-no-files-found: error
 
       - name: Upload game files
         uses: actions/upload-artifact@v7
         with:
-          name: CosmicConflict-${{ steps.toolchain.outputs.version }}-app-${{ github.sha }}
-          path: releases/${{ steps.toolchain.outputs.version }}/app/
+          name: CosmicConflict-${{ steps.version.outputs.version }}-app-${{ github.sha }}
+          path: releases/${{ steps.version.outputs.version }}/app/
           if-no-files-found: error
+
+      - name: Create tag and release
+        if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+          TARGET: ${{ github.event.pull_request.merge_commit_sha || github.sha }}
+        run: |
+          $folder = "releases/$env:VERSION"
+          $installer = "$folder/CosmicConflict-$env:VERSION-Setup.exe"
+          $portable = "$folder/CosmicConflict-$env:VERSION-Windows-x64.zip"
+          Compress-Archive -Path "$folder/app/*" -DestinationPath $portable -Force
+          $notes = @(
+            '| File | SHA-256 |'
+            '| --- | --- |'
+            foreach ($file in $installer, $portable) { "| $(Split-Path $file -Leaf) | ``$((Get-FileHash $file -Algorithm SHA256).Hash)`` |" }
+          ) -join "`n"
+          gh release create "v$env:VERSION" $installer $portable --target $env:TARGET --title "Cosmic Conflict $env:VERSION" --notes $notes --generate-notes
+          if ($LASTEXITCODE -ne 0) { throw 'Release creation failed.' }

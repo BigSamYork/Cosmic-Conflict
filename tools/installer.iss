@@ -4,6 +4,9 @@
 #ifndef GameVersion
   #define GameVersion "1.0.0"
 #endif
+#ifndef ManualVersion
+  #define ManualVersion GameVersion
+#endif
 
 [Setup]
 #ifdef ValidationInstall
@@ -46,7 +49,7 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Source: "{#Root}\releases\{#GameVersion}\app\CosmicConflict.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#Root}\releases\{#GameVersion}\app\CosmicConflict.pck"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#Root}\releases\{#GameVersion}\app\FLIGHT_LAB.md"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#Root}\releases\{#GameVersion}\app\Cosmic_Conflict_Player_Manual_v{#GameVersion}.docx"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#Root}\releases\{#GameVersion}\app\Cosmic_Conflict_Player_Manual_v{#ManualVersion}.docx"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#Root}\releases\{#GameVersion}\app\LICENSES.txt"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#Root}\releases\{#GameVersion}\app\VoiceEditor.cmd"; DestDir: "{app}"; Flags: ignoreversion
 
