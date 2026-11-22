@@ -1,0 +1,75 @@
+name: Build
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
+    runs-on: windows-latest
+    timeout-minutes: 120
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      # tools/build.ps1 verifies the music generator's SHA-256 against a hash of the CRLF working copy.
+      - name: Use CRLF checkout
+        run: git config --global core.autocrlf true
+
+      - uses: actions/checkout@v7
+
+      - name: Read toolchain
+        id: toolchain
+        run: |
+          $config = Get-Content tools/toolchain.json -Raw | ConvertFrom-Json
+          "godot=$($config.godot)" >> $env:GITHUB_OUTPUT
+          "version=$($config.game_version)" >> $env:GITHUB_OUTPUT
+
+      - name: Cache Godot engine and export templates
+        uses: actions/cache@v6
+        with:
+          path: |
+            .tools/downloads
+            .tools/templates
+          key: godot-${{ steps.toolchain.outputs.godot }}-windows
+
+      - name: Install Godot
+        run: ./tools/bootstrap.ps1
+
+      - name: Install Inno Setup
+        id: inno
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path -LiteralPath $iscc)) {
+            choco install innosetup --no-progress -y
+            if ($LASTEXITCODE -ne 0) { throw 'Inno Setup installation failed.' }
+          }
+          if (-not (Test-Path -LiteralPath $iscc)) { throw "ISCC.exe not found at $iscc" }
+          "iscc=$iscc" >> $env:GITHUB_OUTPUT
+
+      - name: Test, export and package
+        run: ./tools/build.ps1 -Iscc '${{ steps.inno.outputs.iscc }}'
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v7
+        with:
+          name: CosmicConflict-${{ steps.toolchain.outputs.version }}-Setup-${{ github.sha }}
+          path: releases/${{ steps.toolchain.outputs.version }}/CosmicConflict-${{ steps.toolchain.outputs.version }}-Setup.exe
+          if-no-files-found: error
+
+      - name: Upload game files
+        uses: actions/upload-artifact@v7
+        with:
+          name: CosmicConflict-${{ steps.toolchain.outputs.version }}-app-${{ github.sha }}
+          path: releases/${{ steps.toolchain.outputs.version }}/app/
+          if-no-files-found: error
