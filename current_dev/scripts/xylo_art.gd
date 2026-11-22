@@ -155,20 +155,6 @@ static func sensor() -> Node3D:
 		batch.ellipsoid(Vector3(side * 4, 2, 0), Vector3(0.8, 0.8, 0.8), ACID, 6, 8)
 	return VectorArt.remember_model("xylo_sensor", batch.build())
 
-static func organ_sac(radius: float, length: float, core: bool) -> Node3D:
-	var key: String = "xylo_organ_%s_%s_%s" % [radius, length, core]
-	var cached: Node3D = VectorArt.cached_model(key)
-	if cached != null:
-		return cached
-	var batch := GeometryBatch.new()
-	batch.ellipsoid(Vector3.ZERO, Vector3(radius, radius, length * 0.5), SHELL, 8, 12)
-	var front: float = length * 0.5 + radius * 0.7
-	var tint: Color = VectorArt.CYAN if core else VectorArt.AMBER
-	batch.ellipsoid(Vector3(0, 0, front - 0.5), Vector3(radius * 0.85, radius * 0.85, 0.65), tint, 8, 12)
-	batch.ring(Vector3(0, 0, front + 0.18), radius * 0.65, tint, 24)
-	batch.ring(Vector3(0, 0, front + 0.2), radius * 0.3, VectorArt.CYAN, 16)
-	return VectorArt.remember_model(key, batch.build())
-
 static func spore_bolt() -> Node3D:
 	var cached: Node3D = VectorArt.cached_model("xylo_spore_bolt")
 	if cached != null:

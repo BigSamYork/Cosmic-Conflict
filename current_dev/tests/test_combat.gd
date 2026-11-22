@@ -17,6 +17,27 @@ func run() -> void:
 	for drone in game.targets:
 		drone.collision_layer = 0
 	var target: RangeTarget = game.targets[0]
+	game.camera.position = Vector3(22, 17, -60)
+	target.animate(1.2)
+	check((-target.global_basis.z).dot(target.global_position.direction_to(game.camera.global_position)) > 0.999, "Ground range ship points its bow at the displaced cockpit")
+	var interceptor := EnemyFighter.new()
+	interceptor.sector = "thalassa"
+	interceptor.travel = 130
+	interceptor.ground_pilot = game.camera
+	game.add_child(interceptor)
+	interceptor.animate(1.2)
+	check((-interceptor.global_basis.z).dot(interceptor.global_position.direction_to(game.camera.global_position)) > 0.999, "Ground interceptor tracks the cockpit after banking and strafing")
+	var salvos: Array[int] = [0]
+	interceptor.missile_requested.connect(func(_at: Vector3, _direction: Vector3) -> void: salvos[0] += 1)
+	interceptor.cooldown = 0
+	interceptor.advance(0.1, game.camera.global_position, Vector3.ZERO)
+	game.camera.position.z = -205
+	interceptor.animate(2)
+	interceptor.cooldown = 0
+	interceptor.advance(0.1, game.camera.global_position, Vector3.ZERO)
+	check(salvos[0] == 1, "Ground interceptor fires on approach and stops firing once passed")
+	interceptor.free()
+	game.camera.transform = Transform3D.IDENTITY
 	target.transform = Transform3D(Basis.IDENTITY, Vector3(0, 0, -20))
 	target.collision_layer = 2
 	await physics_frame

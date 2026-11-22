@@ -10,18 +10,6 @@ static func warm_cache() -> void:
 	for factory in [light_fighter, strike_fighter, delta_fighter, escort_gunship, web_drone, radar_dish, pirate_skirmisher, heat_plume, thermal_emitter, siege_runner, battleship, missile_turret, station]:
 		var model: Node3D = factory.call()
 		model.free()
-	for dimensions in [Vector2(4.6, 18), Vector2(4.3, 12)]:
-		var model: Node3D = reactor_nacelle(dimensions.x, dimensions.y)
-		model.free()
-
-static func reactor_nacelle(radius: float, length: float) -> Node3D:
-	var key: String = "reactor-nacelle:%s:%s" % [radius, length]
-	var cached: Node3D = VectorArt.cached_model(key)
-	if cached != null:
-		return cached
-	var batch := GeometryBatch.new()
-	engine(batch, Vector3.ZERO, radius, length)
-	return VectorArt.remember_model(key, batch.build())
 
 static func heat_plume() -> Node3D:
 	var cached: Node3D = VectorArt.cached_model("ignis_heat_plume")
@@ -41,18 +29,7 @@ static func heat_plume() -> Node3D:
 	return VectorArt.remember_model("ignis_heat_plume", batch.build())
 
 static func thermal_emitter() -> Node3D:
-	var cached: Node3D = VectorArt.cached_model("thermal_emitter")
-	if cached != null:
-		return cached
-	var batch := GeometryBatch.new()
-	batch.box(Vector3.ZERO, Vector3(7, 5, 6), HULL, Color("#33231e"))
-	for z in [-2.5, -1.0, 0.5, 2.0, 3.5]:
-		batch.ring(Vector3(0, 0, z), 2.5, VectorArt.AMBER, 20)
-		batch.ring(Vector3(0, 0, z), 1.7, VectorArt.HOSTILE, 20)
-	for side in [-1.0, 1.0]:
-		batch.box(Vector3(side * 4, 0, 0), Vector3(1, 4, 5), GOLD)
-	batch.ring(Vector3(0, 0, 3.7), 0.8, VectorArt.CYAN, 16)
-	return VectorArt.remember_model("thermal_emitter", batch.build())
+	return FleetArt.model("boss_thermal_lens")
 
 static func web_drone() -> Node3D:
 	return FleetArt.model("web_drone")
@@ -91,35 +68,7 @@ static func radar_dish() -> Node3D:
 	return VectorArt.remember_model("radar_dish", batch.build())
 
 static func missile_turret() -> Node3D:
-	var cached: Node3D = VectorArt.cached_model("boss_missile_turret")
-	if cached != null:
-		return cached
-	var batch := GeometryBatch.new()
-	batch.box(Vector3(0, 0, 0.2), Vector3(7, 3.5, 4), HULL, Color("#242731"))
-	for x in [-2.0, 0.0, 2.0]:
-		for y in [-0.75, 0.75]:
-			batch.tube(Vector3(x, y, -2.2), 0.65, 3.2, GOLD, 12)
-			batch.ring(Vector3(x, y, -3.85), 0.47, VectorArt.HOSTILE, 12)
-			batch.ring(Vector3(x, y, -3.87), 0.23, VectorArt.AMBER, 12)
-	for side in [-1.0, 1.0]:
-		batch.box(Vector3(side * 3.8, 0, 0.3), Vector3(0.7, 2.2, 3.5), GOLD)
-		for i in range(5):
-			batch.line(Vector3(side * 3.3, 1.8, -1.2 + i * 0.55), Vector3(side * 1.5, 1.8, -1.2 + i * 0.55), TRIM)
-	return VectorArt.remember_model("boss_missile_turret", batch.build())
-
-static func engine(batch: GeometryBatch, at: Vector3, radius: float, length: float) -> void:
-	batch.tube(at, radius, length, HULL, 16, radius * 0.8)
-	for i in range(5):
-		batch.ring(at + Vector3(0, 0, -length * 0.35 + i * length * 0.17), radius * 1.02, TRIM, 16)
-	var nozzle: Vector3 = at + Vector3(0, 0, length * 0.5 + radius * 0.3)
-	batch.tube(nozzle, radius * 1.08, radius * 0.6, GOLD, 20, radius * 0.65)
-	batch.ring(nozzle + Vector3(0, 0, radius * 0.31), radius * 0.83, VectorArt.AMBER, 20)
-	batch.ring(nozzle + Vector3(0, 0, radius * 0.32), radius * 0.5, VectorArt.CYAN, 16)
-	batch.ring(nozzle + Vector3(0, 0, radius * 0.33), radius * 0.22, VectorArt.AMBER, 12)
-	for i in range(8):
-		var angle: float = i * TAU / 8.0
-		var radial := Vector3(cos(angle), sin(angle), 0)
-		batch.line(nozzle + radial * radius * 0.52, nozzle + radial * radius * 0.8, GOLD)
+	return FleetArt.model("boss_launcher")
 
 static func light_fighter() -> Node3D:
 	return FleetArt.model("engine_scout")

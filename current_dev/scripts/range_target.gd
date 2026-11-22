@@ -8,6 +8,7 @@ var health_scale: float = 1.0
 var destroyed: bool = false
 var phase: float = 0.0
 var guided_lockable: bool = true
+var ground_pilot: Camera3D
 
 func _ready() -> void:
 	collision_layer = 2
@@ -23,6 +24,16 @@ func _ready() -> void:
 func animate(time: float) -> void:
 	if destroyed:
 		return
+	_animate_rail(time)
+	if ground_pilot != null:
+		var direction := global_position.direction_to(ground_pilot.global_position)
+		var up := global_basis.y
+		if not direction.is_zero_approx():
+			if absf(up.dot(direction)) > 0.999:
+				up = direction.cross(global_basis.x).normalized()
+			global_basis = Basis.looking_at(direction, up)
+
+func _animate_rail(time: float) -> void:
 	transform = FlightState.rail_frame(travel)
 	position += basis * Vector3(lane.x + sin(time * 0.9 + phase) * 1.3, lane.y + sin(time * 1.2 + phase) * 0.45, 0)
 	rotate_object_local(Vector3.FORWARD, sin(time + phase) * 0.18)

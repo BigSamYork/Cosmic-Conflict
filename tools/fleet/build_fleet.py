@@ -1145,16 +1145,21 @@ def bake(s, scene, game_material):
     return obj
 
 
-def main():
-    OUTPUT.mkdir(parents=True, exist_ok=True)
-    scene = bpy.data.scenes.new("Cosmic Conflict Fleet")
-    bpy.context.window.scene = scene
+def flight_material():
     game_material = bpy.data.materials.new("Flight livery")
     game_material.use_nodes = True
     nodes = game_material.node_tree
     pigment = nodes.nodes.new("ShaderNodeVertexColor")
     pigment.layer_name = "Livery"
     nodes.links.new(pigment.outputs["Color"], nodes.nodes["Principled BSDF"].inputs["Base Color"])
+    return game_material
+
+
+def main():
+    OUTPUT.mkdir(parents=True, exist_ok=True)
+    scene = bpy.data.scenes.new("Cosmic Conflict Fleet")
+    bpy.context.window.scene = scene
+    game_material = flight_material()
     # Build on the origin, export at gameplay scale, then arrange the editable lineup.
     positions = []
     for s in all_ships():
@@ -1189,4 +1194,5 @@ def main():
     )
 
 
-main()
+if __name__ == "__main__":
+    main()

@@ -82,7 +82,7 @@ func _collect(node: Node3D, output: Array[Dictionary]) -> void:
 	for child in node.get_children():
 		if child is RangeTarget and child.destroyed:
 			continue
-		if child is Node3D:
+		if child is Node3D and child.visible:
 			_collect(child, output)
 
 func _triangle(surfaces: Array[Dictionary], index: int) -> Dictionary:

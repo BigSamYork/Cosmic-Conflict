@@ -88,15 +88,7 @@ static func hydra() -> Node3D:
 	return FleetArt.model("hydra")
 
 static func drone_bay() -> Node3D:
-	var cached: Node3D = VectorArt.cached_model("cryo_drone_bay")
-	if cached != null:
-		return cached
-	var batch := GeometryBatch.new()
-	batch.box(Vector3.ZERO, Vector3(8, 5, 6), ICE, HULL)
-	batch.box(Vector3(0, 0, 3.2), Vector3(6, 3.5, 0.3), VectorArt.HOSTILE, Color("#07131e"))
-	for i in range(5):
-		batch.line(Vector3(-2.6 + i * 1.3, -1.5, 3.4), Vector3(-2.6 + i * 1.3, 1.5, 3.4), STEEL)
-	return VectorArt.remember_model("cryo_drone_bay", batch.build())
+	return FleetArt.model("boss_drone_hangar")
 
 static func frost_plume() -> Node3D:
 	var cached: Node3D = VectorArt.cached_model("cryo_frost_plume")

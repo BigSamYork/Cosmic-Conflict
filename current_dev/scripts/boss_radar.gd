@@ -16,11 +16,7 @@ func _ready() -> void:
 	for side in [-1.0, 1.0]:
 		mount.limb(Vector3(side * 2, 0.5, 0), Vector3(0, mast_height - 2, 0), 0.22, 0.18, EncounterArt.GOLD)
 	add_child(mount.build())
-	var head := GeometryBatch.new()
-	head.box(Vector3.ZERO, Vector3(9, 1.2, 1.7), VectorArt.CYAN, Color("#244455"))
-	for i in range(7):
-		head.box(Vector3((i - 3) * 1.15, 0.8, 0), Vector3(0.35, 1.0, 0.6), EncounterArt.GOLD)
-	scanner = head.build()
+	scanner = FleetArt.model("boss_scanner")
 	scanner.position = face_offset
 	add_child(scanner)
 	var collider := CollisionShape3D.new()

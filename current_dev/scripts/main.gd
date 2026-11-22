@@ -391,6 +391,7 @@ func _build_world(training: bool = true) -> void:
 		towers.append(obstacle)
 	for i in range(33 if training else 40):
 		var target: RangeTarget = RangeTarget.new() if training else EnemyFighter.new()
+		target.ground_pilot = camera
 		target.travel = 130.0 + float(i) * 91.0
 		target.lane = Vector2(float(i % 3 - 1) * 4.4, float(i % 4) * 0.9 + 0.8)
 		target.phase = float(i) * 1.7
@@ -1703,7 +1704,11 @@ func _update_contacts() -> void:
 			label = "NUTRIENT CARGO" if target.cargo else "EGG" if distance < 80 else ""
 			if flight.elapsed > 12:
 				_voice_event("xylo_egg")
-		hud.contacts.append({"screen": camera.unproject_position(target.aim_point()), "distance": distance, "color": tint, "label": label})
+		var contact := {"screen": camera.unproject_position(target.aim_point()), "distance": distance, "color": tint, "label": label}
+		if target is BossPart:
+			contact["boss_part"] = true
+			contact["shielded"] = target.core and not target.unlocked
+		hud.contacts.append(contact)
 	if hud.vent_warning and not previous_vent_warning:
 		_voice_event("ignis_vent")
 	if hud.gate_warning and not previous_gate_warning:
