@@ -31,6 +31,7 @@ func run() -> void:
 	await verify_worlds()
 	await verify_boss_radars()
 	await verify_transitions()
+	await verify_player_destruction()
 	game.queue_free()
 	await process_frame
 	for file in [path, path + ".records"]:
@@ -38,6 +39,44 @@ func run() -> void:
 			check(DirAccess.remove_absolute(file) == OK, "Isolated expansion save removed")
 	print("EXPANSION_FAILURES=", failures)
 	quit(failures)
+
+func verify_player_destruction() -> void:
+	await phase("vespera", "orbit", "hawk")
+	game.campaign.primary_level = 2
+	game.campaign.credits = 400
+	game.flight.hull = 0
+	game.automation = ""
+	game.settings["reduced_effects"] = false
+	var native := DisplayServer.get_name() != "headless"
+	game.music.set_level(60, false)
+	game.music.request_scene("vespera")
+	game.music._process(0.1)
+	game._physics_process(0.016)
+	await process_frame
+	var loss = game.ship_loss
+	check(loss != null and game.campaign.ship.is_empty() and game.campaign.credits == 400, "Lethal damage saves the ejection before the pod camera takes over")
+	if loss == null:
+		return
+	check(loss.pod_camera.is_current() and loss.ship.get_meta("player_hull") == "hawk" and loss.ship.get_meta("primary_level") == 2, "The pod sees the destroyed hull and fitted weapons")
+	game._eject()
+	game._process(0.02)
+	game.music._process(0.02)
+	check(game.music.requested == AmbientMusic.SHIP_LOSS and not game.music.paused, "The death cue stays active through the transition")
+	if native:
+		var track: AudioStreamPlayer = game.music.players[game.music.active]
+		check(track.playing and track.stream.resource_path.ends_with("/Grave Matters.ogg"), "Grave Matters interrupts the current crossfade on a native audio device")
+	for i in 315:
+		game._process(1.0 / 60)
+		if i == 45:
+			check(loss.engine_fire != null and loss.ship.visible, "The engine burns before the reactor fractures the hull")
+			await shot("ejection-breach")
+		if i == 145:
+			check(not loss.ship.visible and loss.panels.size() >= 6 and loss.shards.pieces.size() > 0 and loss.ring.visible, "The reactor throws actual hull sections, guns and debris through the shock ring")
+			await shot("ejection-reactor")
+	check(game.mode == game.Mode.TRANSITION and game.campaign.stats.ejections == 1, "The wreck remains in view and the loss settles only once")
+	game._process(0.6)
+	game._process(0.016)
+	check(game.mode == game.Mode.MARKET and game.ship_loss == null and game.camera.is_current() and game.hud.visible and game.music.requested == "station", "Recovery restores the market, camera, cockpit and station music")
 
 func verify_saves() -> void:
 	var old := CampaignState.new()

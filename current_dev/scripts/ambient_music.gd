@@ -8,6 +8,8 @@ const TRACKS := {
 	"xylo": "Grave Matters", "thalassa": "Mighty and Meek", "kharon": "Americana",
 }
 const MIX_GAIN := 0.16
+const SHIP_LOSS := "ship_loss"
+const LOSS_TRACK := "Grave Matters"
 const CROSSFADE: float = 4.0
 const DEFAULT_VOLUME: int = 60
 var players: Array[AudioStreamPlayer] = []
@@ -54,7 +56,7 @@ func set_level(percent: int, suppress: bool) -> void:
 	_apply_gain()
 
 func request_scene(scene: String) -> void:
-	if not TRACKS.has(scene):
+	if scene != SHIP_LOSS and not TRACKS.has(scene):
 		_fail("Unknown ambient scene: " + scene)
 		return
 	requested = scene
@@ -72,8 +74,9 @@ func set_ducked(value: bool) -> void:
 func _process(delta: float) -> void:
 	if paused or not enabled():
 		return
-	if current != requested and fade_time >= CROSSFADE:
-		var path := "res://assets/music/licensed/%s.ogg" % TRACKS[requested]
+	var death_cue := requested == SHIP_LOSS
+	if current != requested and (death_cue or fade_time >= CROSSFADE):
+		var path := "res://assets/music/licensed/%s.ogg" % (LOSS_TRACK if death_cue else TRACKS[requested])
 		var stream := load(path) as AudioStreamOggVorbis
 		if stream == null:
 			_fail("Soundtrack recording is missing: " + path)
@@ -86,6 +89,12 @@ func _process(delta: float) -> void:
 		players[active].play()
 		current = requested
 		fade_time = 0
+		if death_cue:
+			# The ejection is a hard musical cut, even during a world crossfade.
+			players[1 - active].stop()
+			players[1 - active].stream = null
+			players[active].volume_db = 0
+			fade_time = CROSSFADE
 	if fade_time < CROSSFADE:
 		fade_time = minf(CROSSFADE, fade_time + delta)
 		var amount: float = smoothstep(0, CROSSFADE, fade_time)
@@ -94,13 +103,15 @@ func _process(delta: float) -> void:
 		if fade_time >= CROSSFADE and players[1 - active].playing:
 			players[1 - active].stop()
 			players[1 - active].stream = null
-	duck_gain = lerpf(duck_gain, 0.28 if ducked else 1.0, 1 - exp(-delta * (12.0 if ducked else 2.0)))
+	var dialogue_gain := 0.65 if death_cue else 0.28
+	duck_gain = lerpf(duck_gain, dialogue_gain if ducked else 1.0, 1 - exp(-delta * (12.0 if ducked else 2.0)))
 	_apply_gain()
 
 func _apply_gain() -> void:
 	if bus_name.is_empty():
 		return
-	var gain: float = maxf(0.0001, MIX_GAIN * volume_percent / 100.0 * duck_gain)
+	var mix_gain := 0.38 if current == SHIP_LOSS else MIX_GAIN
+	var gain: float = maxf(0.0001, mix_gain * volume_percent / 100.0 * duck_gain)
 	if is_equal_approx(gain, applied_gain):
 		return
 	var index: int = AudioServer.get_bus_index(bus_name)

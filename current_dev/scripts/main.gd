@@ -9,6 +9,8 @@ var camera: Camera3D
 var combat_lights := CombatLighting.new()
 var surface_weather := SurfaceWeather.new()
 var surface_flight := false
+const PlayerDestruction := preload("res://scripts/player_destruction.gd")
+var ship_loss: PlayerDestruction
 var cockpit_artwork: TextureRect
 var cockpit_foredeck: TextureRect
 var cockpit_livery := ShaderMaterial.new()
@@ -2051,17 +2053,24 @@ func _process(delta: float) -> void:
 	if music != null and automation != "--music-test":
 		var audio_mode := named_games_origin if mode == Mode.NAMED_GAMES else mode
 		var scene: String = "title"
-		if audio_mode == Mode.MARKET:
+		if ship_loss != null:
+			scene = AmbientMusic.SHIP_LOSS
+		elif audio_mode == Mode.MARKET:
 			scene = "station"
 		elif is_campaign and campaign != null and audio_mode not in [Mode.TITLE, Mode.CAMPAIGN_COMPLETE]:
 			scene = campaign.sector
 		elif audio_mode in [Mode.FLIGHT, Mode.PAUSE, Mode.COMPLETE] and flight.training:
 			scene = "ignis"
 		music.request_scene(scene)
-		music.set_paused(audio_mode in [Mode.PAUSE, Mode.DEBUG, Mode.SAVE_ERROR] or (audio_mode == Mode.TRANSITION and sequence.is_empty()))
+		music.set_paused(audio_mode in [Mode.PAUSE, Mode.DEBUG, Mode.SAVE_ERROR] or (audio_mode == Mode.TRANSITION and sequence.is_empty() and ship_loss == null))
 		if automation_music and music.enabled():
 			automation_music_peak = maxf(automation_music_peak, AudioServer.get_bus_peak_volume_left_db(AudioServer.get_bus_index(music.bus_name), 0))
 	hud.fps = float(Engine.get_frames_per_second())
+	if ship_loss != null:
+		ship_loss.advance(delta)
+		if ship_loss.age >= PlayerDestruction.DURATION:
+			_end_ship_loss()
+			_show_market()
 	if mode == Mode.TITLE:
 		display_ship.rotate_object_local(Vector3.UP, delta * 0.13)
 	elif mode == Mode.MARKET and station is StationHangar:
@@ -2146,6 +2155,7 @@ func _apply_settings() -> void:
 			music.set_level(int(settings["music_volume"]), bool(settings["mute"]) or automated_session or not automation.is_empty())
 
 func _clear_stage() -> void:
+	_end_ship_loss()
 	surface_flight = false
 	surface_weather.hide()
 	_clear_parasites()
@@ -3044,20 +3054,44 @@ func _complete_docking() -> void:
 	_voice_event("docking")
 
 func _eject() -> void:
+	if ship_loss != null or campaign.ship.is_empty():
+		return
 	_clear_parasites()
 	sequence = ""
+	var lost_ship := campaign.ship
+	var lost_primary := campaign.primary_level
 	var next: CampaignState = _snapshot()
 	next.eject()
 	if not _save_campaign(next, _eject):
 		return
 	mode = Mode.TRANSITION
 	_set_pointer(false)
+	sound.stop_all()
+	_clear_beams()
+	surface_weather.hide()
+	sound.play_sound(sound.impact)
 	_voice_event("ejection")
-	hud.show_notice("PILOT EJECTED / POD TELEPORTING", "Your ship and fitted equipment are lost.\nEarned credits are retained. Astra recovery is standing by.", [])
+	hud.hide()
+	$CockpitArtworkLayer.hide()
+	ship_loss = PlayerDestruction.new()
+	add_child(ship_loss)
+	ship_loss.reactor_burst.connect(func() -> void:
+		sound.play_destruction(ImpactSpray.Surface.HULL)
+		sound.play_thunder())
+	ship_loss.begin(camera.global_transform, lost_ship, lost_primary, settings["reduced_effects"])
+	music.set_paused(false)
+	music.request_scene(AmbientMusic.SHIP_LOSS)
 	if not automation.is_empty():
 		await _capture("ejection.png")
-	await get_tree().create_timer(1.8).timeout
-	_show_market()
+
+func _end_ship_loss() -> void:
+	if ship_loss == null:
+		return
+	camera.make_current()
+	ship_loss.queue_free()
+	ship_loss = null
+	$CockpitArtworkLayer.show()
+	hud.show()
 
 func _show_market(error: String = "") -> void:
 	_clear_parasites()
