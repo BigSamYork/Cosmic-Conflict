@@ -9,7 +9,7 @@ const TRACKS := {
 }
 const MIX_GAIN := 0.16
 const CROSSFADE: float = 4.0
-const DEFAULT_VOLUME: int = 35
+const DEFAULT_VOLUME: int = 60
 var players: Array[AudioStreamPlayer] = []
 var bus_name: String = ""
 var failure_message: String = ""

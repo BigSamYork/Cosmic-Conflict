@@ -99,7 +99,7 @@ automatically resumes play. Existing settings include three flight responses,
 reduced glow, audio mute and camera-motion control. Disabling camera motion
 removes impact shake/evasive bank without removing dodge movement.
 Computer voice and ambient music have independent volume controls; zero disables
-the corresponding playback. Music defaults to 35% and ducks under speech.
+the corresponding playback. Music defaults to 60% and ducks under speech.
 The full-loadout pause overlay keeps its controls inside the 1080p viewport.
 Broader UI scaling, keyboard-focus and accessibility validation remain planned.
 

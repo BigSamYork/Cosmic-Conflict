@@ -147,7 +147,7 @@ historical; the current rules above and reference sections take precedence.
   combat, orbital flight and both bosses. Docking crossfades to the market
   score. Pause holds playback and computer speech lowers the music.
 - **Music controls:** the title/pause menu has a separate music slider, default
-  35%; zero stops music. Master mute silences everything. Voice volume is
+  60%; zero stops music. Master mute silences everything. Voice volume is
   independent. Recordings ship inside the game and work offline.
 - **Backdrop efficiency:** conservative, precomputed bounds cover each complete
   rotating asteroid envelope. Batches wholly behind the camera no longer upload
