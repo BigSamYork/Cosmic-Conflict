@@ -76,6 +76,7 @@ func _build_hive(entry: Transform3D, arrival: PackedVector3Array) -> void:
 			egg.radius = 5.0 + i % 4 * 1.2
 			egg.variant = (i + slot) % 2
 			egg.cargo = i % 5 == 0 and slot % 2 == 0
+			egg.infested = not egg.cargo and i % 4 == 2 and slot == (i / 4) % 4
 			egg.near_pass = slot < 2
 			egg.phase = i * 1.7 + slot
 			egg.course = entry

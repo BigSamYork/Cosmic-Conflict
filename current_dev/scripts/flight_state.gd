@@ -218,18 +218,21 @@ func primary_name() -> String:
 func primary_damage_label() -> String:
 	return "4 x 1 / VOLLEY" if primary_level == 1 else "3 / BEAM TICK" if primary_level == 2 else "DAMAGE 1"
 
-func impact(reason: String = "PROXIMITY IMPACT", damage: float = 18.0) -> bool:
-	if impact_cooldown > 0.0:
+func impact(reason: String = "PROXIMITY IMPACT", damage: float = 18.0, direct_hull: bool = false) -> bool:
+	if impact_cooldown > 0.0 and not direct_hull:
 		return false
 	impacts += 1
 	if training:
 		shields = maxf(1.0, shields - damage)
+	elif direct_hull:
+		hull = maxf(0.0, hull - damage)
 	else:
 		var absorbed: float = minf(shields, damage)
 		shields -= absorbed
 		hull = maxf(0.0, hull - (damage - absorbed))
-	impact_cooldown = 2.0 if training else 0.7
-	recharge_delay = 2.0 if training else SHIELD_RECOVERY_DELAY
+	if not direct_hull:
+		impact_cooldown = 2.0 if training else 0.7
+		recharge_delay = 2.0 if training else SHIELD_RECOVERY_DELAY
 	damage_flash = 0.35
 	last_impact = reason
 	return true

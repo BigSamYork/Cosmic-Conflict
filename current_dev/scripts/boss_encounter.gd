@@ -29,6 +29,7 @@ var drone_bay: DroneBay
 var cloak: StealthSignature
 var core_rings: Array[Node3D] = []
 var bio_legs: Array[Node3D] = []
+var tempest_legs: Array[Node3D] = []
 
 func _ready() -> void:
 	anchor = position
@@ -50,6 +51,14 @@ func _ready() -> void:
 			leg.scale.x = side
 			model.add_child(leg)
 			bio_legs.append(leg)
+	elif sector == "thalassa" and not orbital:
+		for side in [-1.0, 1.0]:
+			for fore in [-1.0, 1.0]:
+				var leg := FleetArt.model("tempest_leg", "ground")
+				leg.position = Vector3(side * 12.1, -0.75, -11.4 if fore > 0 else 10.5)
+				leg.scale = Vector3(side, 1, fore)
+				model.add_child(leg)
+				tempest_legs.append(leg)
 	if sector == "vespera" and not orbital:
 		for i in range(3):
 			var ring: Node3D = VesperaArt.core_ring()
@@ -132,6 +141,7 @@ func _ready() -> void:
 		cloak.attach(model)
 	for side in [-1.0, 1.0]:
 		var radar := BossRadar.new()
+		radar.biological = sector == "xylo"
 		radar.position = radar_mount(side)
 		var scan_height: float = collider.position.y + shape.size.y * 0.5 + 9
 		for part in parts:
@@ -179,7 +189,12 @@ func advance_visuals(delta: float) -> void:
 	for i in range(core_rings.size()):
 		core_rings[i].rotation.y = visual_age * (0.32 if i % 2 == 0 else -0.23)
 	for i in range(bio_legs.size()):
-		bio_legs[i].rotation.x = sin(visual_age * 2.4 + i * PI) * 0.18
+		var stride := sin(visual_age * 2.4 + i * PI) * 0.18
+		bio_legs[i].basis = Basis(Vector3.RIGHT, stride).scaled_local(Vector3(-1 if i == 0 else 1, 1, 1))
+	for i in range(tempest_legs.size()):
+		var stride := sin(visual_age * 1.7) * (1.0 if i == 0 or i == 3 else -1.0)
+		var mirror := Vector3(-1 if i < 2 else 1, 1, -1 if i % 2 == 0 else 1)
+		tempest_legs[i].basis = Basis(Vector3.RIGHT, stride * 0.09).scaled_local(mirror)
 	if cloak != null and death_time < 0:
 		cloak.advance(delta)
 		_update_guidance()

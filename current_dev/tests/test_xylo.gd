@@ -165,7 +165,46 @@ func verify_world() -> void:
 	game._strike({"collider": cargo, "position": cargo.global_position}, cargo.armor)
 	game._strike({"collider": cargo, "position": cargo.global_position}, 10)
 	check(game.campaign.stats["eggs"] == 1 and game.campaign.credits == 8 and game.campaign.stats["asteroids"] == 0 and game.rock_fragments.is_empty() and game.mineral_pickups.size() == 1 and game.mineral_pickups[0].biological, "Egg cargo pays once and releases a biological pickup without stone fragments")
+	var brood: EggShip
+	for target in game.targets:
+		if target is EggShip and target.infested:
+			brood = target
+			break
+	check(brood != null and not brood.cargo and brood.appearance.get_child(0).name == &"brood_egg", "A distinct brood shell occurs among the shootable swarm eggs")
+	var contact := {"collider": brood, "position": brood.global_position}
+	game._strike(contact, 1)
+	check(game.parasites.is_empty(), "Wounding the shell does not hatch the parasite")
+	game._strike(contact, brood.armor)
+	game._strike(contact, 1)
+	check(game.parasites.size() == 1 and game.parasites[0].global_position.is_equal_approx(brood.global_position), "Destroying the egg releases one creature from the explosion")
+	var parasite: CanopyParasite = game.parasites[0]
+	var hull_before: float = game.flight.hull
+	var shields_before: float = game.flight.shields
+	var damage_before: float = game.campaign.hull_damage
+	game._advance_parasites(CanopyParasite.LEAP + 2.9)
+	check(parasite.gripping() and parasite.get_parent() == game.camera and parasite.position.z < 0, "The creature reaches the canopy belly-first")
+	var frozen := parasite.age
+	game.pause_flight()
+	game._physics_process(1.0)
+	check(parasite.age == frozen and game.flight.hull == hull_before, "Pause freezes the latch and its bite timer")
+	game.resume_flight()
+	game.flight.impact_cooldown = 0.7
+	game._advance_parasites(0.11)
+	check(game.flight.hull < hull_before and game.flight.shields == shields_before, "An attached bite reaches the hull through charged shields")
+	game._advance_parasites(12.0)
+	var loss: float = game.flight.max_hull * 0.10
+	check(is_equal_approx(hull_before - game.flight.hull, loss) and is_equal_approx(game.campaign.hull_damage - damage_before, loss), "A full fifteen-second latch removes ten percent of maximum hull exactly once")
+	var at_release := parasite.position.y
+	game._advance_parasites(0.4)
+	check(parasite.position.y < at_release, "The parasite slides down the glass after fifteen seconds")
+	game._advance_parasites(0.5)
+	check(game.parasites.is_empty() and not game.sound.parasite_voice.playing, "The latch clears its view and sound after release")
 	game.flight.distance = FlightDirector.ASTEROID_SPEED * FlightDirector.ASTEROID_DURATION
+	var final_hull: float = game.flight.hull
+	for egg in game.targets:
+		if egg is EggShip and egg.infested and not egg.destroyed:
+			game._strike({"collider": egg, "position": egg.global_position}, egg.armor)
+			break
 	game.flight.elapsed = FlightDirector.ASTEROID_DURATION
 	game.director.advance("asteroids", 0, game.flight.distance, game.flight.elapsed, game.targets)
 	game._update_camera()
@@ -184,6 +223,7 @@ func verify_world() -> void:
 			for body in preview.backdrop.rocks:
 				passed = passed and pilot_travel + (inverse * Vector3(body["position"])).z - body["radius"] * 1.3 >= 23.9
 	check(passed and nearest > 1 and game.mode == game.Mode.MARKET and game.world == preview, "The living fleet passes behind before the pull-up and remains in one scene through docking")
+	check(game.parasites.is_empty() and is_equal_approx(final_hull - game.flight.hull, loss), "A last-second hatch stays on the glass during the coast and releases before docking")
 	check((-game.camera.global_basis.z).dot(game.station.global_basis.z) > 0.999, "Xylo docking finishes aligned with the next station exit")
 	DirAccess.remove_absolute(path)
 	game.sound.stop_all()

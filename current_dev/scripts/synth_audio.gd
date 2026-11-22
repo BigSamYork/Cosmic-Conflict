@@ -8,6 +8,7 @@ var impact: AudioStreamWAV
 const ImpactSpray := preload("res://scripts/impact_spray.gd")
 var contact_thuds: Dictionary = {}
 var last_contact_usec := -100000
+var parasite_voice := AudioStreamPlayer.new()
 var warp: AudioStreamWAV
 var voice_index: int = 0
 var playback_enabled: bool = true
@@ -22,6 +23,9 @@ func _ready() -> void:
 	for surface in ImpactSpray.Surface.values():
 		contact_thuds[surface] = make_contact_thud(surface)
 	warp = make_tone(1.6, 90.0, 1100.0, 0.25)
+	parasite_voice.stream = preload("res://assets/sfx/canopy_parasite.wav")
+	parasite_voice.volume_db = -8.0
+	add_child(parasite_voice)
 	for _i in range(8):
 		var player := AudioStreamPlayer.new()
 		player.volume_db = -10.0
@@ -44,17 +48,26 @@ func play_contact(surface: ImpactSpray.Surface) -> void:
 		last_contact_usec = now
 
 func pause_sounds(paused: bool) -> void:
+	parasite_voice.stream_paused = paused
 	for voice in voices:
 		voice.stream_paused = paused
 
 func stop_all() -> void:
+	parasite_voice.stop()
 	for voice in voices:
 		voice.stop()
 		voice.stream = null
 
 func set_ducked(active: bool) -> void:
+	parasite_voice.volume_db = -13.0 if active else -8.0
 	for voice in voices:
 		voice.volume_db = -15.0 if active else -10.0
+
+func set_parasite_audible(active: bool) -> void:
+	if active and playback_enabled and not parasite_voice.playing:
+		parasite_voice.play()
+	elif not active and parasite_voice.playing:
+		parasite_voice.stop()
 
 func _exit_tree() -> void:
 	stop_all()

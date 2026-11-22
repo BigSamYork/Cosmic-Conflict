@@ -3,6 +3,7 @@ extends RangeTarget
 
 var radius: float = 5.0
 var cargo: bool = false
+var infested: bool = false
 var variant: int = 0
 var near_pass: bool = true
 var course: Transform3D = Transform3D.IDENTITY
@@ -14,7 +15,7 @@ func _ready() -> void:
 	collision_layer = 3
 	collision_mask = 0
 	armor = ceili(radius * 0.7)
-	appearance = XyloArt.egg_ship(2 if cargo else variant)
+	appearance = FleetArt.model("brood_egg", "ground") if infested else XyloArt.egg_ship(2 if cargo else variant)
 	add_child(appearance)
 	var shape := SphereShape3D.new()
 	shape.radius = collision_radius()
@@ -33,4 +34,6 @@ func collision_radius() -> float:
 	return radius * 1.4
 
 func tint() -> Color:
+	if infested:
+		return Color("#ff4b7b")
 	return VectorArt.AMBER if cargo else XyloArt.SHELL

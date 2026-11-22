@@ -63,6 +63,7 @@ var missiles: Array[EnemyMissile] = []
 var debris: Array[BreakupEffect] = []
 const ImpactSpray := preload("res://scripts/impact_spray.gd")
 var impact_sprays: Array[ImpactSpray] = []
+var parasites: Array[CanopyParasite] = []
 var torpedoes: Array[PlayerTorpedo] = []
 var emp_pulses: Array[EMPPulse] = []
 var flare_clouds: Array[FlareCloud] = []
@@ -429,6 +430,7 @@ func _build_world(training: bool = true) -> void:
 				targets.append(ice)
 		for i in range(5):
 			var dish := RadarDish.new()
+			dish.biological = sector == "xylo"
 			dish.travel = 620.0 + i * 700.0
 			dish.lane.x = -23.0 if i % 2 == 0 else 23.0
 			dish.phase = i * 1.3
@@ -543,6 +545,7 @@ func start_flight() -> void:
 	_set_ground_environment(true)
 
 func show_title() -> void:
+	_clear_parasites()
 	computer_voice.stop_speech(true)
 	computer_voice.pause_speech(false)
 	if launch_approach != null:
@@ -713,6 +716,7 @@ func _physics_process(delta: float) -> void:
 		canyon_contact = _limit_canyon_travel()
 	_update_camera()
 	_advance_rock_fragments(delta, previous, camera.position)
+	_advance_parasites(delta)
 	_check_obstacles(previous, camera.position, canyon_contact)
 	for target in targets:
 		if target is Asteroid or target is EggShip:
@@ -851,13 +855,13 @@ func _check_obstacles(previous: Vector3, current: Vector3, canyon_contact: bool 
 		if not automation.is_empty():
 			print("AUTOMATION_IMPACT phase=%s distance=%.2f offset=%s previous=%s current=%s" % [campaign.phase if is_campaign else "training", flight.distance, flight.offset, previous, current])
 
-func _apply_pilot_damage(reason: String, damage: float = 18.0) -> bool:
+func _apply_pilot_damage(reason: String, damage: float = 18.0, direct_hull: bool = false) -> bool:
 	if god_mode:
 		return false
 	var previous_hull: float = flight.hull
 	var previous_shields: float = flight.shields
 	var previous_multiplier: int = campaign.combo_multiplier() if is_campaign else 1
-	var damaged: bool = flight.impact(reason, damage)
+	var damaged: bool = flight.impact(reason, damage, direct_hull)
 	if not automation.is_empty():
 		automation_hull_damage += maxf(0, previous_hull - flight.hull)
 	if is_campaign and flight.hull < previous_hull:
@@ -1080,7 +1084,12 @@ func _strike(result: Dictionary, damage: int, secondary_hit: bool = false, recor
 				elif collider is EggShip:
 					campaign.stats["eggs"] += 1
 					campaign.reward(8)
-					if collider.cargo:
+					if collider.infested:
+						var hatchling := CanopyParasite.new()
+						hatchling.launch(camera, at, -0.13 if parasites.size() % 2 == 0 else 0.19, settings["reduced_effects"])
+						parasites.append(hatchling)
+						hud.show_message("BROOD EGG RUPTURE / CANOPY PARASITE")
+					elif collider.cargo:
 						_spawn_mineral(collider.global_position, true)
 				elif collider is WebNode:
 					campaign.stats["webs"] += 1
@@ -1130,6 +1139,30 @@ func _strike(result: Dictionary, damage: int, secondary_hit: bool = false, recor
 		_confirm_impact(result)
 		return true
 	return false
+
+func _advance_parasites(delta: float) -> void:
+	if parasites.is_empty():
+		return
+	var audible := false
+	for i in range(parasites.size()-1, -1, -1):
+		var hatchling := parasites[i]
+		var bites := hatchling.advance(delta)
+		if bites > 0 and flight.hull > 0:
+			_apply_pilot_damage("CANOPY PARASITE", flight.max_hull * CanopyParasite.HULL_FRACTION * bites / CanopyParasite.BITES, true)
+		audible = audible or hatchling.gripping()
+		if hatchling.finished():
+			hatchling.hide()
+			hatchling.queue_free()
+			parasites.remove_at(i)
+	sound.set_parasite_audible(audible)
+
+func _clear_parasites() -> void:
+	for hatchling in parasites:
+		hatchling.hide()
+		hatchling.queue_free()
+	parasites.clear()
+	if sound != null:
+		sound.set_parasite_audible(false)
 
 func _confirm_impact(result: Dictionary, previous_armor: int = 0) -> void:
 	var target: Node3D = result["collider"]
@@ -1738,7 +1771,7 @@ func _update_contacts() -> void:
 			tint = VectorArt.AMBER
 			label = ("RUIN" if target is RuinFall else "ICE") + (" / SHOOT OR KEEP CENTER" if target.warning() else " / FALLING / EVADE" if target.started else " / SHOOT TO CLEAR")
 		elif target is EggShip:
-			label = "NUTRIENT CARGO" if target.cargo else "EGG" if distance < 80 else ""
+			label = "BROOD EGG / HOLD FIRE" if target.infested else "NUTRIENT CARGO" if target.cargo else "EGG" if distance < 80 else ""
 			if flight.elapsed > 12:
 				_voice_event("xylo_egg")
 		var contact := {"screen": camera.unproject_position(target.aim_point()), "distance": distance, "color": tint, "label": label}
@@ -1875,6 +1908,7 @@ func _apply_settings() -> void:
 			music.set_level(int(settings["music_volume"]), bool(settings["mute"]) or automated_session or not automation.is_empty())
 
 func _clear_stage() -> void:
+	_clear_parasites()
 	if launch_approach != null:
 		launch_approach.queue_free()
 		launch_approach = null
@@ -2465,6 +2499,12 @@ func _advance_sequence(delta: float) -> void:
 	# Land exactly on the endpoint even when fixed ticks sum just short of it.
 	if sequence_time + delta >= duration - 0.0000001:
 		delta = duration - sequence_time
+	if not parasites.is_empty():
+		_advance_parasites(delta)
+		if flight.hull <= 0:
+			sequence = ""
+			_eject.call_deferred()
+			return
 	sequence_time += delta
 	hud.transit_seconds = ceili(snappedf(transit_time_at_leg_start - sequence_time, 0.0000001))
 	if station is StationHangar:
@@ -2700,6 +2740,7 @@ func _complete_docking() -> void:
 	_voice_event("docking")
 
 func _eject() -> void:
+	_clear_parasites()
 	sequence = ""
 	var next: CampaignState = _snapshot()
 	next.eject()
@@ -2715,6 +2756,7 @@ func _eject() -> void:
 	_show_market()
 
 func _show_market(error: String = "") -> void:
+	_clear_parasites()
 	computer_voice.pause_speech(false)
 	_set_cockpit(campaign.ship, campaign.primary_level)
 	if station == null:

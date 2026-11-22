@@ -38,37 +38,10 @@ static func insect_leg() -> Node3D:
 	return VectorArt.remember_model("xylo_insect_leg", batch.build())
 
 static func goliath() -> Node3D:
-	var cached: Node3D = VectorArt.cached_model("xylo_goliath")
-	if cached != null:
-		return cached
-	var batch := GeometryBatch.new()
-	batch.ellipsoid(Vector3(0, 9, -4), Vector3(8.5, 12, 7), SHELL, 12, 16)
-	for rib in range(5):
-		batch.ellipsoid(Vector3(0, 2 + rib * 4, 1.8), Vector3(8 - absf(rib - 2) * 0.7, 1.3, 4), LEAF if rib % 2 == 0 else SHELL, 6, 12)
-	batch.limb(Vector3(0, 17, -3), Vector3(0, 25, 0), 3.3, 2.8, LEAF)
-	batch.ellipsoid(Vector3(0, 26, 0), Vector3(6.5, 3.8, 5.5), SHELL, 8, 16)
-	for side in [-1.0, 1.0]:
-		batch.ellipsoid(Vector3(side * 4, 27, 4.8), Vector3(1, 0.7, 0.8), ACID, 6, 10)
-		batch.limb(Vector3(side * 2, 25, 5), Vector3(side * 3.5, 23, 7), 0.7, 0.4, ACID)
-		batch.limb(Vector3(side * 3.5, 23, 7), Vector3(side, 22.5, 8.5), 0.4, 0.04, LEAF)
-		batch.limb(Vector3(side * 8, 17, -4), Vector3(side * 22, 14, 1), 3.4, 2.6, LEAF)
-		batch.limb(Vector3(side * 22, 14, 1), Vector3(side * 19, 8, 14), 2.6, 1.6, SHELL)
-		batch.limb(Vector3(side * 9, 6, -9), Vector3(side * 30, 7, -4), 2.6, 1.7, LEAF)
-		for finger in range(3):
-			batch.limb(Vector3(side * (17 + finger * 2), 8, 13), Vector3(side * (18 + finger * 2), 2, 17 + finger), 0.55, 0.04, ACID, 6)
-	return VectorArt.remember_model("xylo_goliath", batch.build())
+	return FleetArt.model("bio_titan", "ground")
 
 static func goliath_leg() -> Node3D:
-	var cached: Node3D = VectorArt.cached_model("xylo_goliath_leg")
-	if cached != null:
-		return cached
-	var batch := GeometryBatch.new()
-	batch.limb(Vector3.ZERO, Vector3(1.5, -4, 1.5), 2.3, 1.7, SHELL)
-	batch.ellipsoid(Vector3(1.5, -4, 1.5), Vector3(1.8, 1.8, 1.8), LEAF)
-	batch.limb(Vector3(1.5, -4, 1.5), Vector3(-1, -8.5, 5), 1.6, 0.7, SHELL)
-	for toe in range(3):
-		batch.limb(Vector3(-1, -8.2, 4), Vector3(-2 + toe, -8.5, 7 + toe * 0.3), 0.45, 0.05, ACID, 6)
-	return VectorArt.remember_model("xylo_goliath_leg", batch.build())
+	return FleetArt.model("titan_leg", "ground")
 
 static func leviathan() -> Node3D:
 	return FleetArt.model("leviathan")

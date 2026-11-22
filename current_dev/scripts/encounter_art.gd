@@ -37,35 +37,13 @@ static func web_drone() -> Node3D:
 static func pirate_skirmisher() -> Node3D:
 	return FleetArt.model("pirate")
 
-static func radar_dish() -> Node3D:
-	var cached: Node3D = VectorArt.cached_model("radar_dish")
-	if cached != null:
-		return cached
-	var batch := GeometryBatch.new()
-	var vertices := PackedVector3Array([Vector3(0, 0, -1.4)])
-	var indices := PackedInt32Array()
-	for ring in range(1, 5):
-		var radius: float = ring * 1.1
-		for sector in range(24):
-			var angle: float = sector * TAU / 24
-			vertices.append(Vector3(cos(angle) * radius, sin(angle) * radius, -1.4 + radius * radius * 0.11))
-	for sector in range(24):
-		var next: int = (sector + 1) % 24
-		indices.append_array(PackedInt32Array([0, 1 + sector, 1 + next]))
-		for ring in range(3):
-			var a: int = 1 + ring * 24 + sector
-			var b: int = 1 + ring * 24 + next
-			indices.append_array(PackedInt32Array([a, b, a + 24, b, b + 24, a + 24]))
-		if sector % 3 == 0:
-			batch.line(vertices[0], vertices[1 + 72 + sector], VectorArt.CYAN)
-	batch.surface(vertices, indices, Color("#15353c"))
-	for ring in range(1, 5):
-		var radius: float = ring * 1.1
-		batch.ring(Vector3(0, 0, -1.4 + radius * radius * 0.11), radius, VectorArt.CYAN, 24)
-	for side in [-1.0, 1.0]:
-		batch.line(Vector3(side * 3.8, 0, 0.2), Vector3(0, 0, 3.4), GOLD)
-	batch.box(Vector3(0, 0, 3.4), Vector3(1, 1, 1.2), VectorArt.AMBER)
-	return VectorArt.remember_model("radar_dish", batch.build())
+static func radar_dish(biological: bool = false) -> Node3D:
+	return FleetArt.model("sensory_fan" if biological else "survey_dish", "ground")
+
+static func radar_mast(height: float, biological: bool) -> Node3D:
+	var mast := FleetArt.model("sensory_stalk" if biological else "radar_pedestal", "ground")
+	mast.scale.y = (height - 2.35) / 8.0
+	return mast
 
 static func missile_turret() -> Node3D:
 	return FleetArt.model("boss_launcher")
