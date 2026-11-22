@@ -116,7 +116,8 @@ func verify_world() -> void:
 	game.store = CampaignStore.new(path)
 	await game._load_phase()
 	check(game.xylo_fields.size() == 14 and game.xylo_rovers != null and game.heat_vents.is_empty() and game.frost_fields.is_empty(), "Xylo has its own corrosive/spore fields and survey vehicles")
-	check(game.xylo_rovers.find_children("*", "CollisionObject3D", true, false).is_empty(), "Survey rovers are non-hostile scenery, not targets or collision traps")
+	var rover_hulls: Array[Node] = game.xylo_rovers.find_children("*", "CollisionObject3D", true, false)
+	check(not rover_hulls.is_empty() and rover_hulls.all(func(body): return body.collision_layer == FleetArt.PILOT_LAYER), "Survey rovers have solid bodies and remain outside every weapon layer")
 	game.pause_flight()
 	var age: float = game.xylo_fields[0].age
 	game._physics_process(3)

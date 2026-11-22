@@ -371,6 +371,7 @@ func run() -> void:
 	DirAccess.remove_absolute(debug_path)
 	if FileAccess.file_exists(debug_path + ".tmp"):
 		DirAccess.remove_absolute(debug_path + ".tmp")
+	await verify_ship_contacts(game)
 	print("COMBAT_TEST_FAILURES=", failures)
 	game.sound.stop_all()
 	await create_timer(0.1).timeout
@@ -378,6 +379,40 @@ func run() -> void:
 	game.queue_free()
 	await process_frame
 	quit(failures)
+
+func verify_ship_contacts(game: Node3D) -> void:
+	game.is_campaign = true
+	game.god_mode = false
+	game.campaign.phase = "orbit"
+	game.flight = FlightState.new()
+	game.flight.configure_campaign(game.campaign)
+	game.flight.hull = 100
+	game.flight.shields = 100
+	var bandit := EnemyFighter.new()
+	game.add_child(bandit)
+	var pose := Transform3D(Basis(Vector3.UP, 0.82), Vector3(6000, 1600, 2400))
+	bandit.global_transform = pose
+	game.director.frame = pose
+	await physics_frame
+	await physics_frame
+	var mesh: MeshInstance3D = bandit.get_child(0).get_child(0)
+	var bounds := mesh.get_aabb()
+	var center := mesh.to_global(bounds.get_center())
+	var right := mesh.global_basis.x.normalized()
+	var clear: Vector3 = mesh.global_basis.y.normalized() * (bounds.size.y * 0.5 + game.flight.collision_radius + 0.25)
+	var sweep := right * (bounds.size.x + 2)
+	game._check_obstacles(center + clear + sweep, center + clear - sweep)
+	check(game.flight.hull == 100 and game.flight.offset == Vector2.ZERO, "A close pass just above a rotated fighter leaves hull and flight path intact")
+	var heading: Basis = game.director.frame.basis
+	game._check_obstacles(center + sweep, center - sweep)
+	check(game.flight.hull == 82 and game.flight.shields == 100 and game.flight.impacts == 1, "Sweeping across an actual fighter hull damages the hull through full shields")
+	check(game.flight.offset.length() > 1 and not game.director.frame.basis.is_equal_approx(heading), "The orbital flight path and heading both deflect on contact")
+	bandit.receive_hit(999)
+	game.flight.advance(1.1, false)
+	await physics_frame
+	game._check_obstacles(center + sweep, center - sweep)
+	check(game.flight.impacts == 1, "A destroyed ship leaves no invisible collision mesh")
+	bandit.queue_free()
 
 func check(condition: bool, description: String) -> void:
 	if condition:

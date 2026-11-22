@@ -84,6 +84,7 @@ func _ready() -> void:
 			lens.position = Vector3(side * 11.3, 10, -11)
 			model.add_child(lens)
 			collectors.append(lens)
+	FleetArt.add_pilot_hull(model)
 	body = StaticBody3D.new()
 	body.collision_layer = 1
 	body.collision_mask = 0
@@ -171,6 +172,8 @@ func _ready() -> void:
 		add_child(radar)
 		radars.append(radar)
 		parts.append(radar)
+	for part in parts:
+		FleetArt.add_pilot_hull(part)
 
 func radar_mount(side: float) -> Vector3:
 	var x: float = side * (5 if sector == "xylo" and not orbital else 8)

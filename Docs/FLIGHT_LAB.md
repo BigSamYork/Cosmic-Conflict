@@ -139,7 +139,7 @@ historical; the current rules above and reference sections take precedence.
 - **Cryo falling ice:** eight loose chunks hang from side-lane ice overhangs.
   Amber markers and a target label warn for two seconds before a chunk falls.
   Two baseline laser hits shatter one; avoiding it is equally valid. A contact
-  deals 14 shield-first damage once, without frost slowdown. The automatic
+  kicks your ship off course and deals 14 hull damage through shields. The automatic
   centerline stays clear. Clearing ice awards no credits, enemy kill or streak.
   Pause freezes the warning and fall.
 - Kevin MacLeod’s “Fanfare for Space” accompanies the opening. “Look Busy”
@@ -694,7 +694,8 @@ Developer assistance remains marked for the entire operation, including later to
 
 - Move the mouse to aim and steer. In orbital dogfights, moving the pointer well off center turns the ship onto a new heading. Center it to resume automatic pursuit.
 - Use **WASD** to move the ship independently of the reticle. Hold **F** to hold your line and traverse the guns. The thrusters still work while F is held.
-- Press **B** for a barrel roll toward the pointer. The roll avoids external hits for 0.92 seconds and shares a six-second capacitor with the Shift dash. A parasite already attached to the glass can still bite.
+- Press **B** for a barrel roll toward the pointer. The roll evades incoming fire for 0.92 seconds and shares a six-second capacitor with the Shift dash. A parasite already attached to the glass can still bite.
+- Leave clearance around ships, canyon walls and solid scenery. A collision pushes your ship away from the point of contact and damages the hull through active shields, even during a roll. A continuous scrape counts as one impact. The training range keeps you flying at one hull point.
 - Press **V** to toggle the thermal governor. It breaks sustained fire into cooling bursts.
 - Press **X** to restore up to 23% of maximum shield in a campaign sortie. The surge adds 34 heat and recharges in 16 seconds. It requires enough thermal headroom.
 - Press **R** to cycle the tactical radar through 180, 360 and 720 meters. Press **I** during a boss encounter to hear the computer repeat its recon.

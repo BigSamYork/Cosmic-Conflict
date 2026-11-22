@@ -45,6 +45,8 @@ var rotor_phase: float = 0.0
 var muzzle_points := PackedVector2Array([Vector2(548, 480), Vector2(828, 480)])
 var player_probe_shape := SphereShape3D.new()
 var player_probe := PhysicsShapeQueryParameters3D.new()
+var canyon_normal := Vector3.UP
+var waterline_rids: Array[RID] = []
 var world: Node3D
 var targets: Array[RangeTarget] = []
 var turrets: Array[GroundTurret] = []
@@ -184,7 +186,7 @@ var screenshot_directory: String = ""
 
 func _ready() -> void:
 	player_probe.shape = player_probe_shape
-	player_probe.collision_mask = 1
+	player_probe.collision_mask = 1 | FleetArt.PILOT_LAYER
 	_define_inputs()
 	_build_environment()
 	_build_world()
@@ -489,7 +491,9 @@ func _build_world(training: bool = true) -> void:
 				ice.travel = 560 + i * 390
 				ice.lane.x = -8.0 if i % 2 == 0 else 8.0
 				ice.landed.connect(func(chunk: FallingIce) -> void: _spawn_breakup(chunk, true))
-				world.add_child(ice.support_model())
+				var support := ice.support_model()
+				world.add_child(support)
+				FleetArt.add_pilot_hull(support)
 				world.add_child(ice)
 				falling_ice.append(ice)
 				targets.append(ice)
@@ -803,7 +807,6 @@ func _physics_process(delta: float) -> void:
 	_update_camera()
 	_advance_rock_fragments(delta, previous, camera.position)
 	_advance_parasites(delta)
-	_check_obstacles(previous, camera.position, canyon_contact)
 	for target in targets:
 		if target is Asteroid or target is EggShip:
 			continue
@@ -824,6 +827,7 @@ func _physics_process(delta: float) -> void:
 		if cloaked and not voice_nyx_cloaked:
 			_voice_event("nyx_cloak")
 		voice_nyx_cloaked = cloaked
+	_check_obstacles(previous, camera.position, canyon_contact)
 	_advance_missiles(delta, previous, camera.position)
 	if is_campaign and flight.hull <= 0.0:
 		flight.shots -= shots
@@ -851,7 +855,7 @@ func _physics_process(delta: float) -> void:
 		_advance_storm(delta, previous)
 	for ice in falling_ice:
 		if ice.advance(delta, previous, camera.position, flight.collision_radius):
-			_apply_pilot_damage("FALLING RUIN" if ice is RuinFall else "FALLING ICE", FallingIce.DAMAGE)
+			_solid_contact(ice.global_position.direction_to(camera.position), "FALLING RUIN" if ice is RuinFall else "FALLING ICE", FallingIce.DAMAGE)
 	for gate in laser_gates:
 		if gate.advance(delta, previous, camera.position, flight.collision_radius):
 			_apply_pilot_damage("CITY LASER GATE", CityLaserGate.DAMAGE)
@@ -923,6 +927,8 @@ func _limit_canyon_travel() -> bool:
 			safe = middle
 		else:
 			requested = middle
+	var correction := Vector2(safe.x, safe.y) - flight.offset
+	canyon_normal = director.frame.basis * Vector3(correction.x, correction.y, 0).normalized()
 	flight.offset = Vector2(safe.x, safe.y)
 	return true
 
@@ -932,14 +938,54 @@ func _check_obstacles(previous: Vector3, current: Vector3, canyon_contact: bool 
 		player_probe_shape.radius = flight.collision_radius
 	query.transform = Transform3D(Basis.IDENTITY, previous)
 	query.motion = current - previous
-	var fraction: PackedFloat32Array = get_world_3d().direct_space_state.cast_motion(query)
-	query.transform.origin = current
+	# Boss ordnance still uses its broad cover volume. The pilot touches its
+	# moving visual hull, so empty spaces between the wings remain flyable.
+	var omitted: Array[RID] = waterline_rids.duplicate()
+	if boss != null:
+		omitted.append(boss.body.get_rid())
+	query.exclude = omitted
+	var space := get_world_3d().direct_space_state
+	var fraction := space.cast_motion(query)
+	var swept := not fraction.is_empty() and fraction[0] < 1.0
+	query.transform.origin = previous.lerp(current, fraction[1]) if swept else current
 	query.motion = Vector3.ZERO
-	var overlapping: bool = not get_world_3d().direct_space_state.intersect_shape(query, 1).is_empty()
-	if (canyon_contact or fraction[0] < 1.0 or overlapping) and _apply_pilot_damage("PROXIMITY IMPACT"):
+	var contact := space.get_rest_info(query)
+	if not contact.is_empty():
+		var normal: Vector3 = contact.normal
+		if normal.dot(current - previous) > 0 and swept:
+			normal = -normal
+		var safe: Vector3 = previous.lerp(current, fraction[0]) if swept else contact.point + normal * flight.collision_radius
+		_solid_contact(normal, "HULL COLLISION", 18.0, normal * maxf(0, (safe - current).dot(normal)))
+	elif canyon_contact:
+		_solid_contact(canyon_normal, "CANYON WALL")
+	elif swept:
+		_solid_contact(current.direction_to(previous), "HULL COLLISION")
+
+func _solid_contact(normal: Vector3, reason: String, damage: float = 18.0, separation := Vector3.ZERO) -> void:
+	if flight.hull <= 0:
+		return
+	var frame := director.frame if is_campaign else FlightState.rail_frame(flight.distance)
+	var local := frame.basis.inverse() * normal
+	var correction := frame.basis.inverse() * separation
+	var limits := Vector2(flight.lateral_limit, FlightState.CORRIDOR.y)
+	flight.offset = (flight.offset + Vector2(correction.x, correction.y)).clamp(-limits, limits)
+	if is_campaign and campaign.phase == "orbit":
+		director.frame.origin += frame.basis.z * correction.z
+	var direction := Vector2(local.x, local.y)
+	if direction.length_squared() < 0.04:
+		# A nose-on strike has no lateral normal. Peel off toward open corridor.
+		direction = Vector2(-signf(flight.offset.x), 0.65 if flight.offset.y < 0.5 * FlightState.CORRIDOR.y else -0.65)
+	if not flight.rebound(direction):
+		if not separation.is_zero_approx():
+			_update_camera()
+		return
+	if is_campaign and campaign.phase == "orbit":
+		director.frame.basis = frame.basis * Basis(Vector3.UP, -flight.contact_direction.x * 0.18) * Basis(Vector3.RIGHT, flight.contact_direction.y * 0.15)
+	_update_camera()
+	if _apply_pilot_damage(reason, damage, true):
 		sound.play_sound(sound.impact)
 		if not automation.is_empty():
-			print("AUTOMATION_IMPACT phase=%s distance=%.2f offset=%s previous=%s current=%s" % [campaign.phase if is_campaign else "training", flight.distance, flight.offset, previous, current])
+			print("AUTOMATION_IMPACT phase=%s distance=%.2f offset=%s" % [campaign.phase if is_campaign else "training", flight.distance, flight.offset])
 
 func _apply_pilot_damage(reason: String, damage: float = 18.0, direct_hull: bool = false) -> bool:
 	if god_mode:
@@ -1481,8 +1527,10 @@ func _advance_rock_fragments(delta: float, previous_pilot: Vector3, pilot: Vecto
 			chunk.global_position += chunk.fragment_velocity * delta
 			var nearest: Vector3 = Geometry3D.get_closest_point_to_segment(Vector3.ZERO, previous_pilot - before, pilot - chunk.global_position)
 			if mode == Mode.FLIGHT and nearest.length() <= flight.collision_radius + chunk.collision_radius():
-				if _apply_pilot_damage("ASTEROID FRAGMENT"):
-					sound.play_sound(sound.impact)
+				var normal := nearest.normalized()
+				if nearest.length_squared() < 0.0001:
+					normal = ((chunk.global_position - before) - (pilot - previous_pilot)).normalized()
+				_solid_contact(normal, "ASTEROID FRAGMENT")
 				chunk.receive_hit(chunk.armor)
 				_spawn_breakup(chunk, true)
 		if chunk.destroyed or chunk.fragment_age >= Asteroid.FRAGMENT_LIFETIME:
@@ -2179,8 +2227,7 @@ func _stream_ground(distance: float) -> void:
 		else:
 			chunk = VectorArt.terrain_chunk(next_ground_chunk, ground_branch != null, is_campaign and campaign != null and campaign.sector == "cryo")
 		chunk.set_meta("start", next_ground_chunk)
-		if is_campaign:
-			_add_ground_cover(chunk)
+		_add_ground_cover(chunk)
 		world.add_child(chunk)
 		_bind_ocean(chunk)
 		ground_chunks.append(chunk)
@@ -2188,26 +2235,45 @@ func _stream_ground(distance: float) -> void:
 
 func _add_ground_cover(chunk: Node3D) -> void:
 	var body := StaticBody3D.new()
-	body.collision_layer = 1 # Shared by the swept pilot probe and missile cover ray.
+	body.collision_layer = 1 if is_campaign else FleetArt.PILOT_LAYER
 	body.collision_mask = 0
+	var trunks := StaticBody3D.new()
+	trunks.collision_layer = FleetArt.PILOT_LAYER
+	trunks.collision_mask = 0
 	for surface in chunk.get_children():
-		if surface is MultiMeshInstance3D and surface.material_override == GroundArt.foliage_material:
-			continue
+		var solid := body
+		var shape: Shape3D
 		var mesh: Mesh
 		var transforms: Array[Transform3D] = []
 		if surface is MultiMeshInstance3D:
 			mesh = surface.multimesh.mesh
 			transforms.assign(surface.multimesh.get_meta("placements"))
+			if surface.material_override == GroundArt.foliage_material:
+				solid = trunks
+				shape = GroundArt.plant_hull(surface.multimesh)
+				if shape == null:
+					continue
 		elif surface is MeshInstance3D and surface.material_override != VectorArt.line_material:
 			mesh = surface.mesh
 			transforms.append(surface.transform)
+			var material: Material = surface.material_override
+			if material is ShaderMaterial and material.shader == FrontierArt.WATER:
+				solid = StaticBody3D.new()
+				solid.collision_layer = 1
+				solid.collision_mask = 0
+				chunk.add_child(solid)
+				var water_rid := solid.get_rid()
+				waterline_rids.append(water_rid)
+				solid.tree_exiting.connect(func(): waterline_rids.erase(water_rid))
 		else:
 			continue # Screen-space outline strokes are not solid terrain.
-		if not mesh.has_meta("ground_cover"):
-			var shape: ConcavePolygonShape3D = mesh.create_trimesh_shape()
-			shape.backface_collision = true
-			mesh.set_meta("ground_cover", shape)
-		if surface is MultiMeshInstance3D and campaign.sector == "thalassa":
+		if shape == null:
+			if not mesh.has_meta("ground_cover"):
+				var cover := mesh.create_trimesh_shape()
+				cover.backface_collision = true
+				mesh.set_meta("ground_cover", cover)
+			shape = mesh.get_meta("ground_cover")
+		if solid == body and surface is MultiMeshInstance3D and is_campaign and campaign.sector == "thalassa":
 			for placement in transforms:
 				var platform := OffshorePlatform.new()
 				platform.configure(mesh, placement)
@@ -2217,10 +2283,14 @@ func _add_ground_cover(chunk: Node3D) -> void:
 			continue
 		for placement in transforms:
 			var collider := CollisionShape3D.new()
-			collider.shape = mesh.get_meta("ground_cover")
+			collider.shape = shape
 			collider.transform = placement
-			body.add_child(collider)
+			solid.add_child(collider)
 	chunk.add_child(body)
+	if trunks.get_child_count() > 0:
+		chunk.add_child(trunks)
+	else:
+		trunks.free()
 
 func _configure_ocean_material() -> void:
 	# The orbital globe is still in the screen texture during descent. Reflect

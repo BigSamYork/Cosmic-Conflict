@@ -25,6 +25,7 @@ func _ready() -> void:
 	if biological:
 		model.scale = Vector3.ONE * 0.7
 	add_child(model)
+	FleetArt.add_pilot_hull(model)
 	var collider := CollisionShape3D.new()
 	var shape := SphereShape3D.new()
 	shape.radius = CLEARANCE_RADIUS

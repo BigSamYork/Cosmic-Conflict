@@ -31,6 +31,10 @@ var precision_hold := false
 var holding_line := false
 var held_offset := Vector2.ZERO
 var offset_velocity := Vector2.ZERO
+var contact_direction := Vector2.ZERO
+var contact_recovery := 0.0
+var last_solid_contact := -INF
+var last_rebound := -INF
 var response: float = 9.0
 var shields: float = 100.0
 var impacts: int = 0
@@ -111,6 +115,11 @@ func advance(delta: float, firing: bool, active: bool = true) -> int:
 		if strafe.y == 0.0:
 			desired.y = held_offset.y
 	holding_line = precision_hold
+	if contact_recovery > 0.0:
+		contact_recovery = maxf(0, contact_recovery - step)
+		var rebound := offset + contact_direction * 4.5
+		desired = rebound.lerp(desired, smoothstep(0, 0.46, 0.46 - contact_recovery))
+		desired = desired.clamp(Vector2(-lateral_limit, -CORRIDOR.y), Vector2(lateral_limit, CORRIDOR.y))
 	var steering_response: float = response * (1.4 if power_mode == "engines" else 1.0)
 	var cold_time: float = minf(step, frost_remaining) if frost_slowdown else 0.0
 	radar_static_remaining = maxf(0, radar_static_remaining - step)
@@ -143,6 +152,22 @@ func advance(delta: float, firing: bool, active: bool = true) -> int:
 	if recharge_delay == 0.0:
 		shields = minf(max_shields, shields + recovery_time * (8.0 if power_mode == "shields" else 5.0))
 	return advance_primary(step, firing)
+
+func rebound(outward: Vector2) -> bool:
+	# A sustained scrape is one strike. Swept queries may hit several adjacent
+	# triangles, or briefly lose contact as the ship rides over their seam.
+	var fresh := elapsed - last_solid_contact > 0.30 and elapsed - last_rebound > 0.80
+	last_solid_contact = elapsed
+	if not fresh or hull <= 0:
+		return false
+	last_rebound = elapsed
+	contact_direction = outward.normalized()
+	contact_recovery = 0.46
+	evade_remaining = 0.0
+	offset = (offset + contact_direction * 1.2).clamp(Vector2(-lateral_limit, -CORRIDOR.y), Vector2(lateral_limit, CORRIDOR.y))
+	if precision_hold:
+		held_offset = offset
+	return true
 
 func apply_frost() -> bool:
 	if training or hull <= 0 or complete() or frost_remaining > 0:
@@ -330,10 +355,10 @@ func impact(reason: String = "PROXIMITY IMPACT", damage: float = 18.0, direct_hu
 		return false
 	var previous_hull := hull
 	impacts += 1
-	if training:
+	if direct_hull:
+		hull = maxf(1.0 if training else 0.0, hull - damage)
+	elif training:
 		shields = maxf(1.0, shields - damage)
-	elif direct_hull:
-		hull = maxf(0.0, hull - damage)
 	else:
 		var absorbed: float = minf(shields, damage)
 		shields -= absorbed

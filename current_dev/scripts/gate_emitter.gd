@@ -9,6 +9,7 @@ func _ready() -> void:
 	collision_mask = 0
 	armor = 4
 	add_child(VesperaArt.gate_emitter())
+	FleetArt.add_pilot_hull(get_child(0))
 	var collider := CollisionShape3D.new()
 	var shape := BoxShape3D.new()
 	shape.size = Vector3(1.8, 22, 3.2)

@@ -146,7 +146,7 @@ static func _sea_surface(start: float, rigs: Array[Transform3D]) -> MeshInstance
 	arrays[Mesh.ARRAY_INDEX] = sea_indices
 	var mesh := ArrayMesh.new()
 	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
-	# Missiles and the swept flight probe only need the mean waterline.
+	# Missiles and weapon cover rays only need the mean waterline.
 	var cover := ConcavePolygonShape3D.new()
 	cover.backface_collision = true
 	cover.set_faces(PackedVector3Array([vertices[0], vertices[SEA_COLUMNS], vertices[-1], vertices[0], vertices[-1], vertices[-stride]]))

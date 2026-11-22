@@ -20,6 +20,7 @@ const PLANTS := {
 	"kharon": ["barrel_bloom", "yucca", "acacia"],
 }
 static var foliage_material := ShaderMaterial.new()
+static var plant_shapes: Dictionary[String, ConcavePolygonShape3D] = {}
 
 static func _static_init() -> void:
 	foliage_material.shader = preload("res://shaders/foliage.gdshader")
@@ -126,6 +127,8 @@ static func add_landmarks(model: Node3D, id: String, props: Array[Transform3D], 
 	instances.mesh = FleetArt.mesh_for(id, "ground")
 	instances.instance_count = props.size()
 	instances.set_meta("placements", props)
+	if foliage:
+		instances.set_meta("species", id)
 	for i in range(props.size()):
 		instances.set_instance_transform(i, props[i])
 		if foliage:
@@ -140,3 +143,30 @@ static func add_landmarks(model: Node3D, id: String, props: Array[Transform3D], 
 		terrain_prop.set_instance_shader_parameter(&"weathered", true)
 	terrain_prop.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	model.add_child(terrain_prop)
+
+static func plant_hull(instances: MultiMesh) -> ConcavePolygonShape3D:
+	var species: String = instances.get_meta("species")
+	if species.begins_with("thalassa_") or species in ["ignis_emberbell", "ignis_aloe", "xylo_shield_fern"]:
+		return null
+	if plant_shapes.has(species):
+		return plant_shapes[species]
+	# The Blender garden exporter bakes the frame finish into UV.x for wood.
+	# Three fleshy species instead use the paint finish for their solid bodies.
+	var finish := 0.15 if species in ["xylo_pitchers", "kharon_barrel_bloom", "cryo_frost_cushion"] else 0.18
+	var arrays := instances.mesh.surface_get_arrays(0)
+	var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var uv: PackedVector2Array = arrays[Mesh.ARRAY_TEX_UV]
+	var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+	var faces := PackedVector3Array()
+	for i in range(0, indices.size(), 3):
+		if absf(uv[indices[i]].x - finish) < 0.002:
+			faces.append(vertices[indices[i]])
+			faces.append(vertices[indices[i + 1]])
+			faces.append(vertices[indices[i + 2]])
+	var shape: ConcavePolygonShape3D
+	if not faces.is_empty():
+		shape = ConcavePolygonShape3D.new()
+		shape.backface_collision = true
+		shape.set_faces(faces)
+	plant_shapes[species] = shape
+	return shape

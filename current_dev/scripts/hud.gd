@@ -237,7 +237,7 @@ func show_menu(next_mode: String, current_settings: Dictionary) -> void:
 		_add_label(stack, "TACTICAL STATUS / SIMULATION HELD", 18, CYAN)
 		_add_label(stack, "TAKE A BREATH, PILOT.", 32, WHITE)
 		if flight.training:
-			_add_label(stack, "Training shield  %03d%%       Impacts  %02d\nNon-lethal proving range / no campaign changes" % [int(flight.shields), flight.impacts], 21, MUTED)
+			_add_label(stack, "Training shield  %03d%%     Hull  %03d%%     Impacts  %02d\nNon-lethal proving range / no campaign changes" % [int(flight.shields), int(flight.hull), flight.impacts], 21, MUTED)
 		else:
 			_add_label(stack, "Shield  %03d / %03d       Hull  %03d / %03d\nPrimary: %s / %s\nSecondary ammo  %d\nHeat %02d%% / Vent %.1fs / Cooling Lv %d\nReactor: %s / Evasion recharge %.1fs\nStreak %d kills / %dX / Combat score %d\nCheckpoint: %s\nExiting restarts this phase at its saved boundary." % [int(flight.shields), int(flight.max_shields), int(flight.hull), int(flight.max_hull), flight.primary_name(), flight.primary_damage_label(), flight.ammo, int(flight.heat), flight.overheat_remaining, flight.heat_sink_level, flight.power_mode.to_upper(), flight.evade_cooldown, campaign.combo_kills, campaign.combo_multiplier(), campaign.combat_score, phase_title], 20, MUTED)
 			_add_secondary_selector(stack, campaign)
@@ -252,7 +252,7 @@ func show_menu(next_mode: String, current_settings: Dictionary) -> void:
 	else:
 		_add_label(stack, "PROVING RANGE / FLIGHT COMPLETE", 18, CYAN)
 		_add_label(stack, "TELEMETRY RECEIVED.", 32, WHITE)
-		_add_label(stack, "Targets disabled  %02d      Accuracy  %02d%%\nGround turrets  %02d       Missiles intercepted  %02d\nShots fired  %03d              Shield hits  %02d\nTraining shield remaining  %03d%%" % [flight.destroyed, int(flight.accuracy()), flight.turrets_destroyed, flight.interceptions, flight.shots, flight.impacts, int(flight.shields)], 23, WHITE)
+		_add_label(stack, "Targets disabled  %02d      Accuracy  %02d%%\nGround turrets  %02d       Missiles intercepted  %02d\nShots fired  %03d              Impacts  %02d\nTraining shield  %03d%%     Hull  %03d%%" % [flight.destroyed, int(flight.accuracy()), flight.turrets_destroyed, flight.interceptions, flight.shots, flight.impacts, int(flight.shields), int(flight.hull)], 23, WHITE)
 		_add_label(stack, "Prototype only. No campaign progress or credits saved.", 18, MUTED)
 		_add_button(stack, "FLY AGAIN", func() -> void: launch_requested.emit())
 	_add_settings(stack)
