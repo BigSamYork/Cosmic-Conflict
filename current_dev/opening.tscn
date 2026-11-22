@@ -25,7 +25,17 @@ script = ExtResource("2")
 [node name="Score" type="AudioStreamPlayer" parent="."]
 stream = ExtResource("3")
 
+[node name="Drone" type="AudioStreamPlayer" parent="."]
+
 [node name="Overlay" type="CanvasLayer" parent="."]
+
+[node name="Feeds" type="Control" parent="Overlay"]
+anchor_left = 0.799
+anchor_top = 0.153
+anchor_right = 0.957
+anchor_bottom = 0.752
+mouse_filter = 2
+visible = false
 
 [node name="Shade" type="TextureRect" parent="Overlay"]
 anchor_top = 0.68

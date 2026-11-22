@@ -30,10 +30,11 @@ Gun Powder Ignite — mechanical and stone destruction
 One effect was excerpted from each supplied recording.
 
 Computer dialogue combines text supplied by the project owner with original
-additional lines. The offline recordings were synthesized locally using the
-Microsoft Zira Desktop voice, with in-game electronic/radio processing.
-The Windows speech engine and voice-engine binaries are not redistributed.
-Review all platform/tool terms before wider commercial distribution.
+additional lines. The voices of Lark and Captain Tomas Vale were rendered
+locally with Resemble AI's Chatterbox-Turbo (MIT). Both character references
+derive from the model's built-in synthetic sample. The game ships the audio.
+https://github.com/resemble-ai/chatterbox
+https://huggingface.co/ResembleAI/chatterbox-turbo
 
 This game uses Godot Engine under the MIT license.
 https://godotengine.org/license

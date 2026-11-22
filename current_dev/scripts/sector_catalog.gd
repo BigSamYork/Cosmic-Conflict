@@ -26,18 +26,18 @@ const DESCRIPTIONS: Dictionary = {
 const DISTRESS := {
 	"ignis": "Open a launch lane for the night shift making ferry heat shields.",
 	"cryo": "Get the greenhouse ward and its newborns through the blockade.",
-	"vespera": "Reach the families keeping candles in the hotel windows.",
+	"vespera": "Reach the families marking the terminal queue with chemical flares.",
 	"xylo": "Bring the clinic patients and their air reeds aboard together.",
-	"thalassa": "Free the lighthouse channel so a tug can reach the Lantern.",
-	"kharon": "Escort the pilots carrying the last paper charts to Astra."
+	"thalassa": "Clear the orbital approach so a tug can reach the Aegis-4.",
+	"kharon": "Escort the transports carrying the hardwired jump coordinates."
 }
 const DISPATCH := {
 	"ignis": "Foundry tug aboard. The last worker down the ramp was still wearing his pouring gloves.",
 	"cryo": "Ward aboard. A nurse asked us to log one more passenger. He was born on the way up.",
-	"vespera": "Hotel ferry aboard. The porter turned out the last light himself.",
+	"vespera": "Last manifest checked. The boarding crew picked up the flares until only the ramp light was left.",
 	"xylo": "Clinic aboard. There's mud on the deck and every last patient is breathing.",
-	"thalassa": "Lantern under tow. Your sister wants her wrench back, Tomas. She says you know which one.",
-	"kharon": "Chart pilots aboard. The keeper kept one ration card. She'd like you both to sign it."
+	"thalassa": "Aegis-4 under tow. Your sister wants her wrench back, Tomas. She says you know which one.",
+	"kharon": "All three transports jumped on the director's coordinates. She finally let go of the cable."
 }
 
 static func name_for(sector: String) -> String:

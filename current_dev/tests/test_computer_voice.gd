@@ -172,6 +172,11 @@ func verify_editable_catalog() -> void:
 	var error: String = catalog.load_catalog(path, ComputerVoice.RULES, cache)
 	check(error.is_empty() and catalog.lines[0]["chance_percent"] == 37 and catalog.lines[0]["cooldown_seconds"] == 90.5, "Frequency-only edits load without regenerating audio: " + error)
 	check(catalog.recording_paths.get(original["id"], "").begins_with("res://") and not DirAccess.dir_exists_absolute(cache), "Frequency edits retain the original packaged recordings")
+	var legacy := data.duplicate(true)
+	legacy["voice"] = VoiceCatalog.DESKTOP
+	VoiceCatalog.write_text(path, JSON.stringify(legacy))
+	error = catalog.load_catalog(path, ComputerVoice.RULES, cache)
+	check(error.is_empty() and catalog.recording_paths.size() == catalog.lines.size() and not DirAccess.dir_exists_absolute(cache), "Existing pilot catalogs reuse the new recordings")
 	for invalid in [
 		["chance_percent", -1], ["chance_percent", 101], ["chance_percent", 0.5], ["chance_percent", "25"],
 		["chance_percent", true], ["cooldown_seconds", -0.01], ["cooldown_seconds", 86401],
@@ -197,7 +202,8 @@ func verify_editable_catalog() -> void:
 		var recording: String = catalog.recording_paths[original["id"]]
 		var sample := AudioStreamWAV.load_from_file(ProjectSettings.globalize_path(recording))
 		check(recording.begins_with(cache) and sample != null and sample.get_length() > 0.5, "The changed line uses a real generated WAV rather than its old recording")
-		var expected_name: String = "line_" + (data["voice"] + "\n" + data["sections"][0]["lines"][0]["text"]).sha256_text() + ".wav"
+		var engine_voice: String = VoiceCatalog.DESKTOP if OS.get_environment("COSMIC_TTS_PYTHON").is_empty() else VoiceCatalog.TURBO
+		var expected_name: String = "line_" + (engine_voice + "\n" + data["sections"][0]["lines"][0]["text"]).sha256_text() + ".wav"
 		check(recording.get_file() == expected_name, "Cache identity covers the exact voice and UTF-8 text")
 		var written: int = FileAccess.get_modified_time(recording)
 		error = catalog.load_catalog(path, ComputerVoice.RULES, cache)

@@ -2,13 +2,13 @@
 
 importer="wav"
 type="AudioStreamWAV"
-uid="uid://cw1jkm5tuk71k"
-path="res://.godot/imported/light.wav-ab174afccfd873dddfaf44fa6835dbd8.sample"
+uid="uid://xcj4u6xvjx57"
+path="res://.godot/imported/vale.wav-3244c3f034994f8a098734295f73cad9.sample"
 
 [deps]
 
-source_file="res://assets/opening/light.wav"
-dest_files=["res://.godot/imported/light.wav-ab174afccfd873dddfaf44fa6835dbd8.sample"]
+source_file="res://assets/voice/profiles/vale.wav"
+dest_files=["res://.godot/imported/vale.wav-3244c3f034994f8a098734295f73cad9.sample"]
 
 [params]
 

@@ -244,9 +244,9 @@ Developer assistance remains marked for the entire operation, including later to
   credits. Egg destruction pays 8 credits once, without an enemy combo reward.
   Gold egg cargo releases a biological salvage pod worth 50 credits when
   collected; the tractor works normally. Shell polygons replace stone fragments.
-- **Female computer voice:** 83 offline Zira recordings use restrained radio/
-  electronic processing: your 50 supplied lines, 21 category additions, and
-  12 easy/hard route quips. Urgent warnings can interrupt banter; ordinary
+- **Lark's voice:** Locally rendered Chatterbox-Turbo recordings cover combat
+  calls, boss recon and route quips, with light radio processing.
+  Urgent warnings can interrupt banter; ordinary
   comments never overlap or queue into stale situations.
 - **Intermittent route comments:** six lines per route, with a 25% chance only
   after four seconds of silence since the preceding utterance finished.
@@ -1038,19 +1038,27 @@ old timing: ordinary sayings have 100% chance, route quips 25%, and all extra
 per-saying cooldowns start at zero. Disabling a warning also disables that warning's
 spoken line, so take care with hull and ejection messages.
 
-Unchanged text uses the original recordings. Changed text is synthesized locally
-at startup using Windows PowerShell and the installed **Microsoft Zira Desktop**
-voice, then cached under `%APPDATA%\Cosmos Conflict\voice-cache`. It uses the same
-radio effects, volume, pause and music ducking as the original audio. No internet
-or rebuild is required. The first restart after text changes may take longer;
-frequency-only edits do not regenerate audio. Missing voices, invalid JSON or
-failed generation produce an explicit voice error rather than speaking old text.
+The game plays bundled Chatterbox-Turbo recordings offline. The opening casts
+Captain Tomas Vale and Lark separately. The spoofed beacon uses Lark's voice.
+The Windows Voice Editor also plays the bundled takes for unchanged text.
+For new text it uses the configured Turbo Python environment, or Microsoft Zira
+Desktop on a standard installation. Older catalogs keep their selected Windows
+voice for custom lines. Edited audio is cached under
+`%APPDATA%\Cosmos Conflict\voice-cache`; changing frequency reuses the recording.
 
-For developers preparing a release after changing the **default** words, refresh
-the bundled recordings before building (frequency-only edits do not need this):
+To render release audio or enable Turbo for custom lines, install Python 3.11
+and Git, then run these commands from the repository root. The first render
+downloads the pinned public Turbo checkpoint. For offline authoring set
+`COSMIC_TTS_MODEL` to a previously downloaded checkpoint directory. The engine
+selects CUDA when available and otherwise runs on CPU. Launch the Voice Editor
+from the same environment to use Turbo for newly edited text.
 
 ```powershell
+py -3.11 -m venv .tools\chatterbox
+$env:COSMIC_TTS_PYTHON = (Resolve-Path .tools\chatterbox\Scripts\python.exe).Path
+& $env:COSMIC_TTS_PYTHON -m pip install -r tools\chatterbox-requirements.txt
 .\tools\generate-voice.ps1 -Overwrite
+.\tools\generate-opening.ps1
 .\tools\build.ps1
 ```
 

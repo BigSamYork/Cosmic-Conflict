@@ -20,7 +20,7 @@ func run() -> void:
 	var voice := ComputerVoice.new()
 	root.add_child(voice)
 	voice.set_level(70, false)
-	check(voice.failure_message.is_empty() and voice.say("reactor_balanced"), "An offline Zira recording starts through the native voice player")
+	check(voice.failure_message.is_empty() and voice.say("reactor_balanced"), "An offline Lark recording starts through the native voice player")
 	await create_timer(0.5).timeout
 	var index: int = AudioServer.get_bus_index(voice.bus_name)
 	var peak: float = AudioServer.get_bus_peak_volume_left_db(index, 0)

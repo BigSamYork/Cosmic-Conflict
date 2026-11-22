@@ -543,7 +543,7 @@ fully clears before the docking pull-up.
 The user supplied fifty lines across seven categories and requested three
 additional lines in each. The catalog contains those fifty plus twenty-one
 additions, and a further twelve route quips (six easy/six hard): **83 lines**.
-The selected voice is offline **Microsoft Zira**, with restrained electronic/
+Lark's current recordings use **Chatterbox-Turbo**, with restrained electronic/
 radio processing, occasional banter and urgent-warning priority.
 
 Route quips have a one-in-four random chance only after at least four seconds

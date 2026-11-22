@@ -1,673 +1,865 @@
-﻿{
-  "catalog_sha256": "09D92D7B5D2A496F450FF757133C2CB29DA09C9294C62E67B0EF202A8A51F2B2",
-  "rate": 22050,
+{
+  "model": "ResembleAI/chatterbox-turbo",
+  "revision": "749d1c1a46eb10492095d68fbcf55691ccf137cd",
+  "voice": "Chatterbox-Turbo / Lark",
+  "catalog_sha256": "5578a57c6382773c593c4405f597099f0d6caee600f704020c4c5247653701ff",
+  "rate": 24000,
+  "channels": 1,
   "clips": [
     {
       "id": "reactor_01",
-      "bytes": 225122,
-      "seconds": 5.104,
+      "speaker": "lark",
+      "event": "reactor_weapons",
       "text_sha256": "63fa6124bc7b919a91fbc12f5f38e8f384fa8d9828d72a670075b9d22c061063",
-      "event": "reactor_weapons"
+      "audio_sha256": "247ee69eafc24906fd63e317bd086635f666fdfc5f4c6162d837ebeb64d3f5b7",
+      "seconds": 3.939,
+      "bytes": 189124
     },
     {
       "id": "reactor_02",
-      "bytes": 259944,
-      "seconds": 5.893,
+      "speaker": "lark",
+      "event": "reactor_weapons",
       "text_sha256": "8ab653e52ae74311ed8f888f0a99c7c59848d1119be05d597f7635414ad68b42",
-      "event": "reactor_weapons"
+      "audio_sha256": "1ce2b73cbbc032df0c25d22463637f8d309bba081d7d13cf4e8a210cfbe424d4",
+      "seconds": 4.846,
+      "bytes": 232646
     },
     {
       "id": "reactor_03",
-      "bytes": 246278,
-      "seconds": 5.583,
+      "speaker": "lark",
+      "event": "reactor_shields",
       "text_sha256": "1fc70b3ca6b839d280c64bb247092495748ee71272d222e7912ceb9fdf1a7e8f",
-      "event": "reactor_shields"
+      "audio_sha256": "3b0da745461196eb2e40efb10acbd11e735bf184c5e6c70948ccdc4c9a9b0a02",
+      "seconds": 4.76,
+      "bytes": 228514
     },
     {
       "id": "reactor_04",
-      "bytes": 212112,
-      "seconds": 4.809,
+      "speaker": "lark",
+      "event": "reactor_shields",
       "text_sha256": "d7e27092af732588e19311663124569646a0ad0ff2aca7c1821bc3e1033353c2",
-      "event": "reactor_shields"
+      "audio_sha256": "948acdffc35f3ca537a20693b99abb5b995d68544aa78a71b9e376584684ce7a",
+      "seconds": 3.88,
+      "bytes": 186276
     },
     {
       "id": "reactor_05",
-      "bytes": 235700,
-      "seconds": 5.344,
+      "speaker": "lark",
+      "event": "reactor_engines",
       "text_sha256": "880bb79730a3517f348ed1f7191379c66c42609ff5e135320b31bb0f4913bee9",
-      "event": "reactor_engines"
+      "audio_sha256": "bb48f1bd42f2e930e46faf07fe7feaee1bfc4c0e211cbf17328290a4d549cfa6",
+      "seconds": 4.68,
+      "bytes": 224668
     },
     {
       "id": "reactor_06",
-      "bytes": 227768,
-      "seconds": 5.164,
+      "speaker": "lark",
+      "event": "reactor_engines",
       "text_sha256": "a18003e50b9ba03bfeb250906870ff0d7633c3f0810ec81157acbdbba45a05dd",
-      "event": "reactor_engines"
+      "audio_sha256": "28c3e5729a72b1bb1bacc88e25439d0d9bd3c60073e87a17790c2285fc33d034",
+      "seconds": 4.078,
+      "bytes": 195776
     },
     {
       "id": "reactor_07",
-      "bytes": 186750,
-      "seconds": 4.234,
+      "speaker": "lark",
+      "event": "reactor_balanced",
       "text_sha256": "f12d1d5a644ce928c4db4dbca2336eac8832baaca75375acb29bf0333200291e",
-      "event": "reactor_balanced"
+      "audio_sha256": "8137d0d428f7eea5ef41656d4cdfa6b4d5b296b37422fc9bb2b65d3904c544a8",
+      "seconds": 3.179,
+      "bytes": 152640
     },
     {
       "id": "reactor_08",
-      "bytes": 207254,
-      "seconds": 4.699,
+      "speaker": "lark",
+      "event": "reactor_balanced",
       "text_sha256": "41ae7600e916414d40177880268255cc5275745d5ba08f3d775f939692b02787",
-      "event": "reactor_balanced"
+      "audio_sha256": "38f7b96bdad606c6ac781f8e132f99c4002d91f076e5d6909eb12f707e4bf30d",
+      "seconds": 3.574,
+      "bytes": 171578
     },
     {
       "id": "reactor_09",
-      "bytes": 239890,
-      "seconds": 5.439,
+      "speaker": "lark",
+      "event": "reactor_routing",
       "text_sha256": "0fae029066fa7aa774b8432beded52278057d35f7bbcf6ce5a89ef20cce71134",
-      "event": "reactor_routing"
+      "audio_sha256": "3593e7a1fdfa7d4636832c36e25e4b052dbb0e260e98947dc90753ea136bf911",
+      "seconds": 4.34,
+      "bytes": 208376
     },
     {
       "id": "reactor_10",
-      "bytes": 205712,
-      "seconds": 4.664,
+      "speaker": "lark",
+      "event": "reactor_routing",
       "text_sha256": "491a40e1444f1e4682b1d3fe09a8f145ca8b8c0de0793faf1545638362032fa5",
-      "event": "reactor_routing"
+      "audio_sha256": "75bd8dd49a5074d132c15f5a46b9a984ac96470585777e7f731828b3e20a250c",
+      "seconds": 4.378,
+      "bytes": 210164
     },
     {
       "id": "reactor_11",
-      "bytes": 201308,
-      "seconds": 4.564,
+      "speaker": "lark",
+      "event": "reactor_routing",
       "text_sha256": "5400377e57b1642e5a982156e3493cb823a3330721528a322b5ecf28d6cd1274",
-      "event": "reactor_routing"
+      "audio_sha256": "cef8aa81d56929999bcea57222284c66e203b831ffaaa73b83d67db1dd10f757",
+      "seconds": 3.643,
+      "bytes": 174900
     },
     {
       "id": "reactor_12",
-      "bytes": 207034,
-      "seconds": 4.694,
+      "speaker": "lark",
+      "event": "reactor_shields",
       "text_sha256": "3be68821669f108869112c7a789bc4cbf52c96c672692c2c91ff142e8bac279e",
-      "event": "reactor_shields"
+      "audio_sha256": "50bab321767a40c2519ce1f6c13d7732c7bf4ad5a6d3180c442cdee719919f6e",
+      "seconds": 3.745,
+      "bytes": 179802
     },
     {
       "id": "reactor_13",
-      "bytes": 248050,
-      "seconds": 5.624,
+      "speaker": "lark",
+      "event": "reactor_engines",
       "text_sha256": "85ba7d8201ae0b36a5b0d7d1500332ae4c6b01d640fd4922ef44b1a02230f691",
-      "event": "reactor_engines"
+      "audio_sha256": "43903df396d8f226dc715708fdd00a9bc5a97000e771aefe6dc4d30e07750999",
+      "seconds": 4.732,
+      "bytes": 227176
     },
     {
       "id": "weapons_01",
-      "bytes": 218726,
-      "seconds": 4.959,
+      "speaker": "lark",
+      "event": "overheat",
       "text_sha256": "cdc3492d61464b9cc12af84d5522f48d610b9d7f7b1b7c2223fa93f95e9a2ef8",
-      "event": "overheat"
+      "audio_sha256": "e84ec536eb4ce1e4641be26406e9ef83db0388a28623fe5e49a767b38ffbfa68",
+      "seconds": 4.351,
+      "bytes": 208882
     },
     {
       "id": "weapons_02",
-      "bytes": 216962,
-      "seconds": 4.919,
+      "speaker": "lark",
+      "event": "overheat",
       "text_sha256": "ea7b79fd4231aa1b55ba14efa686e838d2e370da4adcce9188f882226e8e3d51",
-      "event": "overheat"
+      "audio_sha256": "7293090a4ae45d3c04a3ee8c9714c895a23a21e76dff78a9bf96523bf728ca52",
+      "seconds": 5.184,
+      "bytes": 248892
     },
     {
       "id": "weapons_03",
-      "bytes": 234810,
-      "seconds": 5.323,
+      "speaker": "lark",
+      "event": "overheat",
       "text_sha256": "7516f1a146e8b7f8ca433487267a963e4158523bb7ff5388a8aefc544552bf41",
-      "event": "overheat"
+      "audio_sha256": "d8cc0847ff4645d2c5d8c690741502ceee5854328e09e0263ecd76f62aa93df9",
+      "seconds": 4.457,
+      "bytes": 213960
     },
     {
       "id": "weapons_04",
-      "bytes": 305582,
-      "seconds": 6.928,
+      "speaker": "lark",
+      "event": "overheat",
       "text_sha256": "4fed15ebcd859ade113ee2c68c3a021fabff216518b0342ed99f5dc784d070a3",
-      "event": "overheat"
+      "audio_sha256": "a3c2e28b0be312944fa601a7f391d96aa679f603b56ae3ffb6d13bb2ed7ca81f",
+      "seconds": 5.519,
+      "bytes": 264956
     },
     {
       "id": "weapons_05",
-      "bytes": 315294,
-      "seconds": 7.148,
+      "speaker": "lark",
+      "event": "cooling",
       "text_sha256": "b768898ad6c841ac7339f7e787c4c640d032d198eb167ce0d01fcda4318af55e",
-      "event": "cooling"
+      "audio_sha256": "7fc0a0d2bb55d23714cd61b58e3e1402faac9c600e1347359022873ea11fc1e6",
+      "seconds": 6.263,
+      "bytes": 300666
     },
     {
       "id": "weapons_06",
-      "bytes": 288610,
-      "seconds": 6.543,
+      "speaker": "lark",
+      "event": "primary_tachyon",
       "text_sha256": "74081808bf6978e70b784c80c7b7f95bfd9ead691903f9a4fac511b12b5e3e64",
-      "event": "primary_tachyon"
+      "audio_sha256": "44237d6d0749dd3c880196372814001746c78f2d9025d8e33bad6b2d582b8cd8",
+      "seconds": 6.072,
+      "bytes": 291504
     },
     {
       "id": "weapons_07",
-      "bytes": 263694,
-      "seconds": 5.978,
+      "speaker": "lark",
+      "event": "primary_quad",
       "text_sha256": "14b6ebe86a9bfd04c57c9ea3a0bb194ce5400641513384739d772bcf77f086ae",
-      "event": "primary_quad"
+      "audio_sha256": "fc2155ac2ab9aaaa03c55c3b78a5b23da6f11c2171d112127341272a0789ee4a",
+      "seconds": 5.008,
+      "bytes": 240424
     },
     {
       "id": "weapons_08",
-      "bytes": 264142,
-      "seconds": 5.989,
+      "speaker": "lark",
+      "event": "primary_pulse",
       "text_sha256": "8f8781300a3bbdfc0e4e0fbea64764792571eb5ba079b1c5222d0b53bed038d2",
-      "event": "primary_pulse"
+      "audio_sha256": "4b194e2da5f5308c22b8428d72235e240691c18228d4c7d4467a5be97333ca71",
+      "seconds": 5.701,
+      "bytes": 273692
     },
     {
       "id": "weapons_09",
-      "bytes": 189624,
-      "seconds": 4.299,
+      "speaker": "lark",
+      "event": "overheat",
       "text_sha256": "dd4e9563275f34c1339cd45b759e708a4bf41a38c23792efae4d8eeed5a57abc",
-      "event": "overheat"
+      "audio_sha256": "c8ef5270b962e8eef547c3170bfd7f9e7c4a0b077990e6d7ccba56fcb68a9d01",
+      "seconds": 3.414,
+      "bytes": 163926
     },
     {
       "id": "weapons_10",
-      "bytes": 205942,
-      "seconds": 4.669,
+      "speaker": "lark",
+      "event": "cooling",
       "text_sha256": "d084d81bac25540bfa89bd27d6ec69d76ec91b99e5dfb5db4e69e7c2d8782e42",
-      "event": "cooling"
+      "audio_sha256": "a4bfced91c453938887b6196d9aabdc3d9b235040d1ad727c16031f39e60e7a7",
+      "seconds": 3.622,
+      "bytes": 173898
     },
     {
       "id": "weapons_11",
-      "bytes": 223354,
-      "seconds": 5.064,
+      "speaker": "lark",
+      "event": "primary_quad",
       "text_sha256": "ecb0534667fcbfe06832f266afffca8a7ac41588cef3ba4d46256e4627d2d8de",
-      "event": "primary_quad"
+      "audio_sha256": "5b1620a397158d6173c13436003745185fe241033ff2cae870b5a45afd54b364",
+      "seconds": 3.725,
+      "bytes": 178840
     },
     {
       "id": "streaks_01",
-      "bytes": 251792,
-      "seconds": 5.709,
+      "speaker": "lark",
+      "event": "streak_gain",
       "text_sha256": "85cf00ce475fada51578b043823aa62e8b87177a0bc0181a9910c96b8baa72e9",
-      "event": "streak_gain"
+      "audio_sha256": "a3d8a8bf346246099991293fc619917015079b70685ece4b29b953b03d66afd2",
+      "seconds": 4.435,
+      "bytes": 212936
     },
     {
       "id": "streaks_02",
-      "bytes": 230188,
-      "seconds": 5.219,
+      "speaker": "lark",
+      "event": "streak_break",
       "text_sha256": "2eb044ad6e226320eaeab20b54b4459d74db19ed1ab23fb01909d37a699e2cfe",
-      "event": "streak_break"
+      "audio_sha256": "1f0846cbf04c54d0d4b29a3e2799943b72aeb2cde55af38261b9f6911ceacf77",
+      "seconds": 3.859,
+      "bytes": 185292
     },
     {
       "id": "streaks_03",
-      "bytes": 281112,
-      "seconds": 6.373,
+      "speaker": "lark",
+      "event": "streak_ten",
       "text_sha256": "6e4bb684f19d6ad13c6d78365d430894664cc39f74c1294f024b49e7cf60cf79",
-      "event": "streak_ten"
+      "audio_sha256": "3d3fb6c4d6d902c9e4fa22749a79de3b6c442a96b8af8b8332ad38ce3018faee",
+      "seconds": 5.636,
+      "bytes": 270552
     },
     {
       "id": "streaks_04",
-      "bytes": 219606,
-      "seconds": 4.979,
+      "speaker": "lark",
+      "event": "streak_gain",
       "text_sha256": "1486357a30350526f34e263c84468c4be9c9b43c464023cec7339f93eeedec82",
-      "event": "streak_gain"
+      "audio_sha256": "2d9fd8b24b8682674a2fc52b98f49343b63aa1f3996725f56ea4d0113b2007dc",
+      "seconds": 3.929,
+      "bytes": 188658
     },
     {
       "id": "streaks_05",
-      "bytes": 228856,
-      "seconds": 5.188,
+      "speaker": "lark",
+      "event": "interception",
       "text_sha256": "b3f7b0bd3e1ffc0a08275b981008e49c98a32f5f6212d29f5ff243e01ea45f81",
-      "event": "interception"
+      "audio_sha256": "c339e9a756d9bafa12095af358e1a1cae964522880e31cd8fb8e6fba41cbf746",
+      "seconds": 4.845,
+      "bytes": 232582
     },
     {
       "id": "streaks_06",
-      "bytes": 207706,
-      "seconds": 4.709,
+      "speaker": "lark",
+      "event": "streak_gain",
       "text_sha256": "cae6f8bffe1ccf692b6256310f3197bcdc42ca02f0d02f69a89346c9766bd09f",
-      "event": "streak_gain"
+      "audio_sha256": "37c4c480c413fd766871a35a7fe1a560f1dc0d9dbad3081f601cd3c3c0cf88c5",
+      "seconds": 3.596,
+      "bytes": 172658
     },
     {
       "id": "streaks_07",
-      "bytes": 182570,
-      "seconds": 4.139,
+      "speaker": "lark",
+      "event": "streak_break",
       "text_sha256": "faa4a3f8411341409d7b79c7a2114d2b5db5c1e8c08150229c611d08819d9225",
-      "event": "streak_break"
+      "audio_sha256": "a0899a600b9d4c0ef04558a71f7a783695f60cd5fffebdeba42bd65a45c48d68",
+      "seconds": 2.943,
+      "bytes": 141288
     },
     {
       "id": "streaks_08",
-      "bytes": 218720,
-      "seconds": 4.959,
+      "speaker": "lark",
+      "event": "interception",
       "text_sha256": "378096405b953fa627fde6ae4ea8b553b776e893cc80a90be1a25fe86f46e8d8",
-      "event": "interception"
+      "audio_sha256": "bdc04f32b43e03178f3d0466782b26c89d5b87839d14ebbe0ec6feca2d359523",
+      "seconds": 3.839,
+      "bytes": 184314
     },
     {
       "id": "damage_01",
-      "bytes": 175070,
-      "seconds": 3.969,
+      "speaker": "lark",
+      "event": "shields_empty",
       "text_sha256": "80ff589d3d5f5a87f550a2870cd8ce661fc44fe15de5a118c58f43d077313b65",
-      "event": "shields_empty"
+      "audio_sha256": "0442f83f25b4c626fa0c13d6f286d46bbc3a56ddccf81bfc5ea51b02e8657e9c",
+      "seconds": 3.216,
+      "bytes": 154400
     },
     {
       "id": "damage_02",
-      "bytes": 224228,
-      "seconds": 5.083,
+      "speaker": "lark",
+      "event": "shields_regen",
       "text_sha256": "42df630da2d2a60816a1e67233f14056122cc07fc78a53893af9c3a8edc68b1a",
-      "event": "shields_regen"
+      "audio_sha256": "d8b11996ed31c04b00f8ad7513cf09e440aeaac8bdca95834b9089ab19aabc92",
+      "seconds": 4.232,
+      "bytes": 203164
     },
     {
       "id": "damage_03",
-      "bytes": 184332,
-      "seconds": 4.179,
+      "speaker": "lark",
+      "event": "hull_damage",
       "text_sha256": "52c01794cdfad2d6003489f55a7696636dd29341b3cb99a1cc4681a2b0e28b5f",
-      "event": "hull_damage"
+      "audio_sha256": "8bdd17f6e5c324589f566ca6bb74c1bd20daf5e261b2ff059fe6f3569cecbeb9",
+      "seconds": 2.706,
+      "bytes": 129914
     },
     {
       "id": "damage_04",
-      "bytes": 238562,
-      "seconds": 5.409,
+      "speaker": "lark",
+      "event": "hull_critical",
       "text_sha256": "8dbdd87687c9d870c22e41e34302d0d848bd74841bd223152e05b21667db5140",
-      "event": "hull_critical"
+      "audio_sha256": "e34b97a964b152ba80e43892dc549c44b84e48aea87aaf0af98e56034b2d3dc6",
+      "seconds": 4.728,
+      "bytes": 226982
     },
     {
       "id": "damage_05",
-      "bytes": 189404,
-      "seconds": 4.294,
+      "speaker": "lark",
+      "event": "hull_damage",
       "text_sha256": "bf53d3562823ca1b9ffe5b91500b2d2be940109eabe4e1a6030e7cc7106da631",
-      "event": "hull_damage"
+      "audio_sha256": "be1f1544eeb664fac02b907a972db5a348a6ec3947fa29e3134b225e6f41745c",
+      "seconds": 3.297,
+      "bytes": 158320
     },
     {
       "id": "damage_06",
-      "bytes": 212998,
-      "seconds": 4.829,
+      "speaker": "lark",
+      "event": "shields_empty",
       "text_sha256": "f66a708e0239ce807e32728858e0f5b2616b9bac38bcfb68605b5503564bbd7a",
-      "event": "shields_empty"
+      "audio_sha256": "4227cf605806e9e8a3af39ff1573181a09bf67c7ec9bab1c3c4843a0f500138a",
+      "seconds": 3.97,
+      "bytes": 190628
     },
     {
       "id": "damage_07",
-      "bytes": 211884,
-      "seconds": 4.804,
+      "speaker": "lark",
+      "event": "hull_critical",
       "text_sha256": "bdb61b421a5c91ac8aab4675ae666336221e091862b14e3d90676f888876c3c0",
-      "event": "hull_critical"
+      "audio_sha256": "511914e17395dbc78f2aa565e5cc76884b9470c5622034a744e7841bd0ac8486",
+      "seconds": 3.803,
+      "bytes": 182606
     },
     {
       "id": "damage_08",
-      "bytes": 233496,
-      "seconds": 5.294,
+      "speaker": "lark",
+      "event": "shields_regen",
       "text_sha256": "5b4711e81bdf2ab425db791aa1ea2be8ed58e1a0c6de8d066faa977878692018",
-      "event": "shields_regen"
+      "audio_sha256": "03b600b32485a4364e4a87fc5f7ae8b6dacfcbed336eb95a4e5b12702453c1e0",
+      "seconds": 3.912,
+      "bytes": 187796
     },
     {
       "id": "hazards_01",
-      "bytes": 305590,
-      "seconds": 6.928,
+      "speaker": "lark",
+      "event": "ignis_arrival",
       "text_sha256": "3b4c1a4f76cedae47a093253f38a2eeabd30d0bac8a44410542da3f3094cb0cd",
-      "event": "ignis_arrival"
+      "audio_sha256": "2604964b0ee22f5a0785713b76ec6c1e9d8251747a4861207a389549067a5360",
+      "seconds": 6.38,
+      "bytes": 306282
     },
     {
       "id": "hazards_02",
-      "bytes": 229306,
-      "seconds": 5.199,
+      "speaker": "lark",
+      "event": "ignis_vent",
       "text_sha256": "dbb555cfb9bda2163ef9a7bc97bf7a5d7c88c97316cea45f0ad5c09903520d17",
-      "event": "ignis_vent"
+      "audio_sha256": "89d6157f04c3d5e53dfd6187592a5ea2646fbba032734f9a3553c4cecb9ee508",
+      "seconds": 4.501,
+      "bytes": 216074
     },
     {
       "id": "hazards_03",
-      "bytes": 360036,
-      "seconds": 8.163,
+      "speaker": "lark",
+      "event": "frost_hit",
       "text_sha256": "e46f40c4c7d39c6ae31407237fa0b767cce89ce72c146e7c689dc5d677d3bc46",
-      "event": "frost_hit"
+      "audio_sha256": "b735797bdaee86456e6df00777e6cf162fa6971a8b3262d79949abc455f69d25",
+      "seconds": 7.119,
+      "bytes": 341760
     },
     {
       "id": "hazards_04",
-      "bytes": 311106,
-      "seconds": 7.054,
+      "speaker": "lark",
+      "event": "frost_hit",
       "text_sha256": "668943fc2731e402c70d0b72f3bf9e1c7c6a8822b9203108acbdac1acf5e6205",
-      "event": "frost_hit"
+      "audio_sha256": "01983826a92d8d6864175d7f068a952d2ddc72465a278ca1226eaff214a67e9a",
+      "seconds": 6.611,
+      "bytes": 317394
     },
     {
       "id": "hazards_05",
-      "bytes": 239664,
-      "seconds": 5.434,
+      "speaker": "lark",
+      "event": "vespera_arrival",
       "text_sha256": "5b5108b9879392c2beb5cfd6cca50612c8bcd050a0e89e497dc14988d3e2c088",
-      "event": "vespera_arrival"
+      "audio_sha256": "b66704d45cf2d48ef4b9408c453050c56e704262d2d968f2225212140111299d",
+      "seconds": 4.066,
+      "bytes": 195226
     },
     {
       "id": "hazards_06",
-      "bytes": 281554,
-      "seconds": 6.383,
+      "speaker": "lark",
+      "event": "laser_gate",
       "text_sha256": "b1249ef8065d7a629b621d5a62cd8fbb50929420043d694ed83cd59a50b2b3bc",
-      "event": "laser_gate"
+      "audio_sha256": "abf5d1575f001af0113fd44a64e7de91da509b095743e5687070fe84566c87a7",
+      "seconds": 7.298,
+      "bytes": 350350
     },
     {
       "id": "hazards_07",
-      "bytes": 265236,
-      "seconds": 6.013,
+      "speaker": "lark",
+      "event": "stealth_fighter",
       "text_sha256": "ea4b27837795dcec3c2fbd4d79b5ef5bfe9b5ae819f2276bac4decd52be0580b",
-      "event": "stealth_fighter"
+      "audio_sha256": "3720cc2d82c881ea4c0307734494adad12db84d7b94a0ac926886a6e1c825287",
+      "seconds": 4.72,
+      "bytes": 226614
     },
     {
       "id": "hazards_08",
-      "bytes": 297866,
-      "seconds": 6.753,
+      "speaker": "lark",
+      "event": "nyx_cloak",
       "text_sha256": "7e0bb3238d5083168e3f831073e3e833fa5929445b9bba8831033d57e9e90be8",
-      "event": "nyx_cloak"
+      "audio_sha256": "e5e368e373caeada132e6d47fe7beb16246d0df1a30575966b9cf898bbe0bc81",
+      "seconds": 6.267,
+      "bytes": 300838
     },
     {
       "id": "hazards_09",
-      "bytes": 288390,
-      "seconds": 6.538,
+      "speaker": "lark",
+      "event": "xylo_arrival",
       "text_sha256": "2b54b8a04ea9246d8273ab1a41562fe3aaa7c4b27b9b69763c87775f53851601",
-      "event": "xylo_arrival"
+      "audio_sha256": "6217d3175672c7f3c817c2a3741f1d1c46eb29eab24b85ab68c8c42861c15b2f",
+      "seconds": 6.34,
+      "bytes": 304348
     },
     {
       "id": "hazards_10",
-      "bytes": 317714,
-      "seconds": 7.203,
+      "speaker": "lark",
+      "event": "xylo_spores",
       "text_sha256": "48213381d9dc351a57ad581a7e0a80ed0a44f1856137b50bcb239469aaf2ba21",
-      "event": "xylo_spores"
+      "audio_sha256": "11160c315e7db86d955f5d43f93c904daa7ff7f1d4d2fd12d28f97f92a165b13",
+      "seconds": 6.834,
+      "bytes": 328088
     },
     {
       "id": "hazards_11",
-      "bytes": 215628,
-      "seconds": 4.888,
+      "speaker": "lark",
+      "event": "xylo_acid",
       "text_sha256": "e81394420467c9440a7809e6a2bd88b2681ab05deb34fb6adef2db7479f1f418",
-      "event": "xylo_acid"
+      "audio_sha256": "5d176657b1a09e49d169610c4bbfdba1bea657ab46432ee5c2fbc421b7b7cfee",
+      "seconds": 4.225,
+      "bytes": 202850
     },
     {
       "id": "hazards_12",
-      "bytes": 193810,
-      "seconds": 4.394,
+      "speaker": "lark",
+      "event": "xylo_hive",
       "text_sha256": "71c51f6b97c53ee3b485a97fa340e6fd3937e5f1437b6a603865c457aafaaff0",
-      "event": "xylo_hive"
+      "audio_sha256": "94bcd98d0dba49c34ccca1109bc6b20440eac4efcdc4ec9ca9d6513e6fdec279",
+      "seconds": 4.26,
+      "bytes": 204528
     },
     {
       "id": "hazards_13",
-      "bytes": 212330,
-      "seconds": 4.814,
+      "speaker": "lark",
+      "event": "xylo_egg",
       "text_sha256": "cf27daa5116a187101921cb6649378732f3d8d481d6bacd801a9957ec03d68bb",
-      "event": "xylo_egg"
+      "audio_sha256": "629d94d04914608e24eb9f743265ff407327dd0397b4aa0434e12a7fdb651d3b",
+      "seconds": 4.069,
+      "bytes": 195350
     },
     {
       "id": "ordnance_01",
-      "bytes": 256198,
-      "seconds": 5.808,
+      "speaker": "lark",
+      "event": "ordnance_swarm",
       "text_sha256": "5aada52d5308a3757cf0c09f9cfbd8d6cb07fa2825ddcf942b43ed7fd7f6bf3d",
-      "event": "ordnance_swarm"
+      "audio_sha256": "24c163642ea687224f65b5a312e35fb777eecc245358d7dc1486df13e8630109",
+      "seconds": 4.573,
+      "bytes": 219552
     },
     {
       "id": "ordnance_02",
-      "bytes": 321240,
-      "seconds": 7.283,
+      "speaker": "lark",
+      "event": "ordnance_emp",
       "text_sha256": "f121518222e1aa1455a51dfe54a6b88c97ecaabc16c78ee89dce8438b93bed4e",
-      "event": "ordnance_emp"
+      "audio_sha256": "91c6b8528304d526d8dc27d6cf550e07805fe90ef22a784907d5f4df6c394cf1",
+      "seconds": 6.56,
+      "bytes": 314902
     },
     {
       "id": "ordnance_03",
-      "bytes": 201304,
-      "seconds": 4.564,
+      "speaker": "lark",
+      "event": "ordnance_concussion",
       "text_sha256": "1428f3cf5f0f2dc1f82deaca33f7b8cd4a3660f86e62d9af120b1c2d9078a98c",
-      "event": "ordnance_concussion"
+      "audio_sha256": "0b404f41656e355687291d4c9cb81df4366d096c620b4d628eee733213334f3f",
+      "seconds": 4.031,
+      "bytes": 193534
     },
     {
       "id": "ordnance_04",
-      "bytes": 260400,
-      "seconds": 5.904,
+      "speaker": "lark",
+      "event": "flare_deployed",
       "text_sha256": "b23ebefe4df428bfd4ebc6de83531be1b13a79b1f87ef0f15bd8eaf35122bcff",
-      "event": "flare_deployed"
+      "audio_sha256": "3311ae0c52fcebef98b7f992884fec2f0a0c85a71d74d1c6f3bfb05945748a26",
+      "seconds": 4.716,
+      "bytes": 226400
     },
     {
       "id": "ordnance_05",
-      "bytes": 241424,
-      "seconds": 5.473,
+      "speaker": "lark",
+      "event": "flare_cooldown",
       "text_sha256": "b6f488a12d449aaf3d310755d2bdcac66b0b19bae7b9c6a30dc433591fccd593",
-      "event": "flare_cooldown"
+      "audio_sha256": "6720d7d9e6e8a1c459b6667353c6bcfd0190e8ff69027533a8e7c0ae62bea8fa",
+      "seconds": 4.393,
+      "bytes": 210930
     },
     {
       "id": "ordnance_06",
-      "bytes": 280894,
-      "seconds": 6.368,
+      "speaker": "lark",
+      "event": "ordnance_empty",
       "text_sha256": "4aa21fb126ea7c47159331ff05652662526095b97282b2430fd6724313b5e169",
-      "event": "ordnance_empty"
+      "audio_sha256": "da7d80775cfb5efd8bbdd987b3b3de73542c6b2a8e2ff636ebd48f8f6d45fea7",
+      "seconds": 4.933,
+      "bytes": 236828
     },
     {
       "id": "ordnance_07",
-      "bytes": 219382,
-      "seconds": 4.974,
+      "speaker": "lark",
+      "event": "ordnance_swarm",
       "text_sha256": "6b189c97028a1d1df9f1c45ae413b5a9b3197e1eae5808dd44cdc3da31399f57",
-      "event": "ordnance_swarm"
+      "audio_sha256": "8f7d19d16131164f92d4814e5c143ef5f43ed5a6525fef6a6c90b3ffd908382e",
+      "seconds": 4.556,
+      "bytes": 218750
     },
     {
       "id": "ordnance_08",
-      "bytes": 233278,
-      "seconds": 5.289,
+      "speaker": "lark",
+      "event": "ordnance_emp",
       "text_sha256": "0e5c9aad5acbdcede0928c12318d24987d776f95eb6d7f36c0507906e4051393",
-      "event": "ordnance_emp"
+      "audio_sha256": "a37f04d0145ed87fccd9d7757c1ac63b43d5ecc3d5193a33b4c3c2cfe9b97c93",
+      "seconds": 4.235,
+      "bytes": 203338
     },
     {
       "id": "ordnance_09",
-      "bytes": 182354,
-      "seconds": 4.134,
+      "speaker": "lark",
+      "event": "ordnance_empty",
       "text_sha256": "24ee85bfee9208156c797ee56469f7074a221d67f902aa65df682980da797cd6",
-      "event": "ordnance_empty"
+      "audio_sha256": "1156df9dd53429535155de3732873d90e8406d0ac6345c2af439e81a21ba6426",
+      "seconds": 2.923,
+      "bytes": 140364
     },
     {
       "id": "recovery_01",
-      "bytes": 288170,
-      "seconds": 6.533,
+      "speaker": "lark",
+      "event": "ejection",
       "text_sha256": "6aefc1bd174ca7b016b096b88d41c1df1fc41c5017fdf5a3ed5b901b81e8e576",
-      "event": "ejection"
+      "audio_sha256": "9d06b0ab0d5e6f8ec7a64f75ab505492d848a7d9fbc64586b8d21fccd635b612",
+      "seconds": 5.374,
+      "bytes": 257998
     },
     {
       "id": "recovery_02",
-      "bytes": 358288,
-      "seconds": 8.123,
+      "speaker": "lark",
+      "event": "recovery",
       "text_sha256": "a75309510d4d0a591908d1b81353c22f57965e8cb10a4c4e87c905c698c78965",
-      "event": "recovery"
+      "audio_sha256": "b5d1b87f2005d8c79177942421878331238c30db46aa4d9cc9de9c13f0e5ff1f",
+      "seconds": 6.675,
+      "bytes": 320446
     },
     {
       "id": "recovery_03",
-      "bytes": 287280,
-      "seconds": 6.513,
+      "speaker": "lark",
+      "event": "rescue_purchased",
       "text_sha256": "a7a4ab27cb74c58b7ab57d13c522eaa3711bd072b77879135221a4d621da8204",
-      "event": "rescue_purchased"
+      "audio_sha256": "2522894ba4b9d89f257c95f84e1b395eba61cd2d79e01ae597b4ad446fddbfef",
+      "seconds": 7.545,
+      "bytes": 362228
     },
     {
       "id": "recovery_04",
-      "bytes": 266994,
-      "seconds": 6.053,
+      "speaker": "lark",
+      "event": "rescue_launch",
       "text_sha256": "0f6dce1c53bdfa2271690901eed14aaec35ad8a24a0eb331e0e8bb7d902634bc",
-      "event": "rescue_launch"
+      "audio_sha256": "b7f900a89a7d410b98785c43e9761c3e25881740712f2b8a99176eb399b3ff68",
+      "seconds": 5.118,
+      "bytes": 245714
     },
     {
       "id": "recovery_05",
-      "bytes": 216962,
-      "seconds": 4.919,
+      "speaker": "lark",
+      "event": "upgrade",
       "text_sha256": "640aed6a573be830c41569787e652c6a4718be601b2b9635bd6602c67c981888",
-      "event": "upgrade"
+      "audio_sha256": "7ccee152f3299fd30bcb8973cb96a05221373b7bd38d1236206940d30e62feeb",
+      "seconds": 3.829,
+      "bytes": 183858
     },
     {
       "id": "recovery_06",
-      "bytes": 309330,
-      "seconds": 7.013,
+      "speaker": "lark",
+      "event": "docking",
       "text_sha256": "48abfd6f27ace7141ae1792229178c048deea1e9ce93f751e4c05104cbd785fb",
-      "event": "docking"
+      "audio_sha256": "f5a952173f40c3b51b1e9f38f7ed7c2c675daced33b9b976c8599dd28f4e01d2",
+      "seconds": 8.238,
+      "bytes": 395476
     },
     {
       "id": "recovery_07",
-      "bytes": 238342,
-      "seconds": 5.404,
+      "speaker": "lark",
+      "event": "ejection",
       "text_sha256": "91bca739c00a3ee079aa52a3972a51207d9c1d6fadb3cfc96e2cf4e608e451fb",
-      "event": "ejection"
+      "audio_sha256": "4bbcc82c9293d7aecba787f52f565a9e57775b8df37b54d382278afa21948d42",
+      "seconds": 3.808,
+      "bytes": 182804
     },
     {
       "id": "recovery_08",
-      "bytes": 188956,
-      "seconds": 4.284,
+      "speaker": "lark",
+      "event": "upgrade",
       "text_sha256": "dd73df908201ed1022883720716a871c31113b6879ff1e848134319452e199a8",
-      "event": "upgrade"
+      "audio_sha256": "2cbfc641cc6203950652a7687daf571b4de4a40f9f94d8d41a217a04fd99aa33",
+      "seconds": 3.275,
+      "bytes": 157222
     },
     {
       "id": "recovery_09",
-      "bytes": 241868,
-      "seconds": 5.483,
+      "speaker": "lark",
+      "event": "docking",
       "text_sha256": "8dc0885b14214505773ed398c58ff2cbe75e2a20afa4786c138f29bfb080b07a",
-      "event": "docking"
+      "audio_sha256": "e37ceef5e985add1284e35a0a25a9c24711a565b7e4e4c10f5d51e60c4727c26",
+      "seconds": 4.021,
+      "bytes": 193060
     },
     {
       "id": "routes_01",
-      "bytes": 210782,
-      "seconds": 4.779,
+      "speaker": "lark",
+      "event": "route_easy",
       "text_sha256": "7016bb5e4089464bb97c9c06e2a3903bb8eba91a60c99cb531d061efeca5f93d",
-      "event": "route_easy"
+      "audio_sha256": "152b7f1fd1dbcd2457ae67d22385f13859df600d95bc1544168c636291a7e512",
+      "seconds": 4.29,
+      "bytes": 205962
     },
     {
       "id": "routes_02",
-      "bytes": 238792,
-      "seconds": 5.414,
+      "speaker": "lark",
+      "event": "route_easy",
       "text_sha256": "3372cabfd4e16006e9c2d1085cb6e543372b2f02f2250994999693bbbd3b2e65",
-      "event": "route_easy"
+      "audio_sha256": "d1f526b3ffc7b21306cf96df87d32b272abe33d1c408b4ba7a6b3c7929af8d85",
+      "seconds": 4.391,
+      "bytes": 210798
     },
     {
       "id": "routes_03",
-      "bytes": 270744,
-      "seconds": 6.138,
+      "speaker": "lark",
+      "event": "route_easy",
       "text_sha256": "ef8e64db56b4f8beef5dc8a626261587101abd5e04bf29ac742926b11a6743e4",
-      "event": "route_easy"
+      "audio_sha256": "4c400075e70bda7e5e832151605d9072621fa8183e1df294054084920768b8ea",
+      "seconds": 5.379,
+      "bytes": 258246
     },
     {
       "id": "routes_04",
-      "bytes": 207914,
-      "seconds": 4.714,
+      "speaker": "lark",
+      "event": "route_easy",
       "text_sha256": "8294c363a71d2aa47adbf22403d64451e12ff43c84d8fc7497e011afc5a19f72",
-      "event": "route_easy"
+      "audio_sha256": "b0ca546a2cd0ffa189ab4a172cb7cd49d3ac0ac39be585c5381b67beca244ab1",
+      "seconds": 3.393,
+      "bytes": 162928
     },
     {
       "id": "routes_05",
-      "bytes": 215420,
-      "seconds": 4.884,
+      "speaker": "lark",
+      "event": "route_easy",
       "text_sha256": "e1f80cb22c76074160533fea16f8c07d1a7fcab8e9842e97877eb89f11d805c2",
-      "event": "route_easy"
+      "audio_sha256": "f3043f14cc6e1e4c28e751247a799859eb4260d20a38adb952403f62aeb37913",
+      "seconds": 3.995,
+      "bytes": 191804
     },
     {
       "id": "routes_06",
-      "bytes": 175738,
-      "seconds": 3.984,
+      "speaker": "lark",
+      "event": "route_easy",
       "text_sha256": "a38d0213471fde14258bdad39eac5ff5ef40f847c4e8ba53111728bdabeae085",
-      "event": "route_easy"
+      "audio_sha256": "a966b7a4e0e9d3b48a1269ef95bf8baa7f59322f32d3c45d1ad78ea83cbe2800",
+      "seconds": 2.78,
+      "bytes": 133470
     },
     {
       "id": "routes_07",
-      "bytes": 196676,
-      "seconds": 4.459,
+      "speaker": "lark",
+      "event": "route_hard",
       "text_sha256": "264889707cbadf8500198bc46aa8ecfb70848ef243d03682d3c75fe49436dd6d",
-      "event": "route_hard"
+      "audio_sha256": "6797bd8f83421868a4a2dc2a43240dcfc31aff1a2b81e1f92b690138ab457dce",
+      "seconds": 3.205,
+      "bytes": 153874
     },
     {
       "id": "routes_08",
-      "bytes": 249590,
-      "seconds": 5.659,
+      "speaker": "lark",
+      "event": "route_hard",
       "text_sha256": "fd7cd45f9b422eae2a22db548b090eebafd37d3894b6db1a8482ff441d1217e0",
-      "event": "route_hard"
+      "audio_sha256": "c33836c225f61a134a96888c69d3ef7afc9f4422ddb756d2729fe8977e4891ff",
+      "seconds": 4.909,
+      "bytes": 235690
     },
     {
       "id": "routes_09",
-      "bytes": 199766,
-      "seconds": 4.529,
+      "speaker": "lark",
+      "event": "route_hard",
       "text_sha256": "cb02705cccde25962936f7af70fb6cea8de16c588be1dd688b53ad7e8ca6ffe0",
-      "event": "route_hard"
+      "audio_sha256": "5897061fd69c32f2439ecfb8795689b60e8a21445d92b67c56464ef49de5af0a",
+      "seconds": 2.877,
+      "bytes": 138122
     },
     {
       "id": "routes_10",
-      "bytes": 281772,
-      "seconds": 6.388,
+      "speaker": "lark",
+      "event": "route_hard",
       "text_sha256": "d338c86dd6c263434c2fe62705616c38efe626ce9aa6e59fabeba38069bced10",
-      "event": "route_hard"
+      "audio_sha256": "3ee26e03d50ed9dd7d2c268a608e8aa7b4f4163552d66fcb9d60e578cf23ae3a",
+      "seconds": 4.871,
+      "bytes": 233860
     },
     {
       "id": "routes_11",
-      "bytes": 238342,
-      "seconds": 5.404,
+      "speaker": "lark",
+      "event": "route_hard",
       "text_sha256": "4a8653448715ae53d02bf6d6a367f91034b6c9e792611cb83882697bdcfe232c",
-      "event": "route_hard"
+      "audio_sha256": "30206752c5396f84f4e9d80db68a3c16d710d5a4c133e7c1e7811f4e03b6bc06",
+      "seconds": 4.239,
+      "bytes": 203504
     },
     {
       "id": "routes_12",
-      "bytes": 200422,
-      "seconds": 4.544,
+      "speaker": "lark",
+      "event": "route_hard",
       "text_sha256": "f935fcaa734cb14df72f0b1f2b811115a622543d77c24c230ab6204d622f35a4",
-      "event": "route_hard"
+      "audio_sha256": "1b2ec0df2a2cc5bd7849d75772956fe803ed7f0bb5c1b240c344ee9fc002c886",
+      "seconds": 3.58,
+      "bytes": 171864
     },
     {
-      "text_sha256": "28d1643892ffeff5e36348671be84bd294d4507db96a58e30e49d7c64ae0934e",
-      "seconds": 9.463,
       "id": "recon_ignis_ground",
+      "speaker": "lark",
       "event": "recon_ignis_ground",
-      "bytes": 417352
+      "text_sha256": "28d1643892ffeff5e36348671be84bd294d4507db96a58e30e49d7c64ae0934e",
+      "audio_sha256": "5d0d5d3e833e7ee48a6074f5c224be248fa18da00fd7d85dfb2026d31ebc54af",
+      "seconds": 8.937,
+      "bytes": 428996
     },
     {
-      "text_sha256": "6194cf2431e4627d7cfc19e37935744c562438dfa7109f14ceace49aa8a1235b",
-      "seconds": 8.423,
       "id": "recon_ignis_orbit",
+      "speaker": "lark",
       "event": "recon_ignis_orbit",
-      "bytes": 371500
+      "text_sha256": "6194cf2431e4627d7cfc19e37935744c562438dfa7109f14ceace49aa8a1235b",
+      "audio_sha256": "7854f00015e24b4aecce0c8e592e76674546a635bf779a65cd0d499e3892a2a1",
+      "seconds": 8.279,
+      "bytes": 397428
     },
     {
-      "text_sha256": "24f16a5ffb0a5e503a3be2a2231954766a65b26e5f9857ceafafd443313859be",
-      "seconds": 8.308,
       "id": "recon_cryo_ground",
+      "speaker": "lark",
       "event": "recon_cryo_ground",
-      "bytes": 366430
+      "text_sha256": "24f16a5ffb0a5e503a3be2a2231954766a65b26e5f9857ceafafd443313859be",
+      "audio_sha256": "21e88371d3afee583335e0d0ce9230017a39b9f9eda01094bee503fd95d1cf37",
+      "seconds": 8.829,
+      "bytes": 423860
     },
     {
-      "text_sha256": "c47218e79075fc166cdc741a089064652b8ba470acb050e4abc4ae752329570a",
-      "seconds": 8.888,
       "id": "recon_cryo_orbit",
+      "speaker": "lark",
       "event": "recon_cryo_orbit",
-      "bytes": 391998
+      "text_sha256": "c47218e79075fc166cdc741a089064652b8ba470acb050e4abc4ae752329570a",
+      "audio_sha256": "6bbfaecca5668467ec4e83679f94ae39622e9d61a9b4e29dcc0a7cf77f6db829",
+      "seconds": 8.473,
+      "bytes": 406752
     },
     {
-      "text_sha256": "e937908201594b053249901d8c6f47d0576064fff7add9c1fb15f1f2febc5b6b",
-      "seconds": 8.618,
       "id": "recon_vespera_ground",
+      "speaker": "lark",
       "event": "recon_vespera_ground",
-      "bytes": 380110
+      "text_sha256": "e937908201594b053249901d8c6f47d0576064fff7add9c1fb15f1f2febc5b6b",
+      "audio_sha256": "5587898b9430574191f5cb81a66b15120edcd6a89738cf192bcc2c6bf17a5c6a",
+      "seconds": 7.724,
+      "bytes": 370812
     },
     {
-      "text_sha256": "a6160cb86abbb6e7371bb10c7bf19c53494f866f0e14db733add35723655152d",
-      "seconds": 9.778,
       "id": "recon_vespera_orbit",
+      "speaker": "lark",
       "event": "recon_vespera_orbit",
-      "bytes": 431256
+      "text_sha256": "a6160cb86abbb6e7371bb10c7bf19c53494f866f0e14db733add35723655152d",
+      "audio_sha256": "ec783677b6c69f1b1b9be32deb53e4867c1a98bfa8c96b1f1b70b6c37fdafc78",
+      "seconds": 9.229,
+      "bytes": 443038
     },
     {
-      "text_sha256": "29e1966678ce0413fdb30823ea7364faa07083dbb4a05a182d36f043eb84c350",
-      "seconds": 8.378,
       "id": "recon_xylo_ground",
+      "speaker": "lark",
       "event": "recon_xylo_ground",
-      "bytes": 369518
+      "text_sha256": "29e1966678ce0413fdb30823ea7364faa07083dbb4a05a182d36f043eb84c350",
+      "audio_sha256": "65b04814df658c5a3c284df46daf9e90d1ccc78304c59e23d20cd0839dc4716d",
+      "seconds": 8.185,
+      "bytes": 392936
     },
     {
-      "text_sha256": "fa9166874421453b79ef168e03b60cb4e44c8e4a1ae8746809c606778352841a",
-      "seconds": 8.083,
       "id": "recon_xylo_orbit",
+      "speaker": "lark",
       "event": "recon_xylo_orbit",
-      "bytes": 356508
+      "text_sha256": "fa9166874421453b79ef168e03b60cb4e44c8e4a1ae8746809c606778352841a",
+      "audio_sha256": "ce598a13ae82cb49b5aad42b13a56aac60cdcd76934d7720dbd84bfafc8d3d33",
+      "seconds": 7.171,
+      "bytes": 344248
     },
     {
-      "text_sha256": "0e467e9fcdbdfee1a93e985d61e45a4d5a4204aa9b76b2f31e39090878d24a62",
-      "seconds": 8.048,
       "id": "recon_thalassa_ground",
+      "speaker": "lark",
       "event": "recon_thalassa_ground",
-      "bytes": 354962
+      "text_sha256": "0e467e9fcdbdfee1a93e985d61e45a4d5a4204aa9b76b2f31e39090878d24a62",
+      "audio_sha256": "42c8aa5a545dfbfc4507692ee91f76cbb59732fc19230d12d3d777d72f33167b",
+      "seconds": 7.247,
+      "bytes": 347876
     },
     {
-      "text_sha256": "a2b988c1800b3786eec0593d0c6c950bd1e4c1b07c2d67c6145ff5de530f7b6e",
-      "seconds": 6.833,
       "id": "recon_thalassa_orbit",
+      "speaker": "lark",
       "event": "recon_thalassa_orbit",
-      "bytes": 301390
+      "text_sha256": "a2b988c1800b3786eec0593d0c6c950bd1e4c1b07c2d67c6145ff5de530f7b6e",
+      "audio_sha256": "1516696c3decd29da79d807c17f47a5ba3c40539135c044b76725241238fa572",
+      "seconds": 6.885,
+      "bytes": 330508
     },
     {
-      "text_sha256": "947c99c9833c4e6cff024f46a3ea657397011c998a0223172f32682a879e6c23",
-      "seconds": 9.113,
       "id": "recon_kharon_ground",
+      "speaker": "lark",
       "event": "recon_kharon_ground",
-      "bytes": 401918
+      "text_sha256": "947c99c9833c4e6cff024f46a3ea657397011c998a0223172f32682a879e6c23",
+      "audio_sha256": "304ad40f75b64c915078a90354e88b01b1977bbffdded01289e2be8f59fda4e7",
+      "seconds": 8.092,
+      "bytes": 388448
     },
     {
-      "text_sha256": "b9b3283b415749b6e88bc86da6bce7e9e28b7885714abd9e17a88a746dad43f6",
-      "seconds": 9.723,
       "id": "recon_kharon_orbit",
+      "speaker": "lark",
       "event": "recon_kharon_orbit",
-      "bytes": 428828
+      "text_sha256": "b9b3283b415749b6e88bc86da6bce7e9e28b7885714abd9e17a88a746dad43f6",
+      "audio_sha256": "2f178d77215b3f21b41f5ae12450e5154ad323501e6b92b67208b6640d85ed4f",
+      "seconds": 9.823,
+      "bytes": 471562
     }
-  ],
-  "channels": 1,
-  "voice": "Microsoft Zira Desktop"
+  ]
 }

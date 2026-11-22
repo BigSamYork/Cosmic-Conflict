@@ -220,7 +220,7 @@ func _ready() -> void:
 	hud = FlightHUD.new()
 	layer.add_child(hud)
 	hud.flight = flight
-	hud.credits_text = "Cosmic Conflict v%s\nCockpit artwork supplied by the project owner.\n\n" % ProjectSettings.get_setting("application/config/version") + FileAccess.get_file_as_string("res://assets/music/credits.txt") + "\n\n" + Engine.get_license_text() + "\n\n" + JSON.stringify(Engine.get_copyright_info(), "\t") + "\n\n" + JSON.stringify(Engine.get_license_info(), "\t")
+	hud.credits_text = "Cosmic Conflict v%s\nCockpit artwork supplied by the project owner.\nVoices of Lark and Captain Tomas Vale rendered with Chatterbox-Turbo by Resemble AI.\n\n" % ProjectSettings.get_setting("application/config/version") + FileAccess.get_file_as_string("res://assets/music/credits.txt") + "\n\n" + Engine.get_license_text() + "\n\n" + JSON.stringify(Engine.get_copyright_info(), "\t") + "\n\n" + JSON.stringify(Engine.get_license_info(), "\t")
 	hud.launch_requested.connect(start_flight)
 	hud.resume_requested.connect(resume_flight)
 	hud.title_requested.connect(show_title)

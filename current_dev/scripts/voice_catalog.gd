@@ -5,6 +5,9 @@ const DEFAULT_PATH: String = "res://assets/voice/lines.json"
 const USER_PATH: String = "user://computer-voice.json"
 const RECORDING_INDEX: String = "res://assets/voice/generated-voice.json"
 const GENERATOR: String = "res://assets/voice/generate-voice.ps1"
+const TURBO: String = "Chatterbox-Turbo / Lark"
+const DESKTOP: String = "Microsoft Zira Desktop"
+const TURBO_GENERATOR: String = "res://assets/voice/render_chatterbox.py"
 
 var lines: Array[Dictionary] = []
 var recording_paths: Dictionary = {}
@@ -52,24 +55,29 @@ func load_catalog(path: String, rules: Dictionary, cache_directory: String = "us
 			return "Computer voice recording index needs regeneration with tools\\generate-voice.ps1 -Overwrite."
 		recorded[clip["id"]] = clip["text_sha256"]
 	var pending: Array[Dictionary] = []
+	var author_voice: String = data["voice"]
+	if author_voice == TURBO and OS.get_environment("COSMIC_TTS_PYTHON").is_empty():
+		author_voice = DESKTOP
+	# Existing Zira catalogs still use the shipped takes for unedited dialogue.
+	var shipped_voice: bool = proof.data.get("voice") == data["voice"] or (proof.data.get("voice") == TURBO and data["voice"] == DESKTOP)
 	for line in lines:
 		if line["chance_percent"] == 0:
 			continue
 		var id: String = line["id"]
 		var text_hash: String = line["text"].sha256_text()
-		if proof.data.get("voice") == data["voice"] and recorded.get(id) == text_hash:
+		if shipped_voice and recorded.get(id) == text_hash:
 			var recording: String = "res://assets/voice/%s.wav" % id
 			if not ResourceLoader.exists(recording):
 				return "Computer voice recording is missing: " + recording
 			recording_paths[id] = recording
 		else:
-			var cache_id: String = "line_" + (data["voice"] + "\n" + line["text"]).sha256_text()
+			var cache_id: String = "line_" + (author_voice + "\n" + line["text"]).sha256_text()
 			var recording: String = cache_directory.path_join(cache_id + ".wav")
 			recording_paths[id] = recording
 			if not FileAccess.file_exists(recording) and not pending.any(func(item: Dictionary) -> bool: return item["id"] == cache_id):
 				pending.append({"id": cache_id, "event": line["event"], "text": line["text"]})
 	if not pending.is_empty():
-		error = _generate(data["voice"], pending, cache_directory)
+		error = _generate(author_voice, pending, cache_directory)
 		if not error.is_empty():
 			return error
 	return ""
@@ -120,9 +128,11 @@ static func write_text(path: String, text: String) -> String:
 	return "" if error == OK else "Cannot write %s: %s" % [path, error_string(error)]
 
 func _generate(voice: String, pending: Array[Dictionary], cache_directory: String) -> String:
-	if OS.get_name() != "Windows":
-		return "Edited computer voice text requires Windows with the selected offline voice installed."
-	if not FileAccess.file_exists(GENERATOR):
+	var turbo: bool = voice == TURBO
+	var generator: String = TURBO_GENERATOR if turbo else GENERATOR
+	if not turbo and OS.get_name() != "Windows":
+		return "Set COSMIC_TTS_PYTHON for Chatterbox dialogue or install the selected desktop voice on Windows."
+	if not FileAccess.file_exists(generator):
 		return "The bundled computer voice generator is missing."
 	var error: Error = DirAccess.make_dir_recursive_absolute(cache_directory)
 	if error != OK:
@@ -131,20 +141,30 @@ func _generate(voice: String, pending: Array[Dictionary], cache_directory: Strin
 	error = DirAccess.make_dir_recursive_absolute(job)
 	if error != OK:
 		return "Cannot create computer voice generation folder: " + error_string(error)
-	var script_path: String = job.path_join("generate-voice.ps1")
+	var script_path: String = job.path_join("render_chatterbox.py" if turbo else "generate-voice.ps1")
 	var request_path: String = job.path_join("request.json")
-	var message: String = write_text(script_path, FileAccess.get_file_as_string(GENERATOR))
+	var message: String = write_text(script_path, FileAccess.get_file_as_string(generator))
+	var reference: String = job.path_join("lark.wav")
+	if turbo and message.is_empty():
+		var prompt := load("res://assets/voice/profiles/lark.wav") as AudioStreamWAV
+		if prompt == null or prompt.save_to_wav(ProjectSettings.globalize_path(reference)) != OK:
+			message = "Cannot unpack Lark's voice reference."
 	if message.is_empty():
 		message = write_text(request_path, JSON.stringify({"voice": voice, "sections": [{"lines": pending}]}))
 	if message.is_empty():
 		var output: Array = []
 		var powershell: String = OS.get_environment("SystemRoot").path_join("System32\\WindowsPowerShell\\v1.0\\powershell.exe")
-		var exit_code: int = OS.execute(powershell, PackedStringArray([
+		var program: String = OS.get_environment("COSMIC_TTS_PYTHON") if turbo else powershell
+		var args := PackedStringArray([
 			"-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", ProjectSettings.globalize_path(script_path),
 			"-CatalogPath", ProjectSettings.globalize_path(request_path), "-OutputDirectory", ProjectSettings.globalize_path(job)
-		]), output, true)
+		])
+		if turbo:
+			args = PackedStringArray([ProjectSettings.globalize_path(script_path), ProjectSettings.globalize_path(request_path),
+				ProjectSettings.globalize_path(job), "--profiles", ProjectSettings.globalize_path(job)])
+		var exit_code: int = OS.execute(program, args, output, true)
 		if exit_code != 0:
-			message = "Computer voice generation failed (exit %d). Check Windows voice '%s'. %s" % [exit_code, voice, "\n".join(output)]
+			message = "Computer voice generation failed (exit %d) for '%s'. %s" % [exit_code, voice, "\n".join(output)]
 		else:
 			for line in pending:
 				var filename: String = line["id"] + ".wav"
@@ -154,6 +174,8 @@ func _generate(voice: String, pending: Array[Dictionary], cache_directory: Strin
 					break
 	# Only this job's known files are removed, never another game's cache.
 	var temporary: Array[String] = [script_path, request_path, job.path_join("generated-voice.json")]
+	if turbo:
+		temporary.append(reference)
 	for line in pending:
 		temporary.append(job.path_join(line["id"] + ".wav"))
 	for path in temporary:
