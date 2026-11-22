@@ -38,6 +38,7 @@ static func remember_model(key: String, model: Node3D) -> Node3D:
 
 static func set_reduced_effects(reduced: bool) -> void:
 	ensure_material()
+	FleetArt.hull_material.set_shader_parameter("pulse_strength", 0.0 if reduced else 1.0)
 	line_material.set_shader_parameter("halo_strength", 0.0 if reduced else 0.65)
 	line_material.set_shader_parameter("stroke_width", 1.15 if reduced else 1.4)
 
@@ -119,17 +120,7 @@ static func box(size: Vector3, color: Color) -> Node3D:
 	return batch.build()
 
 static func ship() -> Node3D:
-	var cached := cached_model("range_ship")
-	if cached != null:
-		return cached
-	var batch := GeometryBatch.new()
-	batch.ship_hull(Vector3.ZERO, [Vector3(0.25, 0.2, -2.8), Vector3(1.25, 0.8, -0.2), Vector3(0.85, 0.52, 2.2)], CYAN, Color("#213845"))
-	for side in [-1.0, 1.0]:
-		var vane := PackedVector3Array([Vector3(side, 0, -0.9), Vector3(side * 3.2, 0.6, 0.2), Vector3(side * 2.8, 0.5, 1.25), Vector3(side, 0, 1.65)])
-		batch.surface(vane, PackedInt32Array([0, 1, 2, 0, 2, 3]), Color("#1a3342"))
-		batch.outline(vane, CYAN)
-		batch.ring(Vector3(side * 0.4, 0, 2.22), 0.23, AMBER)
-	return remember_model("range_ship", batch.build())
+	return FleetArt.model("range")
 
 static func cockpit_detail() -> Node3D:
 	var batch := GeometryBatch.new()

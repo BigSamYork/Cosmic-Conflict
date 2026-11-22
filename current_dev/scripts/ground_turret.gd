@@ -38,6 +38,7 @@ func animate(_time: float) -> void:
 	pass
 
 func reset() -> void:
+	clear_impact_marks()
 	destroyed = false
 	armor = ceili(4 * health_scale)
 	collision_layer = 3

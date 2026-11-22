@@ -174,6 +174,8 @@ func radar_interval_multiplier() -> float:
 
 func advance_visuals(delta: float) -> void:
 	visual_age += delta
+	for reactor in [parts[0], parts[1], core]:
+		reactor.animate_reactor(visual_age)
 	for i in range(core_rings.size()):
 		core_rings[i].rotation.y = visual_age * (0.32 if i % 2 == 0 else -0.23)
 	for i in range(bio_legs.size()):

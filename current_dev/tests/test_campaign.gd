@@ -227,11 +227,12 @@ func run() -> void:
 		root.add_child(boss)
 		var core_armor: int = boss.core.armor
 		boss.core.receive_hit(1000)
-		check(boss.core.armor == core_armor, "Boss core remains shielded until generators fall")
+		check(boss.core.armor == core_armor and boss.core.shield_cover.visible, "Boss core remains covered and shielded until generators fall")
 		for generator in [boss.parts[0], boss.parts[1]]:
 			for _hit in range(generator.maximum_armor):
 				generator.receive_hit(1)
 		boss.advance(0.01, Vector3(0, 12, 200), Vector3.ZERO)
+		check(boss.core.unlocked and not boss.core.shield_cover.visible, "Destroying both generators reveals the live reactor")
 		for _hit in range(boss.core.maximum_armor):
 			boss.core.receive_hit(1)
 		check(boss.defeated(), "Boss is beatable with basic primary damage and no secondary ammunition")

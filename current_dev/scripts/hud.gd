@@ -729,10 +729,19 @@ func _draw() -> void:
 		if not label.is_empty():
 			_text(screen + Vector2(-60, -30), label, 13, tint)
 		tint.a = 0.65
-		draw_line(screen + Vector2(-22, -14), screen + Vector2(-22, -22), tint, 1.2)
-		draw_line(screen + Vector2(-22, -22), screen + Vector2(-14, -22), tint, 1.2)
-		draw_line(screen + Vector2(22, 14), screen + Vector2(22, 22), tint, 1.2)
-		draw_line(screen + Vector2(22, 22), screen + Vector2(14, 22), tint, 1.2)
+		if contact.get("boss_part", false):
+			if contact["shielded"]:
+				tint = Color(MUTED, 0.65)
+			for i in range(3):
+				var angle := i * TAU / 3.0 - PI / 2.0
+				draw_arc(screen, 20, angle - 0.36, angle + 0.36, 10, tint, 1.5, true)
+				var radial := Vector2.from_angle(angle)
+				draw_line(screen + radial * 20, screen + radial * 25, tint, 1.5, true)
+		else:
+			draw_line(screen + Vector2(-22, -14), screen + Vector2(-22, -22), tint, 1.2)
+			draw_line(screen + Vector2(-22, -22), screen + Vector2(-14, -22), tint, 1.2)
+			draw_line(screen + Vector2(22, 14), screen + Vector2(22, 22), tint, 1.2)
+			draw_line(screen + Vector2(22, 22), screen + Vector2(14, 22), tint, 1.2)
 		_text(screen + Vector2(30, 5), "%03dm" % int(distance), 14, tint)
 	for location in incoming:
 		var marker: Vector2 = location.clamp(Vector2(35, 245), Vector2(width - 35, height - 200))

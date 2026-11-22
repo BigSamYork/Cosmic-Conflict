@@ -27,6 +27,7 @@ func animate(_time: float) -> void:
 	pass
 
 func reset() -> void:
+	clear_impact_marks()
 	armor = 6
 	destroyed = false
 	collision_layer = 3

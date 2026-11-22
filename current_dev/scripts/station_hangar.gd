@@ -14,6 +14,7 @@ func _ready() -> void:
 		for row in range(4):
 			var design: int = (row + (1 if side > 0 else 0)) % factories.size()
 			var ship: Node3D = factories[design].call()
+			ship.get_child(0).set_instance_shader_parameter("parked", true)
 			ship.name = "ParkedShip%d" % parked_ships.size()
 			ship.set_meta("design", design)
 			var bay: Vector3 = EncounterArt.PARKING_BAYS[row]

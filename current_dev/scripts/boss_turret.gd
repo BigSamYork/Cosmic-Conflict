@@ -14,12 +14,17 @@ func _ready() -> void:
 	collision_layer = 2
 	collision_mask = 0
 	armor = maximum_armor
-	add_child(XyloArt.spitter_base() if biological else VectorArt.box(Vector3(8, 1, 7), EncounterArt.GOLD))
+	add_child(XyloArt.spitter_base() if biological else FleetArt.model("boss_turret_base"))
 	head = XyloArt.spitter_head() if biological else EncounterArt.missile_turret()
 	head.position.y = 1.8
 	add_child(head)
-	beacon = VectorArt.box(Vector3(2.4, 0.3, 0.8), VectorArt.HOSTILE)
-	beacon.position = Vector3(0, 2, -1.5)
+	if biological:
+		var glands := GeometryBatch.new()
+		for side in [-1.0, 1.0]:
+			glands.ellipsoid(Vector3(side * 1.4, 0.2, -3.82), Vector3(0.48, 0.48, 0.32), XyloArt.ACID, 8, 16)
+		beacon = glands.build()
+	else:
+		beacon = FleetArt.model("boss_launch_warning")
 	head.add_child(beacon)
 	beacon.hide()
 	var collider := CollisionShape3D.new()

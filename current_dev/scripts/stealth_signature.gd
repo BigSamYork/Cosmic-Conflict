@@ -18,10 +18,10 @@ func attach(model: Node3D) -> void:
 		var source: Material = child.material_override
 		assert(source is StandardMaterial3D or source is ShaderMaterial)
 		var material: ShaderMaterial
-		if source is StandardMaterial3D:
+		if source is StandardMaterial3D or source == FleetArt.hull_material:
 			material = ShaderMaterial.new()
 			material.shader = SURFACE
-			material.set_shader_parameter("hull_tint", source.albedo_color)
+			material.set_shader_parameter("hull_tint", source.albedo_color if source is StandardMaterial3D else Color.WHITE)
 		else:
 			material = source.duplicate()
 		meshes.append(child)
@@ -53,6 +53,9 @@ func refresh() -> void:
 		if not is_instance_valid(meshes[i]):
 			continue
 		meshes[i].material_override = veils[i] if cloaked else originals[i]
+		var scars := meshes[i].material_overlay as ShaderMaterial
+		if scars != null and scars.get_shader_parameter("cloaked") != cloaked:
+			scars.set_shader_parameter("cloaked", cloaked)
 		if not cloaked:
 			continue
 		if veils[i].shader == SURFACE:

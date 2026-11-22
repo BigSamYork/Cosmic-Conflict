@@ -10,6 +10,7 @@ var dogfight: bool = false
 var expired: bool = false
 var age: float = 0.0
 var spawn_frame: Transform3D
+var approach_axis := Vector3.BACK
 var spawn_position: Vector3
 var velocity: Vector3
 var lifetime: float = 23.0
@@ -57,7 +58,7 @@ func _ready() -> void:
 		cloak.phase = phase
 		cloak.attach(get_child(0))
 	if heavy and sector != "xylo":
-		var plating := VectorArt.box(Vector3(3.4, 1.5, 2.8), VectorArt.HOSTILE)
+		var plating := FleetArt.model("heavy_armor")
 		add_child(plating)
 	if has_directional_shield():
 		shield_visual = _create_shield()
@@ -86,6 +87,11 @@ func animate(time: float) -> void:
 	if dogfight:
 		return
 	super.animate(time)
+
+func _animate_rail(time: float) -> void:
+	super._animate_rail(time)
+	# The firing window follows the course even after the bow tracks a passing pilot.
+	approach_axis = global_basis.z
 	if not heavy:
 		position.x += sin(time * 1.7 + phase) * 2.0
 		if sector == "thalassa":
@@ -126,7 +132,7 @@ func advance(delta: float, pilot: Vector3, velocity: Vector3) -> void:
 	_update_shield()
 	if stun_remaining > 0.0:
 		return
-	if (not dogfight and to_local(pilot).z < 35.0) or global_position.distance_to(pilot) > (180.0 if dogfight else 330.0):
+	if (not dogfight and (pilot - global_position).dot(approach_axis) < 35.0) or global_position.distance_to(pilot) > (180.0 if dogfight else 330.0):
 		return
 	if dogfight and not web_layer and velocity.length_squared() > 0.1 and velocity.normalized().dot((global_position - pilot).normalized()) < -0.15:
 		return
