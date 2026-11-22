@@ -12,30 +12,10 @@ static func warm_cache() -> void:
 		model.free()
 
 static func pylon() -> Node3D:
-	var cached: Node3D = VectorArt.cached_model("vespera_pylon")
-	if cached != null:
-		return cached
-	var batch := GeometryBatch.new()
-	batch.box(Vector3(0, -4.9, 0), Vector3(3.2, 1.2, 4), VectorArt.AMBER, HULL)
-	batch.box(Vector3(0, 0.6, 0), Vector3(2.4, 9.8, 3.2), NEON, PANEL)
-	for side in [-1.0, 1.0]:
-		batch.line(Vector3(side * 0.8, -3.8, 1.65), Vector3(side * 0.8, 5, 1.65), SIGNAL)
-	for row in range(5):
-		batch.box(Vector3(0, -2.7 + row * 1.6, 1.7), Vector3(1, 0.35, 0.2), NEON, HULL)
-	return VectorArt.remember_model("vespera_pylon", batch.build())
+	return GroundArt.tower("vespera")
 
 static func turret_base() -> Node3D:
-	var cached: Node3D = VectorArt.cached_model("vespera_turret")
-	if cached != null:
-		return cached
-	var batch := GeometryBatch.new()
-	batch.box(Vector3(0, -0.5, 0), Vector3(7, 1, 7), NEON, HULL)
-	batch.box(Vector3(0, 0.5, 0), Vector3(4.5, 1.6, 4.5), SIGNAL, PANEL)
-	for side in [-1.0, 1.0]:
-		batch.box(Vector3(side * 2.8, 0.3, 0), Vector3(0.7, 1.7, 6), NEON, HULL)
-		for i in range(4):
-			batch.line(Vector3(side * 3.2, 0.2, -2.2 + i * 1.4), Vector3(side * 3.2, 1.1, -2.2 + i * 1.4), SIGNAL)
-	return VectorArt.remember_model("vespera_turret", batch.build())
+	return FleetArt.model("mount_vespera", "ground")
 
 static func fighter() -> Node3D:
 	return FleetArt.model("vespera")
@@ -102,6 +82,8 @@ static func terrain_chunk(start: float, branching: bool = false) -> Node3D:
 	if cached != null:
 		return cached
 	var batch := GeometryBatch.new()
+	var terrain := GeometryBatch.new()
+	var scenery: Array[Transform3D] = []
 	for row in range(8):
 		var travel: float = start + row * 16
 		for column in range(32):
@@ -110,10 +92,7 @@ static func terrain_chunk(start: float, branching: bool = false) -> Node3D:
 			var b: Vector3 = floor_point(x + 10, travel)
 			var c: Vector3 = floor_point(x + 10, travel + 16)
 			var d: Vector3 = floor_point(x, travel + 16)
-			batch.surface(PackedVector3Array([a, b, c, d]), PackedInt32Array([0, 1, 2, 0, 2, 3]), Color("#171324") if (row + column) % 2 == 0 else Color("#211b30"))
-			batch.line(a, b, Color("#704179"))
-			if column % 2 == 0:
-				batch.line(a, d, Color("#483556"))
+			terrain.surface(PackedVector3Array([a, b, c, d]), PackedInt32Array([0, 1, 2, 0, 2, 3]), Color.WHITE)
 		for route in range(2 if branching else 1):
 			for side in [-1.0, 1.0]:
 				var offset: float = GroundRoute.lateral_offset(travel) if route == 1 else 0
@@ -142,29 +121,15 @@ static func terrain_chunk(start: float, branching: bool = false) -> Node3D:
 					continue
 				var at: Vector3 = floor_point(x, travel)
 				var height: float = 54 + posmod(int(start / 128) * 13 + row * 7 + tier * 11, 80)
-				batch.box(at + Vector3(0, height * 0.5, 0), Vector3(23, height, 29), NEON.darkened(tier * 0.18), HULL)
-				batch.box(at + Vector3(0, height + 4, 0), Vector3(15, 8, 19), SIGNAL.darkened(0.3), PANEL)
-				batch.box(at + Vector3(-side * 9, 8, 2), Vector3(6, 16, 14), NEON, PANEL)
-				for floor_index in range(1, int(height / 10)):
-					var y: float = floor_index * 10
-					batch.line(at + Vector3(-11.6, y, 14.6), at + Vector3(11.6, y, 14.6), NEON.darkened(0.2))
-					var inner_x: float = -side * 11.6
-					batch.line(at + Vector3(inner_x, y, -14.6), at + Vector3(inner_x, y, 14.6), NEON.darkened(0.15))
-					for window in range(3):
-						var wx: float = -7 + window * 7
-						batch.line(at + Vector3(wx, y + 2, 14.7), at + Vector3(wx, y + 5, 14.7), SIGNAL.darkened(0.2))
-						var z: float = -9 + window * 9
-						batch.outline(PackedVector3Array([at + Vector3(inner_x, y + 1, z), at + Vector3(inner_x, y + 6, z), at + Vector3(inner_x, y + 6, z + 4), at + Vector3(inner_x, y + 1, z + 4)]), SIGNAL.darkened(0.25))
-				for pillar in [-1.0, 1.0]:
-					batch.line(at + Vector3(pillar * 8, 2, 14.8), at + Vector3(pillar * 8, height - 2, 14.8), NEON)
-					batch.line(at + Vector3(-side * 11.7, 2, pillar * 12), at + Vector3(-side * 11.7, height - 2, pillar * 12), NEON)
+				scenery.append(GroundArt.placement(at, Vector3(1, height / 60, 1), PI if side < 0 else 0.0))
 	if posmod(int(start / VectorArt.CHUNK_LENGTH), 3) == 1:
 		var center: Vector3 = FlightState.rail_point(start + 64)
 		batch.box(Vector3(center.x, 53, center.z), Vector3(162, 2.0, 12), SIGNAL, HULL)
 		batch.truss(Vector3(center.x - 81, 58, center.z), Vector3(center.x + 81, 58, center.z), 5, NEON, 18)
 		for side in [-1.0, 1.0]:
 			batch.line(Vector3(center.x - 81, 54.2, center.z + side * 3), Vector3(center.x + 81, 54.2, center.z + side * 3), SIGNAL)
-	return VectorArt.remember_model(key, batch.build()) if start < VectorArt.TERRAIN_CACHE_CHUNKS * VectorArt.CHUNK_LENGTH else batch.build()
+	var chunk := GroundArt.finish_chunk(batch.build(), terrain, scenery, "vespera")
+	return VectorArt.remember_model(key, chunk) if start < VectorArt.TERRAIN_CACHE_CHUNKS * VectorArt.CHUNK_LENGTH else chunk
 
 static func floor_point(x: float, travel: float) -> Vector3:
 	return Vector3(FlightState.rail_point(travel).x + x, -1, -travel)

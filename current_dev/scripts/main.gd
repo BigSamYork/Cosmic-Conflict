@@ -1962,17 +1962,25 @@ func _add_ground_cover(chunk: Node3D) -> void:
 	body.collision_layer = 1 # Shared by the swept pilot probe and missile cover ray.
 	body.collision_mask = 0
 	for surface in chunk.get_children():
-		if not surface is MeshInstance3D or surface.material_override == VectorArt.line_material:
+		var mesh: Mesh
+		var transforms: Array[Transform3D] = []
+		if surface is MultiMeshInstance3D:
+			mesh = surface.multimesh.mesh
+			transforms.assign(surface.multimesh.get_meta("placements"))
+		elif surface is MeshInstance3D and surface.material_override != VectorArt.line_material:
+			mesh = surface.mesh
+			transforms.append(surface.transform)
+		else:
 			continue # Screen-space outline strokes are not solid terrain.
-		var mesh: Mesh = surface.mesh
 		if not mesh.has_meta("ground_cover"):
 			var shape: ConcavePolygonShape3D = mesh.create_trimesh_shape()
 			shape.backface_collision = true
 			mesh.set_meta("ground_cover", shape)
-		var collider := CollisionShape3D.new()
-		collider.shape = mesh.get_meta("ground_cover")
-		collider.transform = surface.transform
-		body.add_child(collider)
+		for placement in transforms:
+			var collider := CollisionShape3D.new()
+			collider.shape = mesh.get_meta("ground_cover")
+			collider.transform = placement
+			body.add_child(collider)
 	chunk.add_child(body)
 
 func _bind_ocean(node: Node3D) -> void:

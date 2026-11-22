@@ -17,38 +17,13 @@ static func warm_cache() -> void:
 		egg.free()
 
 static func pylon() -> Node3D:
-	var cached: Node3D = VectorArt.cached_model("xylo_pylon")
-	if cached != null:
-		return cached
-	var batch := GeometryBatch.new()
-	batch.ellipsoid(Vector3(0, -4.7, 0), Vector3(1.6, 0.8, 2), VectorArt.AMBER, 6, 10)
-	batch.limb(Vector3(0, -4, 0), Vector3(0.4, 3.8, 0), 1.1, 0.7, LEAF)
-	batch.ellipsoid(Vector3(0.4, 4, 0), Vector3(1.1, 1.5, 1.5), SHELL, 6, 10)
-	for side in [-1.0, 1.0]:
-		batch.limb(Vector3(side * 0.5, -2, 0), Vector3(side * 1.4, 4.7, 0.8), 0.35, 0.04, ACID, 6)
-	return VectorArt.remember_model("xylo_pylon", batch.build())
+	return GroundArt.tower("xylo")
 
 static func spitter_base() -> Node3D:
-	var cached: Node3D = VectorArt.cached_model("xylo_spitter_base")
-	if cached != null:
-		return cached
-	var batch := GeometryBatch.new()
-	batch.ellipsoid(Vector3(0, 0, 0), Vector3(3.2, 1.1, 3.2), LEAF, 6, 12)
-	for i in range(6):
-		var angle: float = i * TAU / 6
-		batch.limb(Vector3.ZERO, Vector3(cos(angle) * 3.4, -0.9, sin(angle) * 3.4), 0.55, 0.12, SHELL, 6)
-	return VectorArt.remember_model("xylo_spitter_base", batch.build())
+	return FleetArt.model("mount_xylo", "ground")
 
 static func spitter_head() -> Node3D:
-	var cached: Node3D = VectorArt.cached_model("xylo_spitter_head")
-	if cached != null:
-		return cached
-	var batch := GeometryBatch.new()
-	batch.ellipsoid(Vector3(0, 0.2, 0), Vector3(2.6, 1.6, 2), SHELL, 8, 12)
-	for side in [-1.0, 1.0]:
-		batch.limb(Vector3(side, 0, -0.6), Vector3(side * 1.4, 0.2, -3.8), 0.7, 0.35, ACID)
-		batch.ring(Vector3(side * 1.4, 0.2, -3.85), 0.35, VectorArt.HOSTILE, 10)
-	return VectorArt.remember_model("xylo_spitter_head", batch.build())
+	return FleetArt.model("spitter", "ground")
 
 static func insect() -> Node3D:
 	return FleetArt.model("insect")
@@ -170,38 +145,6 @@ static func spore_bolt() -> Node3D:
 static func floor_point(x: float, travel: float) -> Vector3:
 	return Vector3(FlightState.rail_point(travel).x + x, -1, -travel)
 
-static func _tree(batch: GeometryBatch, at: Vector3, height: float, side: float) -> void:
-	var seed: float = at.z * 0.073 + at.x * 0.11
-	var trunk := PackedVector3Array([at])
-	for level in range(1, 6):
-		var t: float = level / 5.0
-		var point: Vector3 = at + Vector3(sin(seed + t * 4.5) * 5 * t + side * sin(t * PI) * 3, height * t, cos(seed * 0.6 + t * 3.7) * 6 * t)
-		batch.limb(trunk[-1], point, 4.5 - (level - 1) * 0.67, 4.5 - level * 0.67, LEAF if level % 2 == 0 else SHELL)
-		trunk.append(point)
-	for root in range(5):
-		var angle: float = root * TAU / 5 + seed
-		var knee: Vector3 = at + Vector3(cos(angle) * 4, 3, sin(angle) * 4)
-		batch.limb(at + Vector3.UP * 5, knee, 1.4, 0.8, LEAF)
-		batch.limb(knee, at + Vector3(cos(angle) * 9, 0, sin(angle) * 9), 0.8, 0.15, SHELL)
-	for branch in range(3):
-		var from: Vector3 = trunk[3 + branch]
-		var tip: Vector3 = at + Vector3(-side * (13 + branch * 4), height * (0.72 + branch * 0.08), -14 + branch * 15 + sin(seed) * 5)
-		batch.limb(from, tip, 1.2, 0.12, SHELL)
-		for frond in range(3):
-			var angle: float = seed + frond * 2.1
-			var forward := Vector3(cos(angle), 0, sin(angle))
-			var across: Vector3 = forward.cross(Vector3.UP)
-			var leaf := PackedVector3Array([tip, tip + forward * 5 + across * 2.5 + Vector3.UP * 2, tip + forward * 12 - Vector3.UP, tip + forward * 5 - across * 2.5 + Vector3.UP, tip + forward * 5 + Vector3.UP * 3])
-			batch.surface(leaf, PackedInt32Array([0, 1, 4, 1, 2, 4, 2, 3, 4, 3, 0, 4]), Color("#1c3e24"))
-			batch.outline(PackedVector3Array([leaf[0], leaf[1], leaf[2], leaf[3]]), LEAF.darkened(0.22))
-			batch.line(leaf[0], leaf[4], ACID.darkened(0.35))
-			batch.line(leaf[4], leaf[2], LEAF)
-	var vine: Vector3 = trunk[3] + Vector3(side * 2, 0, 0)
-	for segment in range(6):
-		var next: Vector3 = vine + Vector3(sin(seed + segment) * 0.7, -3, cos(seed + segment) * 0.7)
-		batch.line(vine, next, LEAF.darkened(0.1))
-		vine = next
-
 static func terrain_chunk(start: float, branching: bool = false) -> Node3D:
 	branching = branching and start + VectorArt.CHUNK_LENGTH > GroundRoute.FORK and start < GroundRoute.REJOIN
 	var key: String = ("xylo_branch:%d" if branching else "xylo_terrain:%d") % int(start)
@@ -209,6 +152,8 @@ static func terrain_chunk(start: float, branching: bool = false) -> Node3D:
 	if cached != null:
 		return cached
 	var batch := GeometryBatch.new()
+	var terrain := GeometryBatch.new()
+	var scenery: Array[Transform3D] = []
 	for row in range(8):
 		var travel: float = start + row * 16
 		for column in range(32):
@@ -217,9 +162,7 @@ static func terrain_chunk(start: float, branching: bool = false) -> Node3D:
 			var b: Vector3 = floor_point(x + 10, travel)
 			var c: Vector3 = floor_point(x + 10, travel + 16)
 			var d: Vector3 = floor_point(x, travel + 16)
-			batch.surface(PackedVector3Array([a, b, c, d]), PackedInt32Array([0, 1, 2, 0, 2, 3]), Color("#142b1e") if (row + column) % 3 == 0 else Color("#1c3020"))
-			if row % 2 == 0:
-				batch.line(a, b, Color("#3d5b32"))
+			terrain.surface(PackedVector3Array([a, b, c, d]), PackedInt32Array([0, 1, 2, 0, 2, 3]), Color.WHITE)
 		for route in range(2 if branching else 1):
 			var offset: float = GroundRoute.lateral_offset(travel) if route == 1 else 0
 			var next_offset: float = GroundRoute.lateral_offset(travel + 16) if route == 1 else 0
@@ -227,7 +170,7 @@ static func terrain_chunk(start: float, branching: bool = false) -> Node3D:
 			var b: Vector3 = floor_point(offset + 4.2, travel) + Vector3.UP * 0.08
 			var c: Vector3 = floor_point(next_offset + 4.2, travel + 16) + Vector3.UP * 0.08
 			var d: Vector3 = floor_point(next_offset - 4.2, travel + 16) + Vector3.UP * 0.08
-			batch.surface(PackedVector3Array([a, b, c, d]), PackedInt32Array([0, 1, 2, 0, 2, 3]), Color("#174532"))
+			terrain.surface(PackedVector3Array([a, b, c, d]), PackedInt32Array([0, 1, 2, 0, 2, 3]), Color("#67c9ab"))
 			batch.line(a, d, Color("#67964a"))
 			batch.line(b, c, Color("#67964a"))
 	for i in range(6):
@@ -235,11 +178,13 @@ static func terrain_chunk(start: float, branching: bool = false) -> Node3D:
 		var side: float = -1 if i % 2 == 0 else 1
 		var x: float = side * (35 + (i % 3) * 22)
 		if not branching or absf(x - GroundRoute.lateral_offset(travel)) > 38:
-			_tree(batch, floor_point(x, travel), 50 + posmod(int(start / 128) * 7 + i * 13, 35), side)
+			var height := 50 + posmod(int(start / 128) * 7 + i * 13, 35)
+			scenery.append(GroundArt.placement(floor_point(x, travel), Vector3(1, height / 48.0, 1), travel * 0.17))
 		var reed: Vector3 = floor_point(side * 16, travel)
 		for blade in range(4):
 			batch.line(reed + Vector3(blade * 0.3, 0, 0), reed + Vector3((blade - 1) * 0.7, 3 + blade * 0.5, 1), ACID.darkened(0.2))
-	return VectorArt.remember_model(key, batch.build()) if start < VectorArt.TERRAIN_CACHE_CHUNKS * VectorArt.CHUNK_LENGTH else batch.build()
+	var chunk := GroundArt.finish_chunk(batch.build(), terrain, scenery, "xylo")
+	return VectorArt.remember_model(key, chunk) if start < VectorArt.TERRAIN_CACHE_CHUNKS * VectorArt.CHUNK_LENGTH else chunk
 
 static func horizon() -> Node3D:
 	var cached: Node3D = VectorArt.cached_model("xylo_horizon")

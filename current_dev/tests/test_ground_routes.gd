@@ -195,6 +195,12 @@ func check(condition: bool, description: String) -> void:
 
 func verify_terrain(game: Node3D) -> void:
 	var course: Transform3D = game.director.ground_course
+	# Probe the roof above the canyon floor. This hits only if the streamed
+	# instance and its shared collision mesh use the same placement.
+	var station := VectorArt.ground_point(-28, 64) + Vector3(0, 0, -1.7)
+	var query := PhysicsRayQueryParameters3D.create(course * (station + Vector3.UP * 6), course * (station + Vector3.UP * 2), 1)
+	var roof: Dictionary = game.get_world_3d().direct_space_state.intersect_ray(query)
+	check(not roof.is_empty(), "The instanced canyon substation blocks fire at its visible roof")
 	for side in [-1, 1]:
 		game.flight.aim = Vector2(side, 0)
 		game.flight.advance(1, false)

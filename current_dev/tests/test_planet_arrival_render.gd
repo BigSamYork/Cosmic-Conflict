@@ -165,9 +165,14 @@ func verify_sector_arrival(game: Node3D, destination: String) -> void:
 			await verify_curved_silhouette(game, destination)
 			alignment_checked = true
 	check(alignment_checked, "The %s approach includes a visibly curved terrain reveal before leveling into the canyon" % destination)
+	# The comparison spans render frames. Hold the installations' running lights
+	# steady so only the globe's visibility changes between the two captures.
+	var pulse: float = FleetArt.hull_material.get_shader_parameter("pulse_strength")
+	FleetArt.hull_material.set_shader_parameter("pulse_strength", 0.0)
 	var before: Image = await image(destination + "-planet-ground-handoff.png")
 	game.launch_approach.planet.hide()
 	var after: Image = await image("")
+	FleetArt.hull_material.set_shader_parameter("pulse_strength", pulse)
 	var differences: int = changed_pixels(before, after, Rect2i(220, 320, 1480, 380))
 	check(differences == 0, "%s prepared terrain already occludes the globe before removal (%d changed canopy pixels)" % [destination, differences])
 	game.launch_approach.planet.show()

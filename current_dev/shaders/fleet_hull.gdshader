@@ -9,6 +9,17 @@ varying vec3 local_position;
 uniform float pulse_strength : hint_range(0.0, 1.0) = 1.0;
 
 instance uniform bool parked = false;
+instance uniform bool weathered = false;
+
+float surface_grain(vec3 p) {
+    vec3 cell = floor(p);
+    vec3 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    float base = dot(cell, vec3(1.0, 57.0, 113.0));
+    vec4 corners = base + vec4(0.0, 57.0, 113.0, 170.0);
+    vec4 values = mix(fract(sin(corners) * 4375.54), fract(sin(corners + 1.0) * 4375.54), f.x);
+    return mix(mix(values.x, values.y, f.y), mix(values.z, values.w, f.y), f.z);
+}
 
 void vertex() {
     hull_normal = normalize(MODEL_NORMAL_MATRIX * NORMAL);
@@ -28,6 +39,13 @@ void fragment() {
     vec3 reflect_dir = reflect(-eye, n);
     float sky_band = smoothstep(-0.12, 0.08, reflect_dir.y) * (1.0 - smoothstep(0.28, 0.57, reflect_dir.y));
     vec3 paint = COLOR.rgb;
+    if (weathered && finish < 0.40) {
+        float deposit = surface_grain(local_position * vec3(2.6, 0.68, 2.6));
+        float coarse = surface_grain(local_position * 0.75);
+        float detail = 1.0 - smoothstep(0.025, 0.22, length(fwidth(local_position)));
+        paint *= 0.77 + 0.42 * coarse;
+        paint *= mix(1.0, 0.75 + 0.40 * deposit, detail);
+    }
     // glTF COLOR_0 is linear. Compatibility writes its unshaded result to sRGB.
     vec3 color = paint * (0.34 + 0.76 * max(0.0, dot(n, key)) + 0.14 * max(n.y, 0.0));
     color += vec3(0.66, 0.82, 0.97) * (shine * (0.13 + 0.38 * metal) + rim * (0.035 + 0.12 * glass));

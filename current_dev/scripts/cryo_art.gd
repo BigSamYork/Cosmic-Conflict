@@ -17,33 +17,10 @@ static func warm_cache() -> void:
 		rock.free()
 
 static func ice_pylon() -> Node3D:
-	var cached: Node3D = VectorArt.cached_model("cryo_pylon")
-	if cached != null:
-		return cached
-	var batch := GeometryBatch.new()
-	batch.box(Vector3(0, -4.9, 0), Vector3(3.2, 1.2, 4), VectorArt.AMBER, HULL)
-	batch.crystal(Vector3(0, -4.3, 0), 1.55, 9.8, ICE)
-	for side in [-1.0, 1.0]:
-		batch.crystal(Vector3(side * 1.0, -4.3, 0.7), 0.55, 5.2, STEEL)
-	return VectorArt.remember_model("cryo_pylon", batch.build())
+	return GroundArt.tower("cryo")
 
 static func tank_base() -> Node3D:
-	var cached: Node3D = VectorArt.cached_model("cryo_tank")
-	if cached != null:
-		return cached
-	var batch := GeometryBatch.new()
-	batch.box(Vector3(0, 0.45, 0), Vector3(4.5, 1.8, 6), ICE, HULL)
-	for side in [-1.0, 1.0]:
-		batch.box(Vector3(side * 2.7, -0.15, 0), Vector3(1.0, 1.8, 7.6), STEEL, Color("#101d30"))
-		for i in range(5):
-			var ring := PackedVector3Array()
-			for point in range(12):
-				var angle: float = point * TAU / 12
-				ring.append(Vector3(side * 3.22, -0.15 + sin(angle) * 0.64, -2.7 + i * 1.35 + cos(angle) * 0.64))
-			batch.outline(ring, ICE)
-		for i in range(4):
-			batch.box(Vector3(side * 1.8, 1.4, -2.2 + i * 1.4), Vector3(0.75, 0.18, 0.55), STEEL, Color("#37556c"))
-	return VectorArt.remember_model("cryo_tank", batch.build())
+	return FleetArt.model("mount_cryo", "ground")
 
 static func fighter() -> Node3D:
 	return FleetArt.model("cryo")
