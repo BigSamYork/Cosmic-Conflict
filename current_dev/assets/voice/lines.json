@@ -1,0 +1,137 @@
+{
+  "voice": "Microsoft Zira Desktop",
+  "language": "en-US",
+  "sections": [
+    {
+      "id": "reactor",
+      "title": "Reactor Routing & Power Allocation",
+      "lines": [
+        {"id":"reactor_01","event":"reactor_weapons","added":false,"chance_percent":100,"cooldown_seconds":0,"text":"Overclocking lasers. Remember, aiming is still your responsibility."},
+        {"id":"reactor_02","event":"reactor_weapons","added":false,"chance_percent":100,"cooldown_seconds":0,"text":"Maximum power to weapons. Accuracy not guaranteed, but it will look spectacular."},
+        {"id":"reactor_03","event":"reactor_shields","added":false,"chance_percent":100,"cooldown_seconds":0,"text":"Rerouting power to shields. Please hold your breath to conserve auxiliary life support."},
+        {"id":"reactor_04","event":"reactor_shields","added":false,"chance_percent":100,"cooldown_seconds":0,"text":"Shield reinforcement active. Cowardice setting: Optimized."},
+        {"id":"reactor_05","event":"reactor_engines","added":false,"chance_percent":100,"cooldown_seconds":0,"text":"Thrusters boosted. Enjoy going faster toward the obstacles you were trying to avoid."},
+        {"id":"reactor_06","event":"reactor_engines","added":false,"chance_percent":100,"cooldown_seconds":0,"text":"Maximum steering response. Try not to overcorrect us into a canyon wall."},
+        {"id":"reactor_07","event":"reactor_balanced","added":false,"chance_percent":100,"cooldown_seconds":0,"text":"Reactor balanced. Disappointing all subsystems equally."},
+        {"id":"reactor_08","event":"reactor_balanced","added":false,"chance_percent":100,"cooldown_seconds":0,"text":"Power distributed evenly. Perfect symmetry for average performance."},
+        {"id":"reactor_09","event":"reactor_routing","added":false,"chance_percent":100,"cooldown_seconds":0,"text":"Shifting power grids. Warning: Cockpit cup holder heater now offline."},
+        {"id":"reactor_10","event":"reactor_routing","added":false,"chance_percent":100,"cooldown_seconds":0,"text":"Diverting power. Do not touch any buttons that feel abnormally warm."},
+        {"id":"reactor_11","event":"reactor_routing","added":true,"chance_percent":100,"cooldown_seconds":0,"text":"Power rerouted. The coffee machine has filed a formal complaint."},
+        {"id":"reactor_12","event":"reactor_shields","added":true,"chance_percent":100,"cooldown_seconds":0,"text":"Shield power increased. A bold investment in not becoming debris."},
+        {"id":"reactor_13","event":"reactor_engines","added":true,"chance_percent":100,"cooldown_seconds":0,"text":"Engines prioritized. I have reduced the turning circle, not the consequences."}
+      ]
+    },
+    {
+      "id": "weapons",
+      "title": "Overheating & Weapon Management",
+      "lines": [
+        {"id":"weapons_01","event":"overheat","added":false,"chance_percent":100,"cooldown_seconds":0,"text":"Primary lockout active. I hope you practiced your evasive side-dash."},
+        {"id":"weapons_02","event":"overheat","added":false,"chance_percent":100,"cooldown_seconds":0,"text":"We are overheating. Releasing the primary trigger is free, you know."},
+        {"id":"weapons_03","event":"overheat","added":false,"chance_percent":100,"cooldown_seconds":0,"text":"Weapon systems thermal limit reached. Two seconds of meditative silence initiated."},
+        {"id":"weapons_04","event":"overheat","added":false,"chance_percent":100,"cooldown_seconds":0,"text":"Heat at one hundred percent. Cooling down. Please use this time to reflect on your trigger-happy life."},
+        {"id":"weapons_05","event":"cooling","added":false,"chance_percent":100,"cooldown_seconds":0,"text":"Weapons cooled. Try to fire in bursts, or don't. I enjoy the quiet time during lockouts."},
+        {"id":"weapons_06","event":"primary_tachyon","added":false,"chance_percent":100,"cooldown_seconds":0,"text":"Tachyon Beam Cannon online. Continuous beam, wider footprint, same terrible accuracy."},
+        {"id":"weapons_07","event":"primary_quad","added":false,"chance_percent":100,"cooldown_seconds":0,"text":"Quad Plasma Repeaters selected. Remember to lead your targets; they do not wish to be hit."},
+        {"id":"weapons_08","event":"primary_pulse","added":false,"chance_percent":100,"cooldown_seconds":0,"text":"Baseline Twin Pulse selected. Reliable, precise, and completely free of upgrade fees."},
+        {"id":"weapons_09","event":"overheat","added":true,"chance_percent":100,"cooldown_seconds":0,"text":"Thermal lockout. Our lasers have requested a brief vacation."},
+        {"id":"weapons_10","event":"cooling","added":true,"chance_percent":100,"cooldown_seconds":0,"text":"Weapons cooled. Short bursts remain an available lifestyle choice."},
+        {"id":"weapons_11","event":"primary_quad","added":true,"chance_percent":100,"cooldown_seconds":0,"text":"Four plasma bolts per volley. Statistically, one should meet somebody."}
+      ]
+    },
+    {
+      "id": "streaks",
+      "title": "Combat Streaks & Performance",
+      "lines": [
+        {"id":"streaks_01","event":"streak_gain","added":false,"chance_percent":100,"cooldown_seconds":0,"text":"Combat multiplier active! Try not to scratch the paint; it resets the bonus."},
+        {"id":"streaks_02","event":"streak_break","added":false,"chance_percent":100,"cooldown_seconds":0,"text":"Hull damage detected. Streak broken. There goes my commission."},
+        {"id":"streaks_03","event":"streak_ten","added":false,"chance_percent":100,"cooldown_seconds":0,"text":"Ten-kill streak! Four-times credit multiplier! Please survive long enough to spend them."},
+        {"id":"streaks_04","event":"streak_gain","added":false,"chance_percent":100,"cooldown_seconds":0,"text":"Combat streak rising. Our financial department is starting to respect you."},
+        {"id":"streaks_05","event":"interception","added":false,"chance_percent":100,"cooldown_seconds":0,"text":"Threat intercepted. My sensors are thoroughly unimpressed but functionally relieved."},
+        {"id":"streaks_06","event":"streak_gain","added":true,"chance_percent":100,"cooldown_seconds":0,"text":"Bonus multiplier increased. Apparently panic can be profitable."},
+        {"id":"streaks_07","event":"streak_break","added":true,"chance_percent":100,"cooldown_seconds":0,"text":"Streak terminated. The accounting department would like a word."},
+        {"id":"streaks_08","event":"interception","added":true,"chance_percent":100,"cooldown_seconds":0,"text":"Missile intercepted. That was almost an unscheduled interior renovation."}
+      ]
+    },
+    {
+      "id": "damage",
+      "title": "Shield Damage & Hull Warnings",
+      "lines": [
+        {"id":"damage_01","event":"shields_empty","added":false,"chance_percent":100,"cooldown_seconds":0,"text":"Shields depleted. Initiating prayer protocols."},
+        {"id":"damage_02","event":"shields_regen","added":false,"chance_percent":100,"cooldown_seconds":0,"text":"Shields recharging. Please refrain from getting hit for the next few seconds."},
+        {"id":"damage_03","event":"hull_damage","added":false,"chance_percent":100,"cooldown_seconds":0,"text":"Minor hull damage. This ship is leased, you know."},
+        {"id":"damage_04","event":"hull_critical","added":false,"chance_percent":100,"cooldown_seconds":0,"text":"Hull integrity critical. I would advise checking the resale value of our ejector seat."},
+        {"id":"damage_05","event":"hull_damage","added":false,"chance_percent":100,"cooldown_seconds":0,"text":"Structural compromise detected. That sounded expensive."},
+        {"id":"damage_06","event":"shields_empty","added":true,"chance_percent":100,"cooldown_seconds":0,"text":"Shields exhausted. The hull has reluctantly accepted responsibility."},
+        {"id":"damage_07","event":"hull_critical","added":true,"chance_percent":100,"cooldown_seconds":0,"text":"Hull integrity critical. Please stop negotiating with incoming fire."},
+        {"id":"damage_08","event":"shields_regen","added":true,"chance_percent":100,"cooldown_seconds":0,"text":"Shield recovery underway. A short period without explosions would be appreciated."}
+      ]
+    },
+    {
+      "id": "hazards",
+      "title": "Planetary Hazards & Environments",
+      "lines": [
+        {"id":"hazards_01","event":"ignis_arrival","added":false,"chance_percent":100,"cooldown_seconds":0,"text":"Ignis Prime volcanic activity detected. Lava is hot. Just in case your eyes were offline."},
+        {"id":"hazards_02","event":"ignis_vent","added":false,"chance_percent":100,"cooldown_seconds":0,"text":"High ambient thermal levels. Venting weapon heat is going to be a leisurely affair."},
+        {"id":"hazards_03","event":"frost_hit","added":false,"chance_percent":100,"cooldown_seconds":0,"text":"Extreme cold detected. Steering response reduced by thirty-five percent. Drifting is cool, but not into glaciers."},
+        {"id":"hazards_04","event":"frost_hit","added":false,"chance_percent":100,"cooldown_seconds":0,"text":"Frost impact! Hydraulics frozen. Turning speed restricted. Enjoy the scenic route."},
+        {"id":"hazards_05","event":"vespera_arrival","added":false,"chance_percent":100,"cooldown_seconds":0,"text":"City transit lanes ahead. Please do not attempt to park in the moving laser gates."},
+        {"id":"hazards_06","event":"laser_gate","added":false,"chance_percent":100,"cooldown_seconds":0,"text":"Laser gate sequence active. Reminding pilot: the center is safe, the edges are dissecting."},
+        {"id":"hazards_07","event":"stealth_fighter","added":false,"chance_percent":100,"cooldown_seconds":0,"text":"Stealth signature detected. Swarm rockets are currently experiencing an existential crisis."},
+        {"id":"hazards_08","event":"nyx_cloak","added":false,"chance_percent":100,"cooldown_seconds":0,"text":"Target cloaked. I suggest using an EMP Nova, or just firing blindly and hoping for a miracle."},
+        {"id":"hazards_09","event":"xylo_arrival","added":false,"chance_percent":100,"cooldown_seconds":0,"text":"Approaching Xylo-Mire. Corrosive geysers active. Do not roll down the cockpit windows."},
+        {"id":"hazards_10","event":"xylo_spores","added":false,"chance_percent":100,"cooldown_seconds":0,"text":"Spore density rising. Radar visibility degraded. The green glow is normal. Mostly."},
+        {"id":"hazards_11","event":"xylo_acid","added":true,"chance_percent":100,"cooldown_seconds":0,"text":"Acid spray detected. Our warranty specifically excludes being marinated."},
+        {"id":"hazards_12","event":"xylo_hive","added":true,"chance_percent":100,"cooldown_seconds":0,"text":"Hive Mothers ahead. Please resist the urge to ring every doorbell."},
+        {"id":"hazards_13","event":"xylo_egg","added":true,"chance_percent":100,"cooldown_seconds":0,"text":"Egg-shaped contacts detected. Scrambling them may attract the parents."}
+      ]
+    },
+    {
+      "id": "ordnance",
+      "title": "Secondary Ordnance, Chaff & Flares",
+      "lines": [
+        {"id":"ordnance_01","event":"ordnance_swarm","added":false,"chance_percent":100,"cooldown_seconds":0,"text":"Swarm Rockets primed. Warning: Homing rockets still require you to face the target."},
+        {"id":"ordnance_02","event":"ordnance_emp","added":false,"chance_percent":100,"cooldown_seconds":0,"text":"EMP Nova ready. Clearing local missile locks. Stunned systems will recover before your anxiety does."},
+        {"id":"ordnance_03","event":"ordnance_concussion","added":false,"chance_percent":100,"cooldown_seconds":0,"text":"Concussion missile loaded. Good for knocking sense into heavy gunships."},
+        {"id":"ordnance_04","event":"flare_deployed","added":false,"chance_percent":100,"cooldown_seconds":0,"text":"Flare deployed. Missile diverted. Go play with the bright light, little threat."},
+        {"id":"ordnance_05","event":"flare_cooldown","added":false,"chance_percent":100,"cooldown_seconds":0,"text":"Countermeasures on cooldown. You have a few seconds to think about your life choices."},
+        {"id":"ordnance_06","event":"ordnance_empty","added":false,"chance_percent":100,"cooldown_seconds":0,"text":"Secondary ammunition depleted. I can offer you some moral support, but it deals zero damage."},
+        {"id":"ordnance_07","event":"ordnance_swarm","added":true,"chance_percent":100,"cooldown_seconds":0,"text":"Swarm rockets away. Finally, a weapon willing to help with the aiming."},
+        {"id":"ordnance_08","event":"ordnance_emp","added":true,"chance_percent":100,"cooldown_seconds":0,"text":"EMP discharged. Nearby electronics are reconsidering their career choices."},
+        {"id":"ordnance_09","event":"ordnance_empty","added":true,"chance_percent":100,"cooldown_seconds":0,"text":"Ordnance bay empty. Harsh language remains unlimited."}
+      ]
+    },
+    {
+      "id": "recovery",
+      "title": "Ejection, Recovery, & Astra Market",
+      "lines": [
+        {"id":"recovery_01","event":"ejection","added":false,"chance_percent":100,"cooldown_seconds":0,"text":"Ejection sequence active! See you at Astra Market! Your upgrades will not be joining us."},
+        {"id":"recovery_02","event":"recovery","added":false,"chance_percent":100,"cooldown_seconds":0,"text":"Ejection successful. Pilot recovered. Upgrades vaporized. Wallet remains intact, thankfully."},
+        {"id":"recovery_03","event":"rescue_purchased","added":false,"chance_percent":100,"cooldown_seconds":0,"text":"Welcome to the Rescue Skiff. It has room for three ordnance units, weak plating, and smells like desperation."},
+        {"id":"recovery_04","event":"rescue_launch","added":false,"chance_percent":100,"cooldown_seconds":0,"text":"Launching in the Rescue Skiff. This is what happens when you spend your last credit on cockpit decals."},
+        {"id":"recovery_05","event":"upgrade","added":false,"chance_percent":100,"cooldown_seconds":0,"text":"New hardware installed. Let us see how quickly you can destroy this upgrade."},
+        {"id":"recovery_06","event":"docking","added":false,"chance_percent":100,"cooldown_seconds":0,"text":"Autodocking complete. Welcome back to Astra Market. Repairs are free; counseling is extra."},
+        {"id":"recovery_07","event":"ejection","added":true,"chance_percent":100,"cooldown_seconds":0,"text":"Emergency extraction authorized. We are keeping the pilot and editing the ship out."},
+        {"id":"recovery_08","event":"upgrade","added":true,"chance_percent":100,"cooldown_seconds":0,"text":"Upgrade installed. Your survival odds have improved on paper."},
+        {"id":"recovery_09","event":"docking","added":true,"chance_percent":100,"cooldown_seconds":0,"text":"Docking complete. Complimentary repairs. Complimentary judgment."}
+      ]
+    },
+    {
+      "id": "routes",
+      "title": "Easy and Hard Route Choices",
+      "lines": [
+        {"id":"routes_01","event":"route_easy","added":true,"chance_percent":25,"cooldown_seconds":0,"text":"Safe route selected. An inspiring victory for basic risk assessment."},
+        {"id":"routes_02","event":"route_easy","added":true,"chance_percent":25,"cooldown_seconds":0,"text":"Taking the easy route. I have informed the insurance company of this historic development."},
+        {"id":"routes_03","event":"route_easy","added":true,"chance_percent":25,"cooldown_seconds":0,"text":"Standard corridor confirmed. We can admire the explosions from a financially responsible distance."},
+        {"id":"routes_04","event":"route_easy","added":true,"chance_percent":25,"cooldown_seconds":0,"text":"Easy route locked. Apparently survival is part of the strategy today."},
+        {"id":"routes_05","event":"route_easy","added":true,"chance_percent":25,"cooldown_seconds":0,"text":"Avoiding the hazard trench. A rare example of learning without an explosion."},
+        {"id":"routes_06","event":"route_easy","added":true,"chance_percent":25,"cooldown_seconds":0,"text":"Safe route it is. The hull has sent a thank-you note."},
+        {"id":"routes_07","event":"route_hard","added":true,"chance_percent":25,"cooldown_seconds":0,"text":"Hazard route selected. I will start drafting the expense report."},
+        {"id":"routes_08","event":"route_hard","added":true,"chance_percent":25,"cooldown_seconds":0,"text":"Taking the narrow trench. More rewards, less room for your usual creative steering."},
+        {"id":"routes_09","event":"route_hard","added":true,"chance_percent":25,"cooldown_seconds":0,"text":"Hard route confirmed. The repair crew has canceled its lunch break."},
+        {"id":"routes_10","event":"route_hard","added":true,"chance_percent":25,"cooldown_seconds":0,"text":"Hazard corridor locked. Confidence detected. Supporting evidence remains inconclusive."},
+        {"id":"routes_11","event":"route_hard","added":true,"chance_percent":25,"cooldown_seconds":0,"text":"Extra defenses ahead. You really do consider warning signs a personal invitation."},
+        {"id":"routes_12","event":"route_hard","added":true,"chance_percent":25,"cooldown_seconds":0,"text":"Hard route selected. Please collect the supplies before becoming one."}
+      ]
+    }
+  ]
+}

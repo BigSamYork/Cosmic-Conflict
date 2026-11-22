@@ -1,0 +1,6 @@
+.tools/
+current_dev/.godot/
+releases/
+versions/
+*.tmp
+*.log

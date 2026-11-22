@@ -1,0 +1,53 @@
+{
+	"generator": "original ambient score v1",
+	"generator_sha256": "a40c345c7e8fddfc0aafea7f47a47d6b464f23175fb4a68b0c8a250fff24f231",
+	"sample_rate": 22050,
+	"seconds": 64.0,
+	"tracks": [
+		{
+			"bytes": 5644844,
+			"id": "station",
+			"sha256": "ff78098037d96cc384859b671b97a11b77d74a703823e117df8c8de45bac5a63"
+		},
+		{
+			"bytes": 5644844,
+			"id": "ignis",
+			"sha256": "1f46d182060ad9a433f0657f9db2779b49ba6e8c6f21970be542a64a962deda1"
+		},
+		{
+			"bytes": 5644844,
+			"id": "cryo",
+			"sha256": "b56dd5724afa8e7316cc9b3defe9ea573be0efc0ca1bffa82e3fed9b74c45dad"
+		},
+		{
+			"bytes": 5644844,
+			"id": "vespera",
+			"sha256": "6e03d9bf7c43f3caa0776a362b6c070c0ef6cd12aca1d4f96f1a18aa58adf9ee"
+		},
+		{
+			"bytes": 5644844,
+			"id": "xylo",
+			"sha256": "feb5c1a0f141eb87673645418d36cbadf481f4ebf9fb5581975095d7f8cd4c01"
+		},
+		{
+			"bytes": 5644844,
+			"id": "thalassa",
+			"sha256": "87243595c9ed149cdc91d6fb10a480d3922f975e6391dc929c541bd01bfc52f4"
+		},
+		{
+			"bytes": 5644844,
+			"id": "kharon",
+			"sha256": "60915c1365646807c7259677f6ec2a2e903fbbfd13dd96bd1ad3447dba61a19a"
+		},
+		{
+			"bytes": 5644844,
+			"id": "travel",
+			"sha256": "fc4e42dbbb1994b033d291d9a0d16b6fa47decd3908bb3d1292be1f27b1d860f"
+		},
+		{
+			"bytes": 5644844,
+			"id": "boss",
+			"sha256": "0ae669e58ec75379c1805b19d7b0a6cbb777406a1effcf53a6bed5148997f067"
+		}
+	]
+}

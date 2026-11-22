@@ -1,0 +1,33 @@
+Cosmic Conflict
+
+Procedural game geometry, live HUD graphics, shaders and synthesized sound
+effects were created for this project. The cockpit and gun-upgrade bitmaps were
+supplied by the project owner for integration; rights to those images remain
+with their creator.
+The project owner confirms that these images may be redistributed with the game.
+No recordings, music, or models from the historical reference games are included.
+
+The nine ambient soundtrack compositions and stereo recordings are original
+procedural works generated for this project by tools/generate-music.gd.
+They use synthesized oscillators, not third-party samples or borrowed melodies.
+No external music service or runtime download is required.
+
+Computer dialogue combines text supplied by the project owner with original
+additional lines. The offline recordings were synthesized locally using the
+Microsoft Zira Desktop voice, with in-game electronic/radio processing.
+The Windows speech engine and voice-engine binaries are not redistributed.
+Review all platform/tool terms before wider commercial distribution.
+
+This game uses Godot Engine under the MIT license.
+https://godotengine.org/license
+
+The game includes Godot's engine license and its third-party license information
+in the briefing screen's "Credits & Licenses" panel, sourced directly from the
+runtime via Engine.get_license_text(), Engine.get_copyright_info(), and
+Engine.get_license_info().
+
+No external asset packs or fonts have been added. The game uses the engine's
+bundled fallback font. Godot's third-party notices cover bundled components.
+
+The Windows installer is compiled using Inno Setup.
+https://jrsoftware.org/isinfo.php

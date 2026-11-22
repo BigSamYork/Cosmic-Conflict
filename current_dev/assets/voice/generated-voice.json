@@ -1,0 +1,589 @@
+{
+  "catalog_sha256": "D47E5E275527D4C7AA4700A4072D14C71F74E114B2EE7B11B9CF4E035FBA1554",
+  "rate": 22050,
+  "clips": [
+    {
+      "id": "reactor_01",
+      "bytes": 225122,
+      "seconds": 5.104,
+      "text_sha256": "63fa6124bc7b919a91fbc12f5f38e8f384fa8d9828d72a670075b9d22c061063",
+      "event": "reactor_weapons"
+    },
+    {
+      "id": "reactor_02",
+      "bytes": 259944,
+      "seconds": 5.893,
+      "text_sha256": "8ab653e52ae74311ed8f888f0a99c7c59848d1119be05d597f7635414ad68b42",
+      "event": "reactor_weapons"
+    },
+    {
+      "id": "reactor_03",
+      "bytes": 246278,
+      "seconds": 5.583,
+      "text_sha256": "1fc70b3ca6b839d280c64bb247092495748ee71272d222e7912ceb9fdf1a7e8f",
+      "event": "reactor_shields"
+    },
+    {
+      "id": "reactor_04",
+      "bytes": 212112,
+      "seconds": 4.809,
+      "text_sha256": "d7e27092af732588e19311663124569646a0ad0ff2aca7c1821bc3e1033353c2",
+      "event": "reactor_shields"
+    },
+    {
+      "id": "reactor_05",
+      "bytes": 235700,
+      "seconds": 5.344,
+      "text_sha256": "880bb79730a3517f348ed1f7191379c66c42609ff5e135320b31bb0f4913bee9",
+      "event": "reactor_engines"
+    },
+    {
+      "id": "reactor_06",
+      "bytes": 227768,
+      "seconds": 5.164,
+      "text_sha256": "a18003e50b9ba03bfeb250906870ff0d7633c3f0810ec81157acbdbba45a05dd",
+      "event": "reactor_engines"
+    },
+    {
+      "id": "reactor_07",
+      "bytes": 186750,
+      "seconds": 4.234,
+      "text_sha256": "f12d1d5a644ce928c4db4dbca2336eac8832baaca75375acb29bf0333200291e",
+      "event": "reactor_balanced"
+    },
+    {
+      "id": "reactor_08",
+      "bytes": 207254,
+      "seconds": 4.699,
+      "text_sha256": "41ae7600e916414d40177880268255cc5275745d5ba08f3d775f939692b02787",
+      "event": "reactor_balanced"
+    },
+    {
+      "id": "reactor_09",
+      "bytes": 239890,
+      "seconds": 5.439,
+      "text_sha256": "0fae029066fa7aa774b8432beded52278057d35f7bbcf6ce5a89ef20cce71134",
+      "event": "reactor_routing"
+    },
+    {
+      "id": "reactor_10",
+      "bytes": 205712,
+      "seconds": 4.664,
+      "text_sha256": "491a40e1444f1e4682b1d3fe09a8f145ca8b8c0de0793faf1545638362032fa5",
+      "event": "reactor_routing"
+    },
+    {
+      "id": "reactor_11",
+      "bytes": 201308,
+      "seconds": 4.564,
+      "text_sha256": "5400377e57b1642e5a982156e3493cb823a3330721528a322b5ecf28d6cd1274",
+      "event": "reactor_routing"
+    },
+    {
+      "id": "reactor_12",
+      "bytes": 207034,
+      "seconds": 4.694,
+      "text_sha256": "3be68821669f108869112c7a789bc4cbf52c96c672692c2c91ff142e8bac279e",
+      "event": "reactor_shields"
+    },
+    {
+      "id": "reactor_13",
+      "bytes": 248050,
+      "seconds": 5.624,
+      "text_sha256": "85ba7d8201ae0b36a5b0d7d1500332ae4c6b01d640fd4922ef44b1a02230f691",
+      "event": "reactor_engines"
+    },
+    {
+      "id": "weapons_01",
+      "bytes": 218726,
+      "seconds": 4.959,
+      "text_sha256": "cdc3492d61464b9cc12af84d5522f48d610b9d7f7b1b7c2223fa93f95e9a2ef8",
+      "event": "overheat"
+    },
+    {
+      "id": "weapons_02",
+      "bytes": 216962,
+      "seconds": 4.919,
+      "text_sha256": "ea7b79fd4231aa1b55ba14efa686e838d2e370da4adcce9188f882226e8e3d51",
+      "event": "overheat"
+    },
+    {
+      "id": "weapons_03",
+      "bytes": 234810,
+      "seconds": 5.323,
+      "text_sha256": "7516f1a146e8b7f8ca433487267a963e4158523bb7ff5388a8aefc544552bf41",
+      "event": "overheat"
+    },
+    {
+      "id": "weapons_04",
+      "bytes": 305582,
+      "seconds": 6.928,
+      "text_sha256": "4fed15ebcd859ade113ee2c68c3a021fabff216518b0342ed99f5dc784d070a3",
+      "event": "overheat"
+    },
+    {
+      "id": "weapons_05",
+      "bytes": 315294,
+      "seconds": 7.148,
+      "text_sha256": "b768898ad6c841ac7339f7e787c4c640d032d198eb167ce0d01fcda4318af55e",
+      "event": "cooling"
+    },
+    {
+      "id": "weapons_06",
+      "bytes": 288610,
+      "seconds": 6.543,
+      "text_sha256": "74081808bf6978e70b784c80c7b7f95bfd9ead691903f9a4fac511b12b5e3e64",
+      "event": "primary_tachyon"
+    },
+    {
+      "id": "weapons_07",
+      "bytes": 263694,
+      "seconds": 5.978,
+      "text_sha256": "14b6ebe86a9bfd04c57c9ea3a0bb194ce5400641513384739d772bcf77f086ae",
+      "event": "primary_quad"
+    },
+    {
+      "id": "weapons_08",
+      "bytes": 264142,
+      "seconds": 5.989,
+      "text_sha256": "8f8781300a3bbdfc0e4e0fbea64764792571eb5ba079b1c5222d0b53bed038d2",
+      "event": "primary_pulse"
+    },
+    {
+      "id": "weapons_09",
+      "bytes": 189624,
+      "seconds": 4.299,
+      "text_sha256": "dd4e9563275f34c1339cd45b759e708a4bf41a38c23792efae4d8eeed5a57abc",
+      "event": "overheat"
+    },
+    {
+      "id": "weapons_10",
+      "bytes": 205942,
+      "seconds": 4.669,
+      "text_sha256": "d084d81bac25540bfa89bd27d6ec69d76ec91b99e5dfb5db4e69e7c2d8782e42",
+      "event": "cooling"
+    },
+    {
+      "id": "weapons_11",
+      "bytes": 223354,
+      "seconds": 5.064,
+      "text_sha256": "ecb0534667fcbfe06832f266afffca8a7ac41588cef3ba4d46256e4627d2d8de",
+      "event": "primary_quad"
+    },
+    {
+      "id": "streaks_01",
+      "bytes": 251792,
+      "seconds": 5.709,
+      "text_sha256": "85cf00ce475fada51578b043823aa62e8b87177a0bc0181a9910c96b8baa72e9",
+      "event": "streak_gain"
+    },
+    {
+      "id": "streaks_02",
+      "bytes": 230188,
+      "seconds": 5.219,
+      "text_sha256": "2eb044ad6e226320eaeab20b54b4459d74db19ed1ab23fb01909d37a699e2cfe",
+      "event": "streak_break"
+    },
+    {
+      "id": "streaks_03",
+      "bytes": 281112,
+      "seconds": 6.373,
+      "text_sha256": "6e4bb684f19d6ad13c6d78365d430894664cc39f74c1294f024b49e7cf60cf79",
+      "event": "streak_ten"
+    },
+    {
+      "id": "streaks_04",
+      "bytes": 219606,
+      "seconds": 4.979,
+      "text_sha256": "1486357a30350526f34e263c84468c4be9c9b43c464023cec7339f93eeedec82",
+      "event": "streak_gain"
+    },
+    {
+      "id": "streaks_05",
+      "bytes": 228856,
+      "seconds": 5.188,
+      "text_sha256": "b3f7b0bd3e1ffc0a08275b981008e49c98a32f5f6212d29f5ff243e01ea45f81",
+      "event": "interception"
+    },
+    {
+      "id": "streaks_06",
+      "bytes": 207706,
+      "seconds": 4.709,
+      "text_sha256": "cae6f8bffe1ccf692b6256310f3197bcdc42ca02f0d02f69a89346c9766bd09f",
+      "event": "streak_gain"
+    },
+    {
+      "id": "streaks_07",
+      "bytes": 182570,
+      "seconds": 4.139,
+      "text_sha256": "faa4a3f8411341409d7b79c7a2114d2b5db5c1e8c08150229c611d08819d9225",
+      "event": "streak_break"
+    },
+    {
+      "id": "streaks_08",
+      "bytes": 218720,
+      "seconds": 4.959,
+      "text_sha256": "378096405b953fa627fde6ae4ea8b553b776e893cc80a90be1a25fe86f46e8d8",
+      "event": "interception"
+    },
+    {
+      "id": "damage_01",
+      "bytes": 175070,
+      "seconds": 3.969,
+      "text_sha256": "80ff589d3d5f5a87f550a2870cd8ce661fc44fe15de5a118c58f43d077313b65",
+      "event": "shields_empty"
+    },
+    {
+      "id": "damage_02",
+      "bytes": 224228,
+      "seconds": 5.083,
+      "text_sha256": "42df630da2d2a60816a1e67233f14056122cc07fc78a53893af9c3a8edc68b1a",
+      "event": "shields_regen"
+    },
+    {
+      "id": "damage_03",
+      "bytes": 184332,
+      "seconds": 4.179,
+      "text_sha256": "52c01794cdfad2d6003489f55a7696636dd29341b3cb99a1cc4681a2b0e28b5f",
+      "event": "hull_damage"
+    },
+    {
+      "id": "damage_04",
+      "bytes": 238562,
+      "seconds": 5.409,
+      "text_sha256": "8dbdd87687c9d870c22e41e34302d0d848bd74841bd223152e05b21667db5140",
+      "event": "hull_critical"
+    },
+    {
+      "id": "damage_05",
+      "bytes": 189404,
+      "seconds": 4.294,
+      "text_sha256": "bf53d3562823ca1b9ffe5b91500b2d2be940109eabe4e1a6030e7cc7106da631",
+      "event": "hull_damage"
+    },
+    {
+      "id": "damage_06",
+      "bytes": 212998,
+      "seconds": 4.829,
+      "text_sha256": "f66a708e0239ce807e32728858e0f5b2616b9bac38bcfb68605b5503564bbd7a",
+      "event": "shields_empty"
+    },
+    {
+      "id": "damage_07",
+      "bytes": 211884,
+      "seconds": 4.804,
+      "text_sha256": "bdb61b421a5c91ac8aab4675ae666336221e091862b14e3d90676f888876c3c0",
+      "event": "hull_critical"
+    },
+    {
+      "id": "damage_08",
+      "bytes": 233496,
+      "seconds": 5.294,
+      "text_sha256": "5b4711e81bdf2ab425db791aa1ea2be8ed58e1a0c6de8d066faa977878692018",
+      "event": "shields_regen"
+    },
+    {
+      "id": "hazards_01",
+      "bytes": 305590,
+      "seconds": 6.928,
+      "text_sha256": "3b4c1a4f76cedae47a093253f38a2eeabd30d0bac8a44410542da3f3094cb0cd",
+      "event": "ignis_arrival"
+    },
+    {
+      "id": "hazards_02",
+      "bytes": 229306,
+      "seconds": 5.199,
+      "text_sha256": "dbb555cfb9bda2163ef9a7bc97bf7a5d7c88c97316cea45f0ad5c09903520d17",
+      "event": "ignis_vent"
+    },
+    {
+      "id": "hazards_03",
+      "bytes": 360036,
+      "seconds": 8.163,
+      "text_sha256": "e46f40c4c7d39c6ae31407237fa0b767cce89ce72c146e7c689dc5d677d3bc46",
+      "event": "frost_hit"
+    },
+    {
+      "id": "hazards_04",
+      "bytes": 311106,
+      "seconds": 7.054,
+      "text_sha256": "668943fc2731e402c70d0b72f3bf9e1c7c6a8822b9203108acbdac1acf5e6205",
+      "event": "frost_hit"
+    },
+    {
+      "id": "hazards_05",
+      "bytes": 239664,
+      "seconds": 5.434,
+      "text_sha256": "5b5108b9879392c2beb5cfd6cca50612c8bcd050a0e89e497dc14988d3e2c088",
+      "event": "vespera_arrival"
+    },
+    {
+      "id": "hazards_06",
+      "bytes": 281554,
+      "seconds": 6.383,
+      "text_sha256": "b1249ef8065d7a629b621d5a62cd8fbb50929420043d694ed83cd59a50b2b3bc",
+      "event": "laser_gate"
+    },
+    {
+      "id": "hazards_07",
+      "bytes": 265236,
+      "seconds": 6.013,
+      "text_sha256": "ea4b27837795dcec3c2fbd4d79b5ef5bfe9b5ae819f2276bac4decd52be0580b",
+      "event": "stealth_fighter"
+    },
+    {
+      "id": "hazards_08",
+      "bytes": 297866,
+      "seconds": 6.753,
+      "text_sha256": "7e0bb3238d5083168e3f831073e3e833fa5929445b9bba8831033d57e9e90be8",
+      "event": "nyx_cloak"
+    },
+    {
+      "id": "hazards_09",
+      "bytes": 288390,
+      "seconds": 6.538,
+      "text_sha256": "2b54b8a04ea9246d8273ab1a41562fe3aaa7c4b27b9b69763c87775f53851601",
+      "event": "xylo_arrival"
+    },
+    {
+      "id": "hazards_10",
+      "bytes": 317714,
+      "seconds": 7.203,
+      "text_sha256": "48213381d9dc351a57ad581a7e0a80ed0a44f1856137b50bcb239469aaf2ba21",
+      "event": "xylo_spores"
+    },
+    {
+      "id": "hazards_11",
+      "bytes": 215628,
+      "seconds": 4.888,
+      "text_sha256": "e81394420467c9440a7809e6a2bd88b2681ab05deb34fb6adef2db7479f1f418",
+      "event": "xylo_acid"
+    },
+    {
+      "id": "hazards_12",
+      "bytes": 193810,
+      "seconds": 4.394,
+      "text_sha256": "71c51f6b97c53ee3b485a97fa340e6fd3937e5f1437b6a603865c457aafaaff0",
+      "event": "xylo_hive"
+    },
+    {
+      "id": "hazards_13",
+      "bytes": 212330,
+      "seconds": 4.814,
+      "text_sha256": "cf27daa5116a187101921cb6649378732f3d8d481d6bacd801a9957ec03d68bb",
+      "event": "xylo_egg"
+    },
+    {
+      "id": "ordnance_01",
+      "bytes": 256198,
+      "seconds": 5.808,
+      "text_sha256": "5aada52d5308a3757cf0c09f9cfbd8d6cb07fa2825ddcf942b43ed7fd7f6bf3d",
+      "event": "ordnance_swarm"
+    },
+    {
+      "id": "ordnance_02",
+      "bytes": 321240,
+      "seconds": 7.283,
+      "text_sha256": "f121518222e1aa1455a51dfe54a6b88c97ecaabc16c78ee89dce8438b93bed4e",
+      "event": "ordnance_emp"
+    },
+    {
+      "id": "ordnance_03",
+      "bytes": 201304,
+      "seconds": 4.564,
+      "text_sha256": "1428f3cf5f0f2dc1f82deaca33f7b8cd4a3660f86e62d9af120b1c2d9078a98c",
+      "event": "ordnance_concussion"
+    },
+    {
+      "id": "ordnance_04",
+      "bytes": 260400,
+      "seconds": 5.904,
+      "text_sha256": "b23ebefe4df428bfd4ebc6de83531be1b13a79b1f87ef0f15bd8eaf35122bcff",
+      "event": "flare_deployed"
+    },
+    {
+      "id": "ordnance_05",
+      "bytes": 241424,
+      "seconds": 5.473,
+      "text_sha256": "b6f488a12d449aaf3d310755d2bdcac66b0b19bae7b9c6a30dc433591fccd593",
+      "event": "flare_cooldown"
+    },
+    {
+      "id": "ordnance_06",
+      "bytes": 280894,
+      "seconds": 6.368,
+      "text_sha256": "4aa21fb126ea7c47159331ff05652662526095b97282b2430fd6724313b5e169",
+      "event": "ordnance_empty"
+    },
+    {
+      "id": "ordnance_07",
+      "bytes": 219382,
+      "seconds": 4.974,
+      "text_sha256": "6b189c97028a1d1df9f1c45ae413b5a9b3197e1eae5808dd44cdc3da31399f57",
+      "event": "ordnance_swarm"
+    },
+    {
+      "id": "ordnance_08",
+      "bytes": 233278,
+      "seconds": 5.289,
+      "text_sha256": "0e5c9aad5acbdcede0928c12318d24987d776f95eb6d7f36c0507906e4051393",
+      "event": "ordnance_emp"
+    },
+    {
+      "id": "ordnance_09",
+      "bytes": 182354,
+      "seconds": 4.134,
+      "text_sha256": "24ee85bfee9208156c797ee56469f7074a221d67f902aa65df682980da797cd6",
+      "event": "ordnance_empty"
+    },
+    {
+      "id": "recovery_01",
+      "bytes": 288170,
+      "seconds": 6.533,
+      "text_sha256": "6aefc1bd174ca7b016b096b88d41c1df1fc41c5017fdf5a3ed5b901b81e8e576",
+      "event": "ejection"
+    },
+    {
+      "id": "recovery_02",
+      "bytes": 358288,
+      "seconds": 8.123,
+      "text_sha256": "a75309510d4d0a591908d1b81353c22f57965e8cb10a4c4e87c905c698c78965",
+      "event": "recovery"
+    },
+    {
+      "id": "recovery_03",
+      "bytes": 287280,
+      "seconds": 6.513,
+      "text_sha256": "a7a4ab27cb74c58b7ab57d13c522eaa3711bd072b77879135221a4d621da8204",
+      "event": "rescue_purchased"
+    },
+    {
+      "id": "recovery_04",
+      "bytes": 266994,
+      "seconds": 6.053,
+      "text_sha256": "0f6dce1c53bdfa2271690901eed14aaec35ad8a24a0eb331e0e8bb7d902634bc",
+      "event": "rescue_launch"
+    },
+    {
+      "id": "recovery_05",
+      "bytes": 216962,
+      "seconds": 4.919,
+      "text_sha256": "640aed6a573be830c41569787e652c6a4718be601b2b9635bd6602c67c981888",
+      "event": "upgrade"
+    },
+    {
+      "id": "recovery_06",
+      "bytes": 309330,
+      "seconds": 7.013,
+      "text_sha256": "48abfd6f27ace7141ae1792229178c048deea1e9ce93f751e4c05104cbd785fb",
+      "event": "docking"
+    },
+    {
+      "id": "recovery_07",
+      "bytes": 238342,
+      "seconds": 5.404,
+      "text_sha256": "91bca739c00a3ee079aa52a3972a51207d9c1d6fadb3cfc96e2cf4e608e451fb",
+      "event": "ejection"
+    },
+    {
+      "id": "recovery_08",
+      "bytes": 188956,
+      "seconds": 4.284,
+      "text_sha256": "dd73df908201ed1022883720716a871c31113b6879ff1e848134319452e199a8",
+      "event": "upgrade"
+    },
+    {
+      "id": "recovery_09",
+      "bytes": 241868,
+      "seconds": 5.483,
+      "text_sha256": "8dc0885b14214505773ed398c58ff2cbe75e2a20afa4786c138f29bfb080b07a",
+      "event": "docking"
+    },
+    {
+      "id": "routes_01",
+      "bytes": 210782,
+      "seconds": 4.779,
+      "text_sha256": "7016bb5e4089464bb97c9c06e2a3903bb8eba91a60c99cb531d061efeca5f93d",
+      "event": "route_easy"
+    },
+    {
+      "id": "routes_02",
+      "bytes": 238792,
+      "seconds": 5.414,
+      "text_sha256": "3372cabfd4e16006e9c2d1085cb6e543372b2f02f2250994999693bbbd3b2e65",
+      "event": "route_easy"
+    },
+    {
+      "id": "routes_03",
+      "bytes": 270744,
+      "seconds": 6.138,
+      "text_sha256": "ef8e64db56b4f8beef5dc8a626261587101abd5e04bf29ac742926b11a6743e4",
+      "event": "route_easy"
+    },
+    {
+      "id": "routes_04",
+      "bytes": 207914,
+      "seconds": 4.714,
+      "text_sha256": "8294c363a71d2aa47adbf22403d64451e12ff43c84d8fc7497e011afc5a19f72",
+      "event": "route_easy"
+    },
+    {
+      "id": "routes_05",
+      "bytes": 215420,
+      "seconds": 4.884,
+      "text_sha256": "e1f80cb22c76074160533fea16f8c07d1a7fcab8e9842e97877eb89f11d805c2",
+      "event": "route_easy"
+    },
+    {
+      "id": "routes_06",
+      "bytes": 175738,
+      "seconds": 3.984,
+      "text_sha256": "a38d0213471fde14258bdad39eac5ff5ef40f847c4e8ba53111728bdabeae085",
+      "event": "route_easy"
+    },
+    {
+      "id": "routes_07",
+      "bytes": 196676,
+      "seconds": 4.459,
+      "text_sha256": "264889707cbadf8500198bc46aa8ecfb70848ef243d03682d3c75fe49436dd6d",
+      "event": "route_hard"
+    },
+    {
+      "id": "routes_08",
+      "bytes": 249590,
+      "seconds": 5.659,
+      "text_sha256": "fd7cd45f9b422eae2a22db548b090eebafd37d3894b6db1a8482ff441d1217e0",
+      "event": "route_hard"
+    },
+    {
+      "id": "routes_09",
+      "bytes": 199766,
+      "seconds": 4.529,
+      "text_sha256": "cb02705cccde25962936f7af70fb6cea8de16c588be1dd688b53ad7e8ca6ffe0",
+      "event": "route_hard"
+    },
+    {
+      "id": "routes_10",
+      "bytes": 281772,
+      "seconds": 6.388,
+      "text_sha256": "d338c86dd6c263434c2fe62705616c38efe626ce9aa6e59fabeba38069bced10",
+      "event": "route_hard"
+    },
+    {
+      "id": "routes_11",
+      "bytes": 238342,
+      "seconds": 5.404,
+      "text_sha256": "4a8653448715ae53d02bf6d6a367f91034b6c9e792611cb83882697bdcfe232c",
+      "event": "route_hard"
+    },
+    {
+      "id": "routes_12",
+      "bytes": 200422,
+      "seconds": 4.544,
+      "text_sha256": "f935fcaa734cb14df72f0b1f2b811115a622543d77c24c230ab6204d622f35a4",
+      "event": "route_hard"
+    }
+  ],
+  "channels": 1,
+  "voice": "Microsoft Zira Desktop"
+}
