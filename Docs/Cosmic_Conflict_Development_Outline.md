@@ -63,7 +63,7 @@ Title/trademark clearance remains a distribution task.
 | Pilot systems | DELIVERED: heat, cooling, reactor routing, banking side-dash, combat streaks |
 | Tactical equipment | DELIVERED: Concussion, Swarm, EMP, tactical selection and separate chaff/flares |
 | Encounters | DELIVERED: branches/supplies, radars/webs, thermal/frost/acid/spore hazards, warned shootable falling ice, gates, cloaking, drones, salvage and optional pirates/guardians |
-| Presentation | DELIVERED: six original environments, biological hive/egg fleet, curved opaque arrivals, animated station, original-color breakup, computer speech and nine original ambient tracks |
+| Presentation | Six environments, biological hive/egg fleet, curved opaque arrivals, animated station, original-color breakup, computer speech and nine credited Kevin MacLeod recordings |
 | Progression | DELIVERED: six-world tours, preserved four-world records, Rook/Hawk, two purchasable player battleships, rescue, upgrades, saves and debriefs |
 | Weapons | DELIVERED: Twin Pulse, travelling Quad Plasma and a continuous wider/brighter piercing Tachyon Beam |
 | Campaign/endgame | DELIVERED: tour/lifetime statistics, ranks/medals, local Hall of Fame, resumable retirement and capped-health repeat tours |
@@ -89,8 +89,8 @@ Title/trademark clearance remains a distribution task.
 | F11 | Fullscreen toggle |
 
 Six live cockpit instruments show objectives, timers, damage, ammunition,
-heat, radar, warnings and credits. Rook Scout and Vector Hawk use their supplied
-cockpit variants, as do the Aegis Titan and Nova Bastion player battleships.
+heat, radar, warnings and credits. All five flyable ships use individual
+canopy frames, exterior paint colors and views of their Blender-built hulls.
 Instrument textures refresh at 30 Hz; aiming and world
 rendering remain full-rate.
 
@@ -579,11 +579,10 @@ radar-triggered supply caches were explicitly not selected for this pass.
   The nominal centerline stays clear; pause freezes warning and falling motion.
   Shooting, translated/rotated courses, actual downward motion and stage cleanup
   are verified. No ice is added to training or other planets.
-- **Ambient score:** seven original, locally synthesized 64-second stereo loops
-  cover Astra, the four sectors, travel and restrained boss pressure. No
-  third-party music or samples are used. Playback uses four-second crossfades,
-  independent volume, pause/mute and speech ducking. Stable playback avoids
-  repeatedly writing unchanged audio state every rendered frame.
+- The soundtrack uses nine Kevin MacLeod recordings. The opening, title,
+  market and six worlds have individual themes. Each world keeps its track
+  across combat and travel. Playback supports four-second crossfades, an
+  independent volume control, pause, mute and speech ducking.
 - **Dense-field efficiency:** preserve rock count, five-times scale, shapes,
   craters, spin rates and finite clearance. Conservative static bounds cover
   complete tumbling envelopes; giant instances are grouped spatially for
@@ -739,7 +738,7 @@ the selected desktop shortcut but preserves saves, preferences and records.
 | Cached geometry, vector edges and breakup | `vector_art.gd`, `geometry_batch.gd`, breakup scripts/shader |
 | Cockpit, market and station | `hud.gd`, `cockpit_instruments.gd`, `station_hangar.gd` |
 | Computer speech and editable dialogue | `computer_voice.gd`, `voice_policy.gd`, `assets/voice/lines.json`, `generate-voice.ps1` |
-| Original ambient music and native audio controls | `ambient_music.gd`, `assets/music/`, `generate-music.gd` |
+| Soundtrack, recorded destruction effects and audio controls | `ambient_music.gd`, `assets/music/credits.txt`, `prepare_game_audio.py` |
 | Isolated installer lifecycle and source backup | `validate-installer.ps1`, `archive-source.ps1` |
 
 Use the existing state/economy/render helpers rather than duplicate logic.

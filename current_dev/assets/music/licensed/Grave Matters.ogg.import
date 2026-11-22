@@ -1,0 +1,19 @@
+[remap]
+
+importer="oggvorbisstr"
+type="AudioStreamOggVorbis"
+uid="uid://cliyni4ospm3t"
+path="res://.godot/imported/Grave Matters.ogg-d4841e8c85a9827baad6c752bee90807.oggvorbisstr"
+
+[deps]
+
+source_file="res://assets/music/licensed/Grave Matters.ogg"
+dest_files=["res://.godot/imported/Grave Matters.ogg-d4841e8c85a9827baad6c752bee90807.oggvorbisstr"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

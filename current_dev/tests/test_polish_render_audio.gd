@@ -29,13 +29,14 @@ func run() -> void:
 func verify_audio() -> void:
 	var music := AmbientMusic.new()
 	root.add_child(music)
+	music.request_scene("station")
 	music.set_level(70, false)
 	var bus: int = AudioServer.get_bus_index(music.bus_name)
 	var recording := AudioEffectRecord.new()
 	AudioServer.add_bus_effect(bus, recording)
 	recording.set_recording_active(true)
 	await create_timer(5).timeout
-	check(music.failure_message.is_empty() and music.players[music.active].playing and music.players[music.active].get_playback_position() > 4, "The original station soundtrack produces real native playback")
+	check(music.failure_message.is_empty() and music.players[music.active].stream.resource_path.ends_with("Look Busy.ogg") and music.players[music.active].get_playback_position() > 4, "Astra Market plays Look Busy")
 	var peak: float = AudioServer.get_bus_peak_volume_left_db(bus, 0)
 	check(peak > -60 and peak < -10, "Native soundtrack signal is restrained rather than silent or clipped (%.2fdB)" % peak)
 	music.request_scene("cryo")
@@ -60,16 +61,17 @@ func verify_audio() -> void:
 	voice.stop_speech()
 	await create_timer(2).timeout
 	check(AudioServer.get_bus_volume_db(bus) > before - 1, "Ambient level recovers smoothly after the voice finishes")
-	music.players[music.active].seek(63.8)
+	music.players[music.active].seek(music.players[music.active].stream.get_length() - 0.2)
 	await create_timer(0.6).timeout
 	check(music.players[music.active].playing and music.players[music.active].get_playback_position() < 1, "The imported recording loops through its actual end without stopping")
-	music.request_scene("boss")
-	await create_timer(4.5).timeout
-	check(music.current == "boss" and music.players[music.active].playing, "Boss encounters use the restrained pressure theme")
+	var active_slot := music.active
+	music.request_scene("cryo")
+	await create_timer(0.3).timeout
+	check(music.active == active_slot and music.players[music.active].get_playback_position() > 0.3, "Staying on a world preserves its playback position")
 	recording.set_recording_active(false)
 	if not folder.is_empty():
 		var sample: AudioStreamWAV = recording.get_recording()
-		check(sample != null and sample.get_length() > 12 and sample.save_to_wav(folder.path_join("ambient-preview.wav")) == OK, "Preview records only the game's own original music bus with master output muted")
+		check(sample != null and sample.get_length() > 12 and sample.save_to_wav(folder.path_join("ambient-preview.wav")) == OK, "Preview captures the music bus with master output muted")
 	music.set_level(0, false)
 	check(not music.players[0].playing and not music.players[1].playing, "Zero music volume stops both soundtrack streams")
 	music.set_level(70, true)
@@ -115,6 +117,19 @@ func verify_visuals() -> void:
 	var after: Vector2 = game.camera.unproject_position(ice.global_position)
 	check(after.y > before.y + 35 and ice.position.y < 17, "The visible chunk actually falls toward the side lane rather than only flashing a warning")
 	await capture(game, "ice-falling")
+	var sound: SynthAudio = game.sound
+	var slot := sound.voice_index % sound.voices.size()
+	game._strike({"collider": ice, "position": ice.global_position}, ice.armor)
+	check(sound.voices[slot].playing and sound.voices[slot].stream == SynthAudio.TARGET_IGNITION, "Shattering ice plays the isolated ignition")
+	var egg := EggShip.new()
+	egg.course_position = game.camera.to_global(Vector3(0, 0, -24))
+	game.add_child(egg)
+	slot = sound.voice_index % sound.voices.size()
+	game._strike({"collider": egg, "position": egg.global_position}, egg.armor)
+	check(sound.voices[slot].playing and sound.voices[slot].stream == SynthAudio.ORGANIC_RUPTURE, "Rupturing an egg plays the isolated splash")
+	var after_kill := sound.voice_index
+	game._strike({"collider": egg, "position": egg.global_position}, 1)
+	check(sound.voice_index == after_kill, "Hitting a destroyed egg cannot replay its splash")
 	game.campaign.countermeasures = true
 	game.campaign.flares = CampaignState.FLARE_CAPACITY
 	game.pause_flight()

@@ -13,7 +13,10 @@ func _initialize() -> void:
 			var uv := Vector2(projected.x, projected.y) / projected.z
 			matches = matches and uv.distance_to(expected[i]) < 0.0001
 		check(matches, "Perspective UV mapping matches supplied corners: " + name)
-	for filename in ["res://assets/cockpit_overlay.png", "res://assets/cockpits/rook.png", "res://assets/cockpits/hawk.png", "res://assets/cockpits/titan.png", "res://assets/cockpits/bastion.png"]:
+	var frames := PackedStringArray(["res://assets/cockpit_overlay.png"])
+	for ship: String in CampaignState.SHIPS:
+		frames.append("res://assets/cockpits/%s.png" % ship)
+	for filename in frames:
 		var image := Image.new()
 		var decoded: Error = image.load_png_from_buffer(FileAccess.get_file_as_bytes(filename))
 		check(decoded == OK and image.get_size() == Vector2i(1376, 768), "Cockpit shares the calibrated image dimensions: " + filename.get_file())

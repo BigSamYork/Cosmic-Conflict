@@ -29,7 +29,7 @@ func _ready() -> void:
 	var config := ConfigFile.new()
 	if FileAccess.file_exists("user://settings.cfg"):
 		config.load("user://settings.cfg")
-	sound_on = not bool(config.get_value("flight_lab", "mute", false))
+	sound_on = DisplayServer.get_name() != "headless" and not bool(config.get_value("flight_lab", "mute", false))
 	var voice_level := clampi(int(config.get_value("flight_lab", "voice_volume", 70)), 0, 100)
 	var music_level := clampi(int(config.get_value("flight_lab", "music_volume", AmbientMusic.DEFAULT_VOLUME)), 0, 100)
 	reduced = bool(config.get_value("flight_lab", "reduced_effects", false)) or "--reduced-effects" in OS.get_cmdline_user_args()
@@ -42,7 +42,7 @@ func _ready() -> void:
 	hull.stream = _bulkhead_knock()
 	hull.volume_db = -12
 	if sound_on and music_level > 0:
-		score.volume_db = linear_to_db(music_level / 100.0) - 12.0
+		score.volume_db = linear_to_db(AmbientMusic.MIX_GAIN * music_level / 100.0) - 3.0
 		score.finished.connect(score.play.bind(0.0))
 		score.play()
 	$Overlay/Title.text = book.title

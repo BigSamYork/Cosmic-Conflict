@@ -10,7 +10,33 @@ var combat_lights := CombatLighting.new()
 var surface_weather := SurfaceWeather.new()
 var surface_flight := false
 var cockpit_artwork: TextureRect
+var cockpit_foredeck: TextureRect
+var cockpit_livery := ShaderMaterial.new()
+var hull_plate := Label.new()
+var hull_plate_mount := Node2D.new()
 var cockpit_skin: String = ""
+const COCKPITS := {
+	"rook": {
+		"frame": preload("res://assets/cockpits/rook.png"), "deck": preload("res://assets/cockpits/foredecks/rook.png"),
+		"enamel": Color("#d3dcd7"), "stripe": Color("#e84a29"), "bands": Vector3(18, 24, 1),
+	},
+	"hawk": {
+		"frame": preload("res://assets/cockpits/hawk.png"), "deck": preload("res://assets/cockpits/foredecks/hawk.png"),
+		"enamel": Color("#89a8be"), "stripe": Color("#f6b544"), "bands": Vector3(4, 10, 2),
+	},
+	"titan": {
+		"frame": preload("res://assets/cockpits/titan.png"), "deck": preload("res://assets/cockpits/foredecks/titan.png"),
+		"enamel": Color("#566d83"), "stripe": Color("#e79143"), "bands": Vector3(12, 22, 3),
+	},
+	"bastion": {
+		"frame": preload("res://assets/cockpits/bastion.png"), "deck": preload("res://assets/cockpits/foredecks/bastion.png"),
+		"enamel": Color("#8a82ae"), "stripe": Color("#dcc98f"), "bands": Vector3(6, 15, 2),
+	},
+	"emergency": {
+		"frame": preload("res://assets/cockpits/emergency.png"), "deck": preload("res://assets/cockpits/foredecks/emergency.png"),
+		"enamel": Color("#ef923e"), "stripe": Color("#f1e3c5"), "bands": Vector3(15, 29, 3),
+	},
+}
 var gun_level_displayed: int = 0
 var rotor_mount := Node2D.new()
 var rotors: Array[Sprite2D] = []
@@ -194,7 +220,7 @@ func _ready() -> void:
 	hud = FlightHUD.new()
 	layer.add_child(hud)
 	hud.flight = flight
-	hud.credits_text = "Cosmic Conflict v%s\nProcedural geometry, live HUD, shaders and synthesized audio.\nCockpit artwork supplied by the project owner.\n\n" % ProjectSettings.get_setting("application/config/version") + Engine.get_license_text() + "\n\n" + JSON.stringify(Engine.get_copyright_info(), "\t") + "\n\n" + JSON.stringify(Engine.get_license_info(), "\t")
+	hud.credits_text = "Cosmic Conflict v%s\nCockpit artwork supplied by the project owner.\n\n" % ProjectSettings.get_setting("application/config/version") + FileAccess.get_file_as_string("res://assets/music/credits.txt") + "\n\n" + Engine.get_license_text() + "\n\n" + JSON.stringify(Engine.get_copyright_info(), "\t") + "\n\n" + JSON.stringify(Engine.get_license_info(), "\t")
 	hud.launch_requested.connect(start_flight)
 	hud.resume_requested.connect(resume_flight)
 	hud.title_requested.connect(show_title)
@@ -301,6 +327,13 @@ func _build_cockpit() -> void:
 	layer.name = "CockpitArtworkLayer"
 	layer.layer = 1
 	add_child(layer)
+	cockpit_foredeck = TextureRect.new()
+	cockpit_foredeck.name = "Foredeck"
+	cockpit_foredeck.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	cockpit_foredeck.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	cockpit_foredeck.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.add_child(cockpit_foredeck)
+	cockpit_foredeck.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var artwork := TextureRect.new()
 	cockpit_artwork = artwork
 	artwork.name = "CockpitArtwork"
@@ -310,6 +343,17 @@ func _build_cockpit() -> void:
 	artwork.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	layer.add_child(artwork)
 	artwork.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	cockpit_livery.shader = preload("res://shaders/cockpit_livery.gdshader")
+	artwork.add_child(hull_plate_mount)
+	hull_plate_mount.add_child(hull_plate)
+	# The port sill stays clear of the warning strip above the central gauges.
+	hull_plate.position = Vector2(102, 688)
+	hull_plate.rotation = deg_to_rad(-23)
+	hull_plate.size = Vector2(118, 18)
+	hull_plate.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hull_plate.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	hull_plate.add_theme_font_size_override("font_size", 13)
+	hull_plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	artwork.add_child(rotor_mount)
 	rotor_mount.show_behind_parent = true
 	for right in [false, true]:
@@ -321,12 +365,14 @@ func _build_cockpit() -> void:
 		rotor.flip_h = right
 		rotor_mount.add_child(rotor)
 		rotors.append(rotor)
-	artwork.resized.connect(_place_rotors)
-	_place_rotors()
+	artwork.resized.connect(_place_cockpit_fittings)
+	_place_cockpit_fittings()
 	_set_cockpit("rook")
 
-func _place_rotors() -> void:
-	rotor_mount.transform = CockpitInstruments.artwork_transform(cockpit_artwork.size)
+func _place_cockpit_fittings() -> void:
+	var placement := CockpitInstruments.artwork_transform(cockpit_artwork.size)
+	rotor_mount.transform = placement
+	hull_plate_mount.transform = placement
 
 func _advance_rotors(delta: float, firing: bool) -> void:
 	if not rotor_mount.visible:
@@ -337,29 +383,26 @@ func _advance_rotors(delta: float, firing: bool) -> void:
 		rotor.frame = floori(rotor_phase * rotor.hframes * rotor.vframes)
 
 func _set_cockpit(ship: String, primary_level: int = 0) -> void:
-	match ship:
-		"rook", "emergency":
-			cockpit_skin = "rook"
-			cockpit_artwork.texture = preload("res://assets/cockpits/rook.png")
-		"hawk":
-			cockpit_skin = "hawk"
-			cockpit_artwork.texture = preload("res://assets/cockpits/hawk.png")
-		"titan":
-			cockpit_skin = "titan"
-			cockpit_artwork.texture = preload("res://assets/cockpits/titan.png")
-		"bastion":
-			cockpit_skin = "bastion"
-			cockpit_artwork.texture = preload("res://assets/cockpits/bastion.png")
-		"":
-			cockpit_skin = ""
-			cockpit_artwork.texture = preload("res://assets/cockpit_overlay.png")
-		_:
-			push_error("No cockpit is defined for ship: " + ship)
-			return
-	var equipped: int = 0 if cockpit_skin.is_empty() else primary_level
-	var combined: Texture2D = GunAppearance.texture_for(cockpit_artwork.texture, equipped)
+	var skin: Dictionary = COCKPITS.get(ship, {})
+	if skin.is_empty() and not ship.is_empty():
+		push_error("No cockpit is defined for ship: " + ship)
+		return
+	var frame: Texture2D = skin.get("frame", preload("res://assets/cockpit_overlay.png"))
+	var equipped: int = 0 if ship.is_empty() else primary_level
+	var combined: Texture2D = GunAppearance.texture_for(frame, equipped)
 	if combined == null:
 		return
+	cockpit_skin = ship
+	cockpit_foredeck.texture = skin.get("deck")
+	cockpit_artwork.material = null if skin.is_empty() else cockpit_livery
+	if skin.is_empty():
+		hull_plate.text = ""
+	else:
+		cockpit_livery.set_shader_parameter("enamel", skin.enamel)
+		cockpit_livery.set_shader_parameter("stripe", skin.stripe)
+		cockpit_livery.set_shader_parameter("bands", skin.bands)
+		hull_plate.text = String(CampaignState.SHIPS[ship].name).to_upper()
+		hull_plate.add_theme_color_override("font_color", skin.stripe)
 	cockpit_artwork.texture = combined
 	gun_level_displayed = equipped
 	rotor_mount.visible = equipped == 1
@@ -1068,7 +1111,7 @@ func _strike(result: Dictionary, damage: int, secondary_hit: bool = false, recor
 		var previous_armor: int = collider.armor
 		var shattered: bool = collider.receive_hit(damage)
 		_spawn_breakup(collider, shattered)
-		_confirm_impact(result, previous_armor)
+		_confirm_impact(result, previous_armor, shattered)
 		if shattered:
 			hud.show_message("RUIN BLOCK SHATTERED / SIDE LANE CLEAR" if collider is RuinFall else "FALLING ICE SHATTERED / SIDE LANE CLEAR")
 		return true
@@ -1080,7 +1123,7 @@ func _strike(result: Dictionary, damage: int, secondary_hit: bool = false, recor
 		var previous_armor: int = collider.armor
 		var killed: bool = collider.receive_hit(maxi(damage, collider.armor) if one_hit_kill else damage)
 		_spawn_breakup(collider, killed)
-		_confirm_impact(result, previous_armor)
+		_confirm_impact(result, previous_armor, killed)
 		if killed:
 			hud.show_message("SIDE GATE EMITTER DISABLED / CENTER LANE REMAINS CLEAR")
 		return true
@@ -1112,7 +1155,7 @@ func _strike(result: Dictionary, damage: int, secondary_hit: bool = false, recor
 			killed = collider.receive_hit_at(applied_damage, at, result.get("direction", camera.global_position.direction_to(at)))
 		else:
 			killed = collider.receive_hit(applied_damage)
-		_confirm_impact(result, previous_armor)
+		_confirm_impact(result, previous_armor, killed)
 		if not collider is DestructibleTower and (killed or ImpactSpray.surface_for(collider) != ImpactSpray.Surface.FLESH):
 			_spawn_breakup(collider, killed)
 		if killed:
@@ -1184,7 +1227,7 @@ func _strike(result: Dictionary, damage: int, secondary_hit: bool = false, recor
 		flight.interceptions += 1
 		_voice_event("interception")
 		_spawn_burst(at)
-		_confirm_impact(result)
+		_confirm_impact(result, 0, true)
 		return true
 	return false
 
@@ -1212,7 +1255,7 @@ func _clear_parasites() -> void:
 	if sound != null:
 		sound.set_parasite_audible(false)
 
-func _confirm_impact(result: Dictionary, previous_armor: int = 0) -> void:
+func _confirm_impact(result: Dictionary, previous_armor: int, destroyed: bool) -> void:
 	var target: Node3D = result["collider"]
 	var at: Vector3 = result["position"]
 	var toward_pilot := at.direction_to(camera.global_position)
@@ -1233,7 +1276,10 @@ func _confirm_impact(result: Dictionary, previous_armor: int = 0) -> void:
 	var size := clampf(at.distance_to(camera.global_position) / 100.0, 1.0, 2.0)
 	spray.build(at, normal.normalized(), surface, size, settings["reduced_effects"])
 	impact_sprays.append(spray)
-	sound.play_contact(surface)
+	if destroyed:
+		sound.play_destruction(surface)
+	else:
+		sound.play_contact(surface)
 
 func _award_combat_kill(base_credits: int) -> void:
 	var previous_multiplier: int = campaign.combo_multiplier()
@@ -1288,7 +1334,7 @@ func _detonate_volatile(blast: VolatileBlast) -> void:
 				flight.destroyed += 1
 				_spawn_breakup(target, true)
 				_resolve_asteroid(target, true)
-	sound.play_sound(sound.hit)
+	sound.play_destruction(ImpactSpray.Surface.STONE)
 
 func _advance_salvage(delta: float, previous_pilot: Vector3, pilot: Vector3) -> void:
 	for i in range(volatile_blasts.size() - 1, -1, -1):
@@ -1460,7 +1506,7 @@ func _start_boss_destruction() -> void:
 			add_child(fragments)
 			fragments.build(boss, true, VectorArt.AMBER, 1024, 4.0, 14.0)
 			debris.append(fragments)
-			sound.play_sound(sound.impact))
+			sound.play_destruction(ImpactSpray.surface_for(boss.core)))
 	add_child(effect)
 	explosions.append(effect)
 	sound.play_sound(sound.impact)
@@ -1520,28 +1566,31 @@ func _storm_contact(body: CollisionObject3D, at: Vector3, direction: Vector3) ->
 		_spawn_breakup(body, true)
 		body.collision_layer = 0
 		body.hide()
-		_storm_blast(at, 10.0)
+		_storm_blast(at, 10.0, body)
 	elif body is DestructibleTower:
 		if body.receive_hit_at(body.armor, at, direction):
-			_storm_blast(at, 4.5)
+			_storm_blast(at, 4.5, body)
 	elif body is EnemyFighter or body is GroundTurret or body is RadarDish:
 		if body.receive_hit(body.armor):
 			_spawn_breakup(body, true)
-			_storm_blast(at, 5.5)
+			_storm_blast(at, 5.5, body)
 	elif ground_branch != null and body == ground_branch.patrol.storm_hull:
 		var patrol := ground_branch.patrol
 		_spawn_breakup(patrol.carrier, true)
-		_storm_blast(at, 5.5)
+		_storm_blast(at, 5.5, body)
 		hud.show_message(patrol.lose_carrier(campaign))
 
-func _storm_blast(at: Vector3, radius: float) -> void:
+func _storm_blast(at: Vector3, radius: float, target: Node3D = null) -> void:
 	var blast := DestructionEffect.new()
 	blast.reduced = settings["reduced_effects"]
 	blast.position = at
 	blast.size = radius
 	add_child(blast)
 	explosions.append(blast)
-	sound.play_sound(sound.impact)
+	if target != null:
+		sound.play_destruction(ImpactSpray.surface_for(target))
+	else:
+		sound.play_sound(sound.impact)
 
 func _tower_fractured(tower: DestructibleTower) -> void:
 	var effect := BreakupEffect.new()
@@ -1647,6 +1696,7 @@ func _fire_emp() -> void:
 		if missile.active and _secondary_visible(missile.global_position, EMPPulse.RANGE) and missile.receive_hit():
 			cleared += 1
 			_spawn_burst(missile.global_position)
+			sound.play_destruction(ImpactSpray.surface_for(missile))
 	for target in targets:
 		if target.destroyed or target.collision_layer == 0 or not _secondary_visible(target.aim_point(), EMPPulse.RANGE, target if target is GroundTurret else null):
 			continue
@@ -1950,10 +2000,12 @@ func _process(delta: float) -> void:
 		return
 	if music != null and automation != "--music-test":
 		var audio_mode := named_games_origin if mode == Mode.NAMED_GAMES else mode
-		var scene: String = "station"
-		if is_campaign and campaign != null and audio_mode not in [Mode.TITLE, Mode.MARKET, Mode.CAMPAIGN_COMPLETE]:
-			scene = "travel" if sequence in ["warp_alignment", "hyperspace", "ascent", "belt_transfer", "belt_climb"] else "boss" if campaign.phase.ends_with("_boss") else campaign.sector
-		elif mode == Mode.FLIGHT and flight.training:
+		var scene: String = "title"
+		if audio_mode == Mode.MARKET:
+			scene = "station"
+		elif is_campaign and campaign != null and audio_mode not in [Mode.TITLE, Mode.CAMPAIGN_COMPLETE]:
+			scene = campaign.sector
+		elif audio_mode in [Mode.FLIGHT, Mode.PAUSE, Mode.COMPLETE] and flight.training:
 			scene = "ignis"
 		music.request_scene(scene)
 		music.set_paused(audio_mode in [Mode.PAUSE, Mode.DEBUG, Mode.SAVE_ERROR] or (audio_mode == Mode.TRANSITION and sequence.is_empty()))
@@ -3315,15 +3367,15 @@ func _run_music_test() -> void:
 	music.set_paused(false)
 	await get_tree().create_timer(5).timeout
 	var bus: int = AudioServer.get_bus_index(music.bus_name)
-	_check(music.current == "xylo" and music.players[music.active].get_playback_position() > 4 and AudioServer.get_bus_peak_volume_left_db(bus, 0) > -60, "Packaged original ambient music plays through its native audio bus")
+	_check(music.current == "xylo" and music.players[music.active].get_playback_position() > 4 and AudioServer.get_bus_peak_volume_left_db(bus, 0) > -65, "Packaged Xylo soundtrack plays through its native audio bus")
 	var position: float = music.players[music.active].get_playback_position()
 	music.set_paused(true)
 	await get_tree().create_timer(0.3).timeout
 	_check(absf(music.players[music.active].get_playback_position() - position) < 0.06, "Packaged soundtrack pauses without advancing")
 	music.set_paused(false)
-	music.request_scene("boss")
+	music.request_scene("station")
 	await get_tree().create_timer(4.5).timeout
-	_check(music.current == "boss" and music.players[music.active].playing and not music.players[1 - music.active].playing, "Packaged boss music crossfade completes and releases the previous recording")
+	_check(music.current == "station" and music.players[music.active].playing and not music.players[1 - music.active].playing, "Docking crossfades to Look Busy and releases the previous recording")
 	music.set_level(0, false)
 	_check(not music.players[0].playing and not music.players[1].playing, "Packaged music volume zero stops playback")
 	_finish_automation()
@@ -3764,7 +3816,7 @@ func _run_mission_automation() -> void:
 		_check(campaign.ship.is_empty() and campaign.primary_level == 0 and campaign.ammo == 0 and campaign.heat_sink_level == 0 and campaign.hull_armor_level == 0 and not campaign.tractor and not campaign.swarm_launcher and not campaign.emp_launcher and not campaign.countermeasures and campaign.flares == 0, "Ejection removes ship, weapon stations, flare pod and all charges")
 		_market_purchase("emergency")
 		_check(campaign.ship == "emergency" and campaign.credits == 0, "No-money pilot receives a free emergency ship")
-		_check(cockpit_skin == "rook", "Emergency replacement selects the scout cockpit")
+		_check(cockpit_skin == "emergency", "Emergency replacement selects the Rescue Skiff cockpit")
 		print("MISSION_PHASE_LOG ", phase_log)
 		_finish_automation()
 

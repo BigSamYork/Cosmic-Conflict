@@ -2,14 +2,18 @@ class_name AmbientMusic
 extends Node
 
 signal fault(message: String)
-const TRACKS: Array[String] = ["station", "ignis", "cryo", "vespera", "xylo", "thalassa", "kharon", "travel", "boss"]
+const TRACKS := {
+	"title": "Evening Melodrama", "station": "Look Busy",
+	"ignis": "Five Armies", "cryo": "Constancy Part Three", "vespera": "Clenched Teeth",
+	"xylo": "Grave Matters", "thalassa": "Mighty and Meek", "kharon": "Americana",
+}
+const MIX_GAIN := 0.16
 const CROSSFADE: float = 4.0
 const DEFAULT_VOLUME: int = 35
 var players: Array[AudioStreamPlayer] = []
-var streams: Dictionary = {}
 var bus_name: String = ""
 var failure_message: String = ""
-var requested: String = "station"
+var requested: String = "title"
 var current: String = ""
 var active: int = 0
 var fade_time: float = CROSSFADE
@@ -21,20 +25,6 @@ var duck_gain: float = 1.0
 var applied_gain: float = -1.0
 
 func _ready() -> void:
-	for id in TRACKS:
-		var path: String = "res://assets/music/%s.wav" % id
-		if not ResourceLoader.exists(path):
-			_fail("Ambient soundtrack is missing: " + path + ". Run tools/generate-music.gd.")
-			return
-		var source: AudioStreamWAV = load(path) as AudioStreamWAV
-		if source == null or source.get_length() < 60:
-			_fail("Ambient recording is invalid: " + path)
-			return
-		var stream := source.duplicate() as AudioStreamWAV
-		stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
-		stream.loop_begin = 0
-		stream.loop_end = roundi(source.get_length() * source.mix_rate)
-		streams[id] = stream
 	bus_name = "AmbientMusic-%d" % get_instance_id()
 	var index: int = AudioServer.bus_count
 	AudioServer.add_bus()
@@ -83,9 +73,15 @@ func _process(delta: float) -> void:
 	if paused or not enabled():
 		return
 	if current != requested and fade_time >= CROSSFADE:
+		var path := "res://assets/music/licensed/%s.ogg" % TRACKS[requested]
+		var stream := load(path) as AudioStreamOggVorbis
+		if stream == null:
+			_fail("Soundtrack recording is missing: " + path)
+			return
+		stream.loop = true
 		active = 1 - active
 		players[active].stop()
-		players[active].stream = streams[requested]
+		players[active].stream = stream
 		players[active].volume_db = -80
 		players[active].play()
 		current = requested
@@ -104,7 +100,7 @@ func _process(delta: float) -> void:
 func _apply_gain() -> void:
 	if bus_name.is_empty():
 		return
-	var gain: float = maxf(0.0001, volume_percent / 100.0 * duck_gain)
+	var gain: float = maxf(0.0001, MIX_GAIN * volume_percent / 100.0 * duck_gain)
 	if is_equal_approx(gain, applied_gain):
 		return
 	var index: int = AudioServer.get_bus_index(bus_name)

@@ -7,6 +7,8 @@ var hit: AudioStreamWAV
 var impact: AudioStreamWAV
 var thunder: AudioStreamWAV
 const ImpactSpray := preload("res://scripts/impact_spray.gd")
+const ORGANIC_RUPTURE := preload("res://assets/sfx/organic_rupture.wav")
+const TARGET_IGNITION := preload("res://assets/sfx/target_ignition.wav")
 var contact_thuds: Dictionary = {}
 var last_contact_usec := -100000
 var parasite_voice := AudioStreamPlayer.new()
@@ -68,6 +70,9 @@ func play_contact(surface: ImpactSpray.Surface) -> void:
 	if now - last_contact_usec >= 45000:
 		play_sound(contact_thuds[surface])
 		last_contact_usec = now
+
+func play_destruction(surface: ImpactSpray.Surface) -> void:
+	play_sound(ORGANIC_RUPTURE if surface == ImpactSpray.Surface.FLESH else TARGET_IGNITION)
 
 func pause_sounds(paused: bool) -> void:
 	parasite_voice.stream_paused = paused

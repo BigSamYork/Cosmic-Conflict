@@ -22,6 +22,7 @@ func run() -> void:
 		await scene_changed
 	var intro = current_scene
 	check(intro.scene_file_path == "res://opening.tscn", "Player boot opens the prologue")
+	check(intro.score.stream.resource_path.ends_with("/Fanfare for Space.ogg"), "The narrated prologue opens with Fanfare for Space")
 	intro.set_process(false)
 	var seen := {}
 	var voices_heard := {}

@@ -7,10 +7,27 @@ with their creator.
 The project owner confirms that these images may be redistributed with the game.
 No recordings, music, or models from the historical reference games are included.
 
-The nine ambient soundtrack compositions and stereo recordings are original
-procedural works generated for this project by tools/generate-music.gd.
-They use synthesized oscillators, not third-party samples or borrowed melodies.
-No external music service or runtime download is required.
+Music by Kevin MacLeod (incompetech.com)
+Licensed under Creative Commons Attribution 4.0 International (CC BY 4.0).
+https://creativecommons.org/licenses/by/4.0/
+https://incompetech.com/music/royalty-free/
+
+Fanfare for Space — Two Knocks Home
+Evening Melodrama — Title and campaign honors
+Look Busy — Astra Market
+Five Armies — Ignis Prime
+Constancy Part Three — Cryo-Vex
+Clenched Teeth — Vespera-9
+Grave Matters — Xylo-Mire
+Mighty and Meek — Thalassa Reach
+Americana — Kharon Dunes
+
+Recordings were converted to Ogg Vorbis and level-matched for the game.
+
+Recorded sound effects
+Water Splash on Cement Series (YouTube Audio Library) — organic destruction
+Gun Powder Ignite — mechanical and stone destruction
+One effect was excerpted from each supplied recording.
 
 Computer dialogue combines text supplied by the project owner with original
 additional lines. The offline recordings were synthesized locally using the

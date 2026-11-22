@@ -64,6 +64,28 @@ func run() -> void:
 	check(game.rotor_speed == 0.0, "Rotor comes to rest with the trigger released")
 	game._set_cockpit("hawk", 2)
 	check(game.gun_level_displayed == 2 and game.cockpit_artwork.texture != first_upgrade, "Second primary tier selects its distinct gun artwork")
+	for ship: String in CampaignState.SHIPS:
+		game._set_cockpit(ship)
+		var frame: Texture2D = game.cockpit_artwork.texture
+		var deck: Texture2D = game.cockpit_foredeck.texture
+		check(frame.resource_path == "res://assets/cockpits/%s.png" % ship and deck.resource_path == "res://assets/cockpits/foredecks/%s.png" % ship, "Frame and forward hull match " + ship)
+		check(game.hull_plate.text == String(CampaignState.SHIPS[ship].name).to_upper(), "Instrument panel identifies " + ship)
+		await RenderingServer.frame_post_draw
+		var view: Image = root.get_texture().get_image()
+		check(similar(view.get_pixelv(Vector2i((placement * Vector2(688, 350)) * pixel_scale)), world_color.color), "Clear central sightline for " + ship)
+		game.cockpit_foredeck.hide()
+		await RenderingServer.frame_post_draw
+		var without_deck: Image = root.get_texture().get_image()
+		var hull_samples := 0
+		for y in range(430, 572, 8):
+			for x in range(8, 1370, 8):
+				var pixel := Vector2i((placement * Vector2(x, y)) * pixel_scale)
+				if similar(without_deck.get_pixelv(pixel), world_color.color) and not similar(view.get_pixelv(pixel), world_color.color):
+					hull_samples += 1
+		check(hull_samples >= 12, "Forward hull is visible through the glazing on " + ship)
+		game.cockpit_foredeck.show()
+	game._set_cockpit("", 2)
+	check(game.cockpit_foredeck.texture == null and game.hull_plate.text.is_empty() and game.cockpit_artwork.material == null and game.gun_level_displayed == 0, "Recovery clears the previous hull and its upgrades")
 	game.queue_free()
 	await process_frame
 	print("COCKPIT_COMPOSITE_FAILURES=", failures)

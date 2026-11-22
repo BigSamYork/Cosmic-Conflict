@@ -1018,13 +1018,15 @@ All source artwork was preserved. Game copies are under `current_dev\assets`.
 
 | Game use | Imported game asset | Supplied source |
 | --- | --- | --- |
-| Rook Scout / training / Rescue Skiff | `assets\cockpits\rook.png` | `Cockpit_Overlays\cockpit_1_light_fighter.png` |
+| Rook Scout / training | `assets\cockpits\rook.png` | `Cockpit_Overlays\cockpit_1_light_fighter.png` |
 | Vector Hawk | `assets\cockpits\hawk.png` | `Cockpit_Overlays\cockpit_2_interceptor.png` |
+| Rescue Skiff | `assets\cockpits\emergency.png` | `Cockpit_Overlays\cockpit_3_strike_fighter (1).png` |
+| Aegis Titan | `assets\cockpits\titan.png` | `Cockpit_Overlays\cockpit_4_heavy_gunship (1).png` |
+| Nova Bastion | `assets\cockpits\bastion.png` | `Cockpit_Overlays\cockpit_5_heavy_bomber (1).png` |
 | No assigned ship / recovery view | `assets\cockpit_overlay.png` | Original user attachment |
 
-The strike-fighter, heavy-gunship, and heavy-bomber originals remain in
-`Cockpit_Overlays` for later use; they are not additional purchasable ships yet.
-The interceptor alias was not imported twice.
+The forward decks in `assets/cockpits/foredecks` are rendered from the
+flight meshes by `tools/fleet/render_cockpit_foredecks.gd`.
 
 The renderer uses:
 

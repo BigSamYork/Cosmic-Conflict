@@ -106,6 +106,8 @@ func verify_gameplay() -> void:
 	game.campaign.phase = "ground"
 	game.is_campaign = true
 	await game._load_phase()
+	game._process(0.0)
+	check(game.music.requested == "cryo", "Cryo ground flight requests its world theme")
 	check(game.falling_ice.size() == 8 and game.flight.duration == 90, "Cryo has eight side-lane chunks without consuming ground-combat time")
 	var chunk: FallingIce = game.falling_ice[0]
 	var credits: int = game.campaign.credits
@@ -130,6 +132,8 @@ func verify_gameplay() -> void:
 	game.resume_flight()
 	game.campaign.phase = "ground_boss"
 	await game._load_phase()
+	game._process(0.0)
+	check(game.music.requested == "cryo", "Entering a boss keeps the current world's theme")
 	check(game.falling_ice.is_empty(), "Ground boss entry cannot retain old falling-ice hazards")
 	game.campaign.sector = "ignis"
 	game.campaign.phase = "ground"
@@ -161,18 +165,17 @@ func verify_backdrop_bounds() -> void:
 	await process_frame
 
 func verify_recordings() -> void:
-	for id in AmbientMusic.TRACKS:
-		var stream: AudioStreamWAV = load("res://assets/music/%s.wav" % id)
-		check(stream.stereo and stream.get_length() == 64 and stream.mix_rate == 22050, "Original %s music is a complete offline stereo recording" % id)
-		var data: PackedByteArray = FileAccess.get_file_as_bytes("res://assets/music/%s.wav" % id).slice(44)
-		var peak: int = 0
-		var energy: float = 0
-		for i in range(0, data.size(), 400):
-			var value: int = absi(data.decode_s16(i))
-			peak = maxi(peak, value)
-			energy += value
-		var seam: int = maxi(absi(data.decode_s16(0) - data.decode_s16(data.size() - 4)), absi(data.decode_s16(2) - data.decode_s16(data.size() - 2)))
-		check(peak > 1000 and peak < 16000 and energy > 100000 and seam < 500, "%s soundtrack contains restrained signal without clipping or a discontinuous loop seam (peak=%d seam=%d)" % [id, peak, seam])
+	var credits := FileAccess.get_file_as_string("res://assets/music/credits.txt")
+	check("Kevin MacLeod" in credits and "https://creativecommons.org/licenses/by/4.0/" in credits, "Music credits name the artist and license")
+	var titles: Array = AmbientMusic.TRACKS.values()
+	titles.append("Fanfare for Space")
+	for title: String in titles:
+		var stream := load("res://assets/music/licensed/%s.ogg" % title) as AudioStreamOggVorbis
+		check(stream != null and stream.get_length() > 30 and title in credits, "Packaged and credited recording: " + title)
+	for sector: String in SectorCatalog.AVAILABLE:
+		check(AmbientMusic.TRACKS.has(sector) and titles.count(AmbientMusic.TRACKS[sector]) == 1, "Exclusive world theme: " + sector)
+	for effect: AudioStreamWAV in [SynthAudio.ORGANIC_RUPTURE, SynthAudio.TARGET_IGNITION]:
+		check(effect.get_length() > 0.4 and effect.get_length() < 1 and effect.loop_mode == AudioStreamWAV.LOOP_DISABLED, "Destruction uses one short, non-looping take")
 
 func check_once(when: bool, condition: bool, description: String) -> void:
 	if when:

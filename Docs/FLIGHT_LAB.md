@@ -69,7 +69,7 @@ station music continues. Asteroid artwork now takes less time to generate.
   falling into side lanes; two baseline hits clear one, or avoid it. Contact
   deals 14 damage once without frost, credits or combo rewards. Sunforge Colossus
   and Obelisk Sovereign guard ground and orbit. Both worlds have the complete
-  ground/boss/orbit/boss/escape/docking loop and original ambient themes.
+  ground/boss/orbit/boss/escape/docking loop and individual world themes.
 - **Two PLAYER battleships in Astra Market:** Aegis Titan costs 2,400 CR and has
   240 hull, 160 shields, 12 ordnance and 70% steering response. Nova Bastion costs
   3,600 CR and has 200 hull, 220 shields, 16 ordnance and 80% response. Both have
@@ -140,10 +140,10 @@ historical; the current rules above and reference sections take precedence.
   deals 14 shield-first damage once, without frost slowdown. The automatic
   centerline stays clear. Clearing ice awards no credits, enemy kill or streak.
   Pause freezes the warning and fall.
-- **Original ambient soundtrack:** seven restrained, 64-second stereo loops
-  cover Astra, each planet, travel and boss pressure. They are original local
-  synthesis, not third-party songs or streamed audio. Four-second crossfades
-  join scenes, pause holds playback, and computer speech gently ducks the music.
+- Kevin MacLeod’s “Fanfare for Space” accompanies the opening. “Look Busy”
+  plays in Astra Market. Each world loops its own recording through ground
+  combat, orbital flight and both bosses. Docking crossfades to the market
+  score. Pause holds playback and computer speech lowers the music.
 - **Music controls:** the title/pause menu has a separate music slider, default
   35%; zero stops music. Master mute silences everything. Voice volume is
   independent. Recordings ship inside the game and work offline.
@@ -677,10 +677,10 @@ Developer assistance remains marked for the entire operation, including later to
 - Atomic checkpoint saves, resumable campaigns, and a developer testing panel.
 - User-supplied RGBA cockpit artwork, with the 3D world behind it and live
   instruments perspective-mapped onto all six supplied display areas.
-- Rook Scout uses the light-fighter cockpit; Vector Hawk uses the interceptor
-  cockpit. Buying a hull changes its cockpit without moving the instruments.
-  The Rescue Skiff shares the scout artwork. The three heavier classes are
-  reserved for a later milestone, and the current ship names are retained.
+- Each of the five flyable hulls has its own canopy, paint and view over the
+  bow. The port sill carries the hull name. From the Rescue Skiff’s offset
+  seat you can see the recovery pod to starboard. Buying or resuming a hull
+  restores its cockpit and equipped guns together.
 - Quad Plasma and Tachyon Beam reuse the supplied plasma-shroud and outboard
   autocannon artwork. The guns sit behind the canopy/consoles, preserving the
   MFD screens; artwork is composited once per hull/tier rather than every frame.
