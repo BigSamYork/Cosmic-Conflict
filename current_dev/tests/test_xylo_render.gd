@@ -178,14 +178,67 @@ func verify_swamp() -> void:
 	game._advance_explosions(1.0)
 	game._advance_parasites(CanopyParasite.LEAP + 0.6)
 	var latch: Image = await image("xylo-canopy-latch.png")
-	check(changed(shell, latch, Rect2i(560, 230, 800, 460)) > 140000, "The parasite visibly obscures the central canopy")
+	check(changed(shell, latch, Rect2i(320, 110, 470, 390)) > 40000, "The parasite is visible on the upper port canopy pane")
 	check(game.sound.parasite_voice.playing and game.sound.parasite_voice.stream.loop_mode == AudioStreamWAV.LOOP_FORWARD, "The attached parasite plays a looping growl")
+	var hatchling: CanopyParasite = game.parasites[0]
+	var bounds := hatchling.body.get_aabb()
+	var body_clears_guns := true
+	for i in range(8):
+		var corner: Vector3 = game.camera.to_local(hatchling.body.to_global(bounds.get_endpoint(i)))
+		for muzzle in game._primary_origins():
+			body_clears_guns = body_clears_guns and corner.z > game.camera.to_local(muzzle).z
+	check(body_clears_guns, "The entire latched body sits inside the gun muzzles")
+	var art := CockpitInstruments.artwork_transform(root.get_visible_rect().size)
+	var highest_gun := INF
+	for tier in range(3):
+		for muzzle in GunAppearance.muzzle_points(tier):
+			highest_gun = minf(highest_gun, (art * muzzle).y)
+	var lowest_body := 0.0
+	for vertex: Vector3 in hatchling.body.mesh.get_meta("fragment_vertices"):
+		# Include the depth shift of the planted toes in the projection.
+		vertex.z = minf(CanopyParasite.PAD_PLANE, vertex.z + smoothstep(1.04, 1.41, absf(vertex.x))*0.37)
+		lowest_body = maxf(lowest_body, game.camera.unproject_position(hatchling.to_global(vertex)).y)
+	check(lowest_body < highest_gun - 20.0, "Body, toes and tail leave a visible gap above all three gun mounts")
+	var planted_toe: Node3D = hatchling.toe_prints.get_child(0)
+	var footprint := planted_toe.global_position
+	check(not hatchling.breached and not hatchling.tongue.visible, "The glass is intact when the body first latches")
+	game.computer_voice.set_level(75, false)
+	game._advance_parasites(CanopyParasite.BREACH_TIME - 0.6 + 0.5)
+	game.cursor = Vector2(960, 535)
+	game.fire_primary()
+	var extended: Image = await image("xylo-canopy-breach.png")
+	check(hatchling.tongue.get_child_count() == 4 and float(hatchling.muscle.get_shader_parameter(&"aperture")) > 0.8, "Four hooks spread open during the reach")
+	check(game.sound.voices.any(func(voice: AudioStreamPlayer) -> bool: return voice.stream == preload("res://assets/sfx/canopy_fracture.wav")), "The first puncture plays Small Glass Pane Shatter")
+	hatchling.tongue.hide()
+	await RenderingServer.frame_post_draw
+	var hidden: Image = root.get_texture().get_image()
+	check(changed(extended, hidden, Rect2i(805, 383, 240, 145)) > 1200, "The grasping tip actually renders on the pilot's side of the opening")
+	hatchling.tongue.show()
+	check(hatchling.wound.visible and hatchling.tongue.visible, "The tongue extends through the fractured side pane")
+	var tip: Vector3 = hatchling.transform * Vector3(hatchling.muscle.get_shader_parameter(&"tip"))
+	check(footprint.is_equal_approx(planted_toe.global_position) and absf(game.camera.to_local(footprint).z-hatchling.wound.position.z) < 0.005, "The toes stay planted against the punctured pane during the lunge")
+	check(game.camera.unproject_position(game.camera.to_global(tip)).y < highest_gun - 20.0, "The tongue grasps at eye level above the weapons")
+	check(tip.z > hatchling.wound.position.z + 0.22 and tip.z < -game.camera.near, "The tongue reaches through the glass toward the pilot and stays inside the camera view")
+	check(game.computer_voice.last_line == "canopy_panic", "The breach triggers the pilot's recorded scream")
+	game._advance_parasites(0.5)
+	check(float(hatchling.muscle.get_shader_parameter(&"aperture")) < 0.1, "The hooks close around the grasp")
+	await image("xylo-canopy-grasp.png")
 	game.pause_flight()
 	check(game.sound.parasite_voice.stream_paused, "Pause silences the attached parasite")
 	game.resume_flight()
 	check(not game.sound.parasite_voice.stream_paused, "Resuming flight resumes the growl")
 	game._advance_parasites(CanopyParasite.LATCH + CanopyParasite.SLIDE)
 	check(game.parasites.is_empty() and not game.sound.parasite_voice.playing, "Releasing the glass ends the growl")
+	check(game.camera.has_node("PortPuncture"), "The broken glass stays in the pane after the parasite departs")
+	game._clear_parasites()
+	check(not game.camera.has_node("PortPuncture"), "Leaving the cockpit clears the broken pane")
+	game.flight.hull = game.flight.max_hull * 0.65
+	game.sound.stop_all()
+	game._apply_pilot_damage("CANOPY IMPACT", game.flight.max_hull * 0.04, true)
+	check(game.sound.voices.any(func(voice: AudioStreamPlayer) -> bool: return voice.stream == preload("res://assets/sfx/canopy_fracture.wav")), "The first damage fracture also plays the glass recording")
+	game.sound.stop_all()
+	game._apply_pilot_damage("CANOPY IMPACT", game.flight.max_hull * 0.04, true)
+	check(game.sound.voices.all(func(voice: AudioStreamPlayer) -> bool: return voice.stream != preload("res://assets/sfx/canopy_fracture.wav")), "Damage to an already cracked pane does not replay its shatter")
 	game.sound.stop_all()
 	game.queue_free()
 	await process_frame

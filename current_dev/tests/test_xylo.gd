@@ -197,7 +197,7 @@ func verify_world() -> void:
 	check(is_equal_approx(hull_before - game.flight.hull, loss) and is_equal_approx(game.campaign.hull_damage - damage_before, loss), "A full fifteen-second latch removes ten percent of maximum hull exactly once")
 	var at_release := parasite.position.y
 	game._advance_parasites(0.4)
-	check(parasite.position.y < at_release, "The parasite slides down the glass after fifteen seconds")
+	check(parasite.position.y > at_release, "The parasite peels off over the canopy after fifteen seconds")
 	game._advance_parasites(0.5)
 	check(game.parasites.is_empty() and not game.sound.parasite_voice.playing, "The latch clears its view and sound after release")
 	game.flight.distance = FlightDirector.ASTEROID_SPEED * FlightDirector.ASTEROID_DURATION

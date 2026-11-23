@@ -2,6 +2,7 @@ shader_type spatial;
 render_mode unshaded, cull_disabled;
 
 instance uniform float grip_age = 0.0;
+instance uniform float pressure = 0.0;
 varying vec3 skin_position;
 
 float hash(vec3 p) {
@@ -25,7 +26,12 @@ void vertex() {
 	skin_position = VERTEX;
 	float flex = sin(grip_age * 3.8 + VERTEX.y * 3.0);
 	VERTEX.z += 0.022 * flex * exp(-3.0 * dot(VERTEX.xy, VERTEX.xy));
-	VERTEX.y += 0.016 * sin(grip_age * 2.3 + VERTEX.x * 3.0) * smoothstep(0.75, 1.4, abs(VERTEX.x));
+	float foot = smoothstep(1.04,1.41,abs(VERTEX.x));
+	// Brace the legs toward the pane. Flatten the suction pads against its
+	// inner silhouette while letting the abdomen breathe between fixed feet.
+	VERTEX.z += pressure * foot * 0.37;
+	VERTEX.z = mix(VERTEX.z, min(VERTEX.z,0.49), pressure);
+	VERTEX.xy *= 1.0 + 0.015*flex*(1.0-foot);
 }
 
 void fragment() {
@@ -48,7 +54,16 @@ void fragment() {
 	skin = mix(skin, throat, disc);
 	vec3 n = normalize(NORMAL);
 	vec3 key = normalize(vec3(-0.48, 0.69, 0.61));
-	float wet = pow(max(0.0, dot(n, normalize(key + VIEW))), 48.0) * (0.25 + 0.58 * grain);
-	vec3 color = skin * (0.26 + 0.83 * max(0.0, dot(n, key))) + vec3(0.97, 0.80, 0.73) * wet;
+	// A travelling film pools along the tissue grain and reflects the long
+	// cockpit lights as narrow, curved streaks across each rounded segment.
+	float film = tissue(p * vec3(34,5,16) + vec3(0,grip_age*0.26,0));
+	float rivulet = 1.0-smoothstep(0.025,0.105,abs(film-0.54));
+	vec3 polish = normalize(n + 0.038*vec3(film-0.5,grain-0.5,0.0));
+	vec3 reflection = reflect(-normalize(VIEW),polish);
+	float strip = exp(-55.0*abs(reflection.y-0.51+reflection.x*0.22))*smoothstep(-0.4,0.28,reflection.z);
+	float edge = pow(1.0-clamp(dot(polish,normalize(VIEW)),0.0,1.0),3.6);
+	float wet = pow(max(0.0, dot(polish, normalize(key + VIEW))), 31.0) * (0.63 + 0.55 * film);
+	vec3 color = skin * (0.22 + 0.76 * max(0.0, dot(n, key))) * (0.97-0.16*rivulet);
+	color += vec3(0.97,0.83,0.78)*wet + vec3(0.69,0.87,1.0)*(strip*(0.34+0.61*rivulet)+edge*0.19);
 	ALBEDO = OUTPUT_IS_SRGB ? pow(color, vec3(1.0 / 2.2)) : color;
 }

@@ -1027,6 +1027,8 @@ func _apply_pilot_damage(reason: String, damage: float = 18.0, direct_hull: bool
 	var previous_shields: float = flight.shields
 	var previous_multiplier: int = campaign.combo_multiplier() if is_campaign else 1
 	var damaged: bool = flight.impact(reason, damage, direct_hull)
+	if damaged and flight.fractured_panes(flight.hull) > flight.fractured_panes(previous_hull):
+		sound.play_glass_break()
 	if not automation.is_empty():
 		automation_hull_damage += maxf(0, previous_hull - flight.hull)
 	if is_campaign and flight.hull < previous_hull:
@@ -1316,7 +1318,12 @@ func _advance_parasites(delta: float) -> void:
 	var audible := false
 	for i in range(parasites.size()-1, -1, -1):
 		var hatchling := parasites[i]
+		var glass_was_intact := not hatchling.breached
 		var bites := hatchling.advance(delta)
+		if glass_was_intact and hatchling.breached and not hatchling.finished():
+			if hatchling.made_hole:
+				sound.play_glass_break()
+			computer_voice.panic_at_breach()
 		if bites > 0 and flight.hull > 0:
 			_apply_pilot_damage("CANOPY PARASITE", flight.max_hull * CanopyParasite.HULL_FRACTION * bites / CanopyParasite.BITES, true)
 		audible = audible or hatchling.gripping()
@@ -1331,6 +1338,11 @@ func _clear_parasites() -> void:
 		hatchling.hide()
 		hatchling.queue_free()
 	parasites.clear()
+	if camera != null:
+		for pane in camera.get_children():
+			if pane.is_in_group(&"punctured_canopy"):
+				camera.remove_child(pane)
+				pane.queue_free()
 	if sound != null:
 		sound.set_parasite_audible(false)
 
@@ -3137,7 +3149,7 @@ func _eject() -> void:
 	add_child(ship_loss)
 	ship_loss.reactor_burst.connect(func() -> void:
 		sound.play_destruction(ImpactSpray.Surface.HULL)
-		sound.play_thunder())
+		sound.play_reactor_blast())
 	ship_loss.begin(camera.global_transform, lost_ship, lost_primary, settings["reduced_effects"])
 	music.set_paused(false)
 	music.request_scene(AmbientMusic.SHIP_LOSS)

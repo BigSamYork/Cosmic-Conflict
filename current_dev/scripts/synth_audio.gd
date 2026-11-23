@@ -5,12 +5,13 @@ var voices: Array[AudioStreamPlayer] = []
 var pulse: AudioStreamWAV
 var hit: AudioStreamWAV
 var impact: AudioStreamWAV
-var thunder: AudioStreamWAV
+var reactor_blast: AudioStreamWAV
 const ImpactSpray := preload("res://scripts/impact_spray.gd")
 const ORGANIC_RUPTURE := preload("res://assets/sfx/organic_rupture.wav")
 const TARGET_IGNITION := preload("res://assets/sfx/target_ignition.wav")
 var contact_thuds: Dictionary = {}
 var last_contact_usec := -100000
+var last_glass_frame := -1
 var parasite_voice := AudioStreamPlayer.new()
 var warp: AudioStreamWAV
 var voice_index: int = 0
@@ -44,7 +45,16 @@ func play_sound(stream: AudioStreamWAV) -> void:
 	voice_index += 1
 
 func play_thunder() -> void:
-	if thunder == null:
+	play_sound(preload("res://assets/sfx/thunder_crack.wav"))
+
+func play_glass_break() -> void:
+	var frame := Engine.get_physics_frames()
+	if last_glass_frame != frame:
+		last_glass_frame = frame
+		play_sound(preload("res://assets/sfx/canopy_fracture.wav"))
+
+func play_reactor_blast() -> void:
+	if reactor_blast == null:
 		const RATE := 22050
 		var rng := RandomNumberGenerator.new()
 		rng.seed = 7118
@@ -58,11 +68,11 @@ func play_thunder() -> void:
 			var roll := 0.58 + 0.42 * cos(13.0 * t + 1.7 * sin(t * 8.0))
 			var sample := noise * exp(-48.0 * t) * 0.44 + rumble * 4.2 * roll * exp(-2.6 * t)
 			pcm.encode_s16(i * 2, roundi(32767 * clampf(sample, -0.98, 0.98)))
-		thunder = AudioStreamWAV.new()
-		thunder.format = AudioStreamWAV.FORMAT_16_BITS
-		thunder.mix_rate = RATE
-		thunder.data = pcm
-	play_sound(thunder)
+		reactor_blast = AudioStreamWAV.new()
+		reactor_blast.format = AudioStreamWAV.FORMAT_16_BITS
+		reactor_blast.mix_rate = RATE
+		reactor_blast.data = pcm
+	play_sound(reactor_blast)
 
 func play_contact(surface: ImpactSpray.Surface) -> void:
 	# Coincident plasma bolts and piercing hits share one cockpit confirmation.
