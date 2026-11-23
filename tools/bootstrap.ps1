@@ -1,4 +1,4 @@
-param([switch]$SkipTemplates)
+param([switch]$SkipTemplates, [ValidateSet('Windows','Android','All')][string]$Platform = 'Windows')
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $root = Split-Path $PSScriptRoot -Parent
@@ -36,7 +36,10 @@ $editor = Get-VerifiedArchive "Godot_v$($version)_win64.exe.zip"
 Expand-Archive -LiteralPath $editor -DestinationPath $engine -Force
 if (-not $SkipTemplates) {
     . (Join-Path $PSScriptRoot 'windows-templates.ps1')
-    Install-WindowsTemplates -Url "$baseUrl/Godot_v$($version)_export_templates.tpz" -Destination $templates -Cache $cache
+    $names = @()
+    if ($Platform -ne 'Android') { $names += 'windows_debug_x86_64.exe', 'windows_release_x86_64.exe' }
+    if ($Platform -ne 'Windows') { $names += 'android_release.apk' }
+    Install-ExportTemplates -Url "$baseUrl/Godot_v$($version)_export_templates.tpz" -Destination $templates -Names $names
 }
 $executable = Join-Path $engine "Godot_v$($version)_win64_console.exe"
 & $executable --version

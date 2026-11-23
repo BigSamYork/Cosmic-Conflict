@@ -4,7 +4,16 @@ enum Mode { TITLE, FLIGHT, PAUSE, COMPLETE, TRANSITION, MARKET, DEBUG, SAVE_ERRO
 var named_games_origin: Mode
 
 var flight := FlightState.new()
-var mode: Mode = Mode.TITLE
+const AndroidFlightControls := preload("res://scripts/android_flight_controls.gd")
+var touch_controls: AndroidFlightControls
+var mode: Mode = Mode.TITLE:
+	set(value):
+		mode = value
+		if touch_controls != null:
+			touch_controls.visible = mode == Mode.FLIGHT
+			Input.emulate_mouse_from_touch = mode != Mode.FLIGHT
+			if mode == Mode.FLIGHT:
+				cursor = get_viewport().get_visible_rect().size * 0.5
 var camera: Camera3D
 const SKY_LIGHT := [Vector3(0.53, 0.26, 0.50), Vector3(1.04, 0.69, 0.43), Vector3.ONE, Vector3(0.035, 0.055, 0.10)]
 var headlamp := SpotLight3D.new()
@@ -229,6 +238,15 @@ func _ready() -> void:
 	add_child(layer)
 	hud = FlightHUD.new()
 	layer.add_child(hud)
+	if OS.has_feature("android"):
+		touch_controls = AndroidFlightControls.new()
+		layer.add_child(touch_controls)
+		touch_controls.aimed.connect(func(point: Vector2) -> void: cursor = point)
+		touch_controls.commanded.connect(func(action: StringName) -> void:
+			var command := InputEventAction.new()
+			command.action = action
+			command.pressed = true
+			_unhandled_input(command))
 	hud.flight = flight
 	hud.credits_text = "Cosmic Conflict v%s\nCockpit artwork supplied by the project owner.\nVoices of Lark and Captain Tomas Vale rendered with Chatterbox-Turbo by Resemble AI.\n\n" % ProjectSettings.get_setting("application/config/version") + FileAccess.get_file_as_string("res://assets/music/credits.txt") + "\n\n" + Engine.get_license_text() + "\n\n" + JSON.stringify(Engine.get_copyright_info(), "\t") + "\n\n" + JSON.stringify(Engine.get_license_info(), "\t")
 	hud.launch_requested.connect(start_flight)
@@ -721,14 +739,14 @@ func _notification(what: int) -> void:
 		pause_flight()
 
 func _set_pointer(captured: bool, warp: bool = false) -> void:
-	if automated_session or not automation.is_empty():
+	if touch_controls != null or automated_session or not automation.is_empty():
 		return
 	Input.mouse_mode = Input.MOUSE_MODE_CONFINED_HIDDEN if captured else Input.MOUSE_MODE_VISIBLE
 	if warp:
 		Input.warp_mouse(cursor)
 
-func _input(_event: InputEvent) -> void:
-	if automated_session or not automation.is_empty():
+func _input(event: InputEvent) -> void:
+	if automated_session or not automation.is_empty() or (touch_controls != null and touch_controls.handle(event)):
 		get_viewport().set_input_as_handled()
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -794,8 +812,10 @@ func _physics_process(delta: float) -> void:
 	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
 	flight.aim = (cursor / viewport_size * 2.0 - Vector2.ONE).clamp(-Vector2.ONE, Vector2.ONE)
 	flight.strafe = Vector2(Input.get_axis("strafe_left", "strafe_right"), Input.get_axis("strafe_up", "strafe_down"))
+	if touch_controls != null and touch_controls.stick_finger != -1:
+		flight.strafe = touch_controls.stick
 	flight.precision_hold = Input.is_action_pressed("precision_hold")
-	var held: bool = Input.is_action_pressed("primary")
+	var held: bool = Input.is_action_pressed("primary") or (touch_controls != null and touch_controls.firing())
 	if not held:
 		fire_armed = true
 	var previous: Vector3 = camera.position

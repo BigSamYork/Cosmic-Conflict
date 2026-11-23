@@ -1093,6 +1093,38 @@ Inno Setup 6 is required to compile the installer. Its compiler path can be
 supplied with `build.ps1 -Iscc 'C:\path\to\ISCC.exe'`. Existing cached tools support
 offline build/test use. Bootstrap requires internet when checking remote entries.
 
+#### Android
+
+The left thumbstick aims and steers. Touch the canopy with a second finger to aim
+independently while steering. Hold **FIRE** for the primary guns, or tap **ORD**,
+**FLARE**, **ROLL**, **DASH**, or **PAUSE**. The controls appear during flight on
+Android. Menus accept ordinary taps.
+
+On Windows, set `JAVA_HOME` to a JDK 17 or newer and `ANDROID_HOME` to an Android
+SDK with Platform-Tools and Build-Tools 35.0.0 or newer. To make a test install:
+
+```powershell
+.\tools\bootstrap.ps1 -Platform Android
+.\tools\build.ps1 -Platform Android -AndroidPreview
+```
+
+The preview APK in `releases/<version>/` has its own application ID and a fresh
+test signing key. Uninstall an older preview before installing another preview.
+Production builds keep the same signing key so Android can upgrade existing
+installs and preserve their saves. Set `ANDROID_RELEASE_KEYSTORE` to the keystore
+path, `ANDROID_KEY_ALIAS` to its alias and `ANDROID_KEYSTORE_PASSWORD` to its
+password. Set `ANDROID_KEY_PASSWORD` if the key uses a different password.
+Run `.\tools\build.ps1 -Platform Android` for the signed APK, or use
+`-Platform All` with both bootstrap and build to include Windows. The APK
+supports ARM64 phones and x86-64 emulators.
+
+For GitHub releases, configure repository secrets `ANDROID_KEYSTORE_BASE64`
+(the base64-encoded release keystore), `ANDROID_KEY_ALIAS`,
+`ANDROID_KEYSTORE_PASSWORD`, and optionally `ANDROID_KEY_PASSWORD`. The main
+release workflow attaches the verified, signed APK and lists its SHA-256.
+Until the keystore is configured, CI uploads the test APK as a preview workflow
+artifact and continues to publish the desktop releases.
+
 Native render validation supports `-- --smoke-test` or `-- --benchmark`.
 `-- --campaign-test` flies all six sectors and twelve bosses, then exercises the
 final debrief, retirement, exact reload, separate assisted records, next-tour
