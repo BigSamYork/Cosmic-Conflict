@@ -63,6 +63,7 @@ func verify_supplies() -> void:
 		var supply := SupplyPickup.new()
 		supply.kind = kind
 		root.add_child(supply)
+		check(supply.label(campaign, flight).contains("FLY THROUGH"), "Usable %s refill advertises collection" % kind)
 		var message: String = supply.advance(1.0, Vector3(0, 0, 20), Vector3(0, 0, -20), true, campaign, flight)
 		check(not message.is_empty() and not supply.active, "Swept crossing collects the %s supply, even across a large frame" % kind)
 		var snapshot := Vector3(flight.shields, flight.ammo, campaign.flares)
@@ -74,6 +75,7 @@ func verify_supplies() -> void:
 		supply.kind = kind
 		root.add_child(supply)
 		flight.shields = flight.max_shields
+		check(supply.label(campaign, flight).contains("FULL"), "Full %s inventory is visible on approach" % kind)
 		var message: String = supply.advance(0.1, Vector3.BACK, Vector3.FORWARD, true, campaign, flight)
 		check(message.contains("FULL") and flight.ammo == 3 and campaign.flares == 3 and flight.shields == flight.max_shields, "Full %s inventory is explicitly reported, never overfilled" % kind)
 		supply.queue_free()
@@ -85,11 +87,12 @@ func verify_supplies() -> void:
 		var supply := SupplyPickup.new()
 		supply.kind = kind
 		root.add_child(supply)
+		check(supply.label(campaign, flight).contains("NO "), "Missing %s equipment is visible on approach" % kind)
 		check(supply.advance(0.1, Vector3.BACK, Vector3.FORWARD, true, campaign, flight).contains("NO ") and flight.ammo == 0 and campaign.flares == 0, "Missing %s equipment is reported without granting an unlock or ammunition" % kind)
 		supply.queue_free()
 	var untouched := SupplyPickup.new()
 	root.add_child(untouched)
-	check(untouched.advance(0.1, Vector3.BACK, Vector3.FORWARD, false, campaign, flight).is_empty() and untouched.active, "The safe route cannot collect hazard supplies")
+	check(untouched.advance(0.1, Vector3.BACK, Vector3.FORWARD, false, campaign, flight).is_empty() and untouched.active and not untouched.visible, "The safe route cannot see or collect hazard supplies")
 	flight.hull = 0
 	check(untouched.advance(0.1, Vector3.BACK, Vector3.FORWARD, true, campaign, flight).is_empty() and untouched.active, "An ejected pilot cannot collect a supply in the same frame")
 	untouched.queue_free()
@@ -165,8 +168,18 @@ func verify_game() -> void:
 			nominal_hits += 1
 	check(nominal_hits == 0, "The nominal hazard lane clears real tower/turret collision volumes")
 	game.flight.shields = 20
-	for supply in branch.supplies:
-		supply.advance(0.1, supply.global_position + Vector3.BACK * 10, supply.global_position + Vector3.FORWARD * 10, true, game.campaign, game.flight)
+	game.flight.recharge_delay = 2
+	game.cursor = game.get_viewport().get_visible_rect().size * 0.5
+	game.flight.offset = Vector2.ZERO
+	for i in branch.supplies.size():
+		game.flight.distance = 2020.0 + i * 220.0 - 6.0
+		game.flight.elapsed = game.flight.distance / game.flight.speed
+		game.director.advance("ground", 0, game.flight.distance, game.flight.elapsed, game.targets)
+		game._update_camera()
+		for tick in 12:
+			game._physics_process(1.0 / 60)
+		check(not branch.supplies[i].active, "Flying the trench collects the %s supply" % branch.supplies[i].kind)
+	check(game.flight.shields == 45 and game.flight.ammo == 3 and game.campaign.flares == 1, "Fly-through supplies update all three live inventories")
 	game.flight.distance = GroundRoute.REJOIN
 	branch.advance(0.1, game.camera.global_position, game.camera.global_position, game.campaign, game.flight)
 	branch.advance(0.1, game.camera.global_position, game.camera.global_position, game.campaign, game.flight)

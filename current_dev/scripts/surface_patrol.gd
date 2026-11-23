@@ -98,7 +98,9 @@ func _finish(message: String, campaign: CampaignState, paid: bool = false) -> St
 		storm_hull.collision_layer = 0
 		storm_hull = null
 	if paid:
-		campaign.combat_score += REWARDS[current] * 10
+		var points: int = REWARDS[current] * 10
+		campaign.combat_score += points
+		message += " / +%d SCORE" % points
 	main_model.hide()
 	main_model.queue_free()
 	current = -1
@@ -136,17 +138,17 @@ func advance(delta: float, previous: Vector3, pilot: Vector3, campaign: Campaign
 			side = -side
 	var formation := current in [Job.ESCORT, Job.REPAIR]
 	if formation:
-		# A slow tender overtakes into view then holds ahead for the transfer.
-		mark += clampf((flight.distance - station_distance + 50.0) * 0.84, 0, 230.0)
+		# Let the pilot approach, then match speed a little ahead for the transfer.
+		mark += clampf(flight.distance - station_distance + 6.0, 0, 230.0)
 	main_model.transform = _pose(mark, side, route)
 	var range_m := pilot.distance_to(main_model.global_position)
 	if current == Job.SURVEY:
 		return _scan(delta, range_m, campaign, flight)
 	if formation:
 		return _formation(delta, pilot, range_m, campaign, flight)
-	if flight.distance > mark + 14.0:
-		return _finish("CONTRACT EXPIRED" if stage else "", campaign)
 	if not _crossed(previous, pilot):
+		if flight.distance > mark + 14.0:
+			return _finish("CONTRACT EXPIRED" if stage else "", campaign)
 		return ""
 	match current:
 		Job.SLALOM:
@@ -158,6 +160,8 @@ func advance(delta: float, previous: Vector3, pilot: Vector3, campaign: Campaign
 		Job.RESCUE:
 			return _finish("SURVIVOR ABOARD", campaign, true)
 		Job.COOLANT:
+			if flight.heat <= 0 and flight.overheat_remaining <= 0:
+				return _finish("COOLANT SIPHON / GUNS ALREADY COLD", campaign)
 			flight.heat = 0.0
 			flight.overheat_remaining = 0.0
 			return _finish("HEAT EXCHANGER PURGED / GUNS COLD", campaign)
@@ -175,7 +179,11 @@ func advance(delta: float, previous: Vector3, pilot: Vector3, campaign: Campaign
 				if carrier != null:
 					carrier.hide()
 				lamp.text = "DELIVER" if current == Job.COURIER else "EXIT"
-				return "FREIGHT ABOARD / CROSS DELIVERY GATE" if current == Job.COURIER else "CIVILIANS IN TRANSIT / HOLD FIRE" if current == Job.CEASEFIRE else "BOUNTY LIVE / INTERCEPT BEFORE EXIT"
+				match current:
+					Job.COURIER: prompt = "FREIGHT ABOARD / CROSS DELIVERY GATE"
+					Job.CEASEFIRE: prompt = "CIVILIANS IN TRANSIT / HOLD FIRE UNTIL EXIT"
+					Job.INTERCEPT: prompt = "BOUNTY LIVE / INTERCEPT BEFORE EXIT"
+				return prompt
 			if current == Job.COURIER:
 				var intact := is_equal_approx(campaign.hull_damage, checkpoint_hull)
 				return _finish("FREIGHT DELIVERED" if intact else "FREIGHT DAMAGED", campaign, intact)
@@ -188,7 +196,7 @@ func advance(delta: float, previous: Vector3, pilot: Vector3, campaign: Campaign
 
 func _scan(delta: float, range_m: float, campaign: CampaignState, flight: FlightState) -> String:
 	if flight.distance > station_distance + 5:
-		return _finish("", campaign)
+		return _finish("SURVEY INCOMPLETE / SENSOR PASSED", campaign)
 	var pilot := get_viewport().get_camera_3d()
 	if pilot == null or range_m > 175 or pilot.is_position_behind(main_model.global_position):
 		return ""
@@ -206,14 +214,14 @@ func _scan(delta: float, range_m: float, campaign: CampaignState, flight: Flight
 
 func _formation(delta: float, pilot: Vector3, range_m: float, campaign: CampaignState, flight: FlightState) -> String:
 	if flight.distance > station_distance + 244.0:
-		return _finish("", campaign)
+		return _finish("SERVICE WINDOW MISSED" if current == Job.REPAIR else "FORMATION WINDOW MISSED", campaign)
 	# The ring denotes the wing position beside the service craft.
 	var relative := main_model.to_local(pilot)
 	if range_m < 12.6 and Vector2(relative.x, relative.y).length_squared() < 3.8 * 3.8:
 		progress += delta
-		lamp.text = "%s %d%%" % [LABELS[current], mini(100, roundi(progress * 50))]
 	else:
 		progress = maxf(0.0, progress - delta * 0.5)
+	lamp.text = "%s / HOLD %d%%" % [LABELS[current], mini(100, floori(progress * 50))]
 	if progress < 2.0:
 		return ""
 	if current == Job.ESCORT:

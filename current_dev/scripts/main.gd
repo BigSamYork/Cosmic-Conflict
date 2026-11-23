@@ -817,7 +817,7 @@ func _physics_process(delta: float) -> void:
 		campaign.stats["shots"] += shots
 		if ground_branch != null and campaign.phase == "ground":
 			if ground_branch.route.advance(flight.distance, flight.offset.x):
-				hud.show_message("HAZARD ROUTE SELECTED / SUPPLIES AT REJOIN" if ground_branch.route.selected else "SAFE ROUTE SELECTED")
+				hud.show_message("HAZARD ROUTE SELECTED / SUPPLIES AHEAD" if ground_branch.route.selected else "SAFE ROUTE SELECTED")
 				_voice_route(ground_branch.route.selected)
 		if mission_world != null:
 			mission_world.advance(delta, director.frame)
@@ -905,7 +905,7 @@ func _physics_process(delta: float) -> void:
 				hud.show_message("SPORE STATIC / RADAR ONLY / FLIGHT CONTROLS UNAFFECTED")
 				_voice_event("xylo_spores")
 	if ground_branch != null and is_campaign and campaign.phase == "ground":
-		for message in ground_branch.advance(delta, previous, camera.position, campaign, flight):
+		for message in ground_branch.advance(delta, to_global(previous), camera.global_position, campaign, flight):
 			hud.show_message(message)
 		hud.objective = ground_branch.objective(flight.distance)
 	if mission_world != null and mission_world.advance_webs(delta, previous, camera.position, flight.collision_radius):
@@ -2053,8 +2053,8 @@ func _update_contacts() -> void:
 	if ground_branch != null and is_campaign and campaign.phase == "ground":
 		for supply in ground_branch.supplies:
 			var distance: float = camera.global_position.distance_to(supply.global_position)
-			if supply.active and distance < 250 and not camera.is_position_behind(supply.global_position):
-				hud.contacts.append({"screen": camera.unproject_position(supply.global_position), "distance": distance, "color": supply.color(), "label": supply.label() + " / FLY THROUGH"})
+			if supply.active and supply.is_visible_in_tree() and distance < 250 and not camera.is_position_behind(supply.global_position):
+				hud.contacts.append({"screen": camera.unproject_position(supply.global_position), "distance": distance, "color": supply.color(), "label": supply.label(campaign, flight)})
 	for pickup in mineral_pickups:
 		hud.tractor_active = hud.tractor_active or pickup.being_pulled
 		if pickup.active and not camera.is_position_behind(pickup.global_position) and camera.position.distance_to(pickup.global_position) < 200:

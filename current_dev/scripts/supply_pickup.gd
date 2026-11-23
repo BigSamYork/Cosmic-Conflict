@@ -25,12 +25,43 @@ func _ready() -> void:
 func color() -> Color:
 	return VectorArt.CYAN if kind == "shield" else VectorArt.AMBER if kind == "ordnance" else Color("#f49dce")
 
-func label() -> String:
-	return "SHIELD +25" if kind == "shield" else "ORDNANCE +2" if kind == "ordnance" else "FLARE +1"
+func _available(campaign: CampaignState, flight: FlightState) -> float:
+	match kind:
+		"shield":
+			return clampf(flight.max_shields - flight.shields, 0, 25)
+		"ordnance":
+			if campaign.secondary or campaign.swarm_launcher or campaign.emp_launcher:
+				return clampi(int(CampaignState.SHIPS[campaign.ship]["ammo"]) - flight.ammo, 0, 2)
+		"flare":
+			if campaign.countermeasures:
+				return clampi(CampaignState.FLARE_CAPACITY - campaign.flares, 0, 1)
+	return 0
+
+func _description(amount: float, campaign: CampaignState) -> String:
+	match kind:
+		"shield":
+			if amount > 0 and amount < 1:
+				return "SHIELD SUPPLY / TOP OFF SHIELDS"
+			return "SHIELD SUPPLY / +%d SHIELDS" % roundi(amount) if amount > 0 else "SHIELD SUPPLY / ALREADY FULL"
+		"ordnance":
+			if amount > 0:
+				return "ORDNANCE SUPPLY / +%d SHARED UNITS" % int(amount)
+			return "ORDNANCE SUPPLY / BAY ALREADY FULL" if campaign.secondary or campaign.swarm_launcher or campaign.emp_launcher else "ORDNANCE SUPPLY / NO LAUNCHER EQUIPPED"
+		"flare":
+			if amount > 0:
+				return "FLARE SUPPLY / +1 DEDICATED CHARGE"
+			return "FLARE SUPPLY / POD ALREADY FULL" if campaign.countermeasures else "FLARE SUPPLY / NO POD EQUIPPED"
+	return ""
+
+func label(campaign: CampaignState, flight: FlightState) -> String:
+	var amount := _available(campaign, flight)
+	var detail := _description(amount, campaign)
+	return detail + " / FLY THROUGH" if amount > 0 else detail
 
 func advance(delta: float, previous: Vector3, pilot: Vector3, enabled: bool, campaign: CampaignState, flight: FlightState) -> String:
 	if not active:
 		return ""
+	visible = enabled
 	age += delta
 	model.rotation.y = age * 0.8
 	if not enabled or flight.hull <= 0:
@@ -40,22 +71,12 @@ func advance(delta: float, previous: Vector3, pilot: Vector3, enabled: bool, cam
 		return ""
 	active = false
 	hide()
+	var amount := _available(campaign, flight)
 	match kind:
 		"shield":
-			var amount: float = minf(25.0, flight.max_shields - flight.shields)
 			flight.shields += amount
-			return "SHIELD SUPPLY / +%d SHIELDS" % int(amount) if amount > 0 else "SHIELD SUPPLY / ALREADY FULL"
 		"ordnance":
-			if not (campaign.secondary or campaign.swarm_launcher or campaign.emp_launcher):
-				return "ORDNANCE SUPPLY / NO LAUNCHER EQUIPPED"
-			var amount: int = mini(2, int(CampaignState.SHIPS[campaign.ship]["ammo"]) - flight.ammo)
-			flight.ammo += amount
-			return "ORDNANCE SUPPLY / +%d SHARED UNITS" % amount if amount > 0 else "ORDNANCE SUPPLY / BAY ALREADY FULL"
+			flight.ammo += int(amount)
 		"flare":
-			if not campaign.countermeasures:
-				return "FLARE SUPPLY / NO POD EQUIPPED"
-			var amount: int = mini(1, CampaignState.FLARE_CAPACITY - campaign.flares)
-			campaign.flares += amount
-			return "FLARE SUPPLY / +1 DEDICATED CHARGE" if amount > 0 else "FLARE SUPPLY / POD ALREADY FULL"
-	assert(false, "Unknown supply kind")
-	return ""
+			campaign.flares += int(amount)
+	return _description(amount, campaign)
