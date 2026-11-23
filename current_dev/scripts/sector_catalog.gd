@@ -15,12 +15,12 @@ const GROUND_BOSSES: Dictionary = {"ignis": "Vulcan Siege Runner", "cryo": "Glac
 const ORBITAL_BOSSES: Dictionary = {"ignis": "Solar Flare Cruiser", "cryo": "Cryo-Carrier Hydra", "vespera": "Stealth Dreadnought Nyx", "xylo": "Hive Mother Leviathan", "thalassa": "Storm Ark", "kharon": "Obelisk Sovereign"}
 const ACCENTS: Dictionary = {"ignis": Color("#ff984b"), "cryo": Color("#6eebed"), "vespera": Color("#e88ce9"), "xylo": Color("#98cf64"), "thalassa": Color("#72d8ff"), "kharon": Color("#e8bf65")}
 const DESCRIPTIONS: Dictionary = {
-	"ignis": "Volcanic canyon / erupting cones / thermal weapons",
-	"cryo": "Glacial canyon / frost weapons / giant oblong asteroid belt",
-	"vespera": "Neon city / side laser gates / stealth dreadnought",
-	"xylo": "Alien swamp / acid and spores / living hive fleet",
+	"ignis": "Volcanic canyon / flowing lava / volcanic bombs",
+	"cryo": "Glacial ruptures / rare Glacier Mauler / ice belt",
+	"vespera": "Neon city / falling maglevs / ringed orbital giant",
+	"xylo": "Alien swamp / canopy predator / living hive fleet",
 	"thalassa": "Storm ocean / offshore platforms / lightning / manta interceptors",
-	"kharon": "Desert ruins / broken arches / falling pillars / scarab fighters"
+	"kharon": "Desert ruins / meteor impacts / siege walkers"
 }
 
 const DISTRESS := {

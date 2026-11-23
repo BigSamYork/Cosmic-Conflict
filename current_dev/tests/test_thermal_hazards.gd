@@ -6,6 +6,7 @@ func _initialize() -> void:
 	call_deferred("run")
 
 func run() -> void:
+	_check_planetary_ejecta()
 	var reference_exposure: float = -1.0
 	for fps in [30, 45, 60]:
 		var vent := HeatVent.new()
@@ -29,6 +30,8 @@ func run() -> void:
 	root.add_child(volcano)
 	volcano.age = 0.2
 	volcano.advance(0, Vector3.ZERO, Vector3.ZERO)
+	var channels: MeshInstance3D = volcano.volcano.get_child(1)
+	check(channels.mesh.get_aabb().size.x > 16 and volcano.volcano.lava_light.omni_range >= 8 and volcano.volcano.lava_light.light_energy > 0 and volcano.volcano.lava_light.light_energy < 1.2, "The lava extends past the cone toe and casts a restrained local light")
 	var early_flow: float = volcano.volcano.lava_material.get_shader_parameter("flow_amount")
 	volcano.age = 3.0
 	volcano.advance(0, Vector3.ZERO, Vector3.ZERO)
@@ -130,10 +133,48 @@ func run() -> void:
 	print("THERMAL_HAZARDS_FAILURES=", failures)
 	quit(failures)
 
+func _check_planetary_ejecta() -> void:
+	var course := Node3D.new()
+	course.transform = Transform3D(Basis.from_euler(Vector3(0.18,0.4,-0.1)),Vector3(54,30,160))
+	root.add_child(course)
+	for sector in ["ignis", "kharon"]:
+		var event := preload("res://scripts/igneous_hazard.gd").new()
+		event.sector = sector
+		event.position = Vector3(0,8,-145)
+		event.source_world = course.to_global(Vector3(14,5,-90)) if sector == "ignis" else Vector3.INF
+		course.add_child(event)
+		event.advance_event(0.0,false)
+		if sector == "ignis":
+			check(event.stone.global_position.distance_to(event.source_world) < 0.001, "Volcanic bomb launches from the transformed cone")
+		event.advance_event(2.49,false)
+		check(event.stone.visible and event.stone.position.length() < 2.0 and not event.scar.visible, "%s incoming body converges on the advertised contact" % sector)
+		event.advance_event(2.5,true)
+		check(not event.stone.visible and event.scar.visible and event.chips.visible and event.light.visible, "%s contact lands on the same tick with reduced effects" % sector)
+		check(event.ground_y < -6.0 and event.scar.mesh.get_aabb().end.y < -4, "%s aerial hit projects the impact scar down to the transformed terrain" % sector)
+		event.advance_event(5.5,true)
+		check(not event.dust.visible and not event.light.visible and not event.chips.visible, "%s impact dissipates before retirement" % sector)
+		event.free()
+	var driver := preload("res://scripts/igneous_hazard.gd").new()
+	driver.walker_encounter = true
+	driver.position = Vector3(0,-1,-120)
+	course.add_child(driver)
+	driver.advance_event(1.3,false)
+	var foot_heights := Array(driver.walker.foot_lifts)
+	check(foot_heights.max() > 0.2 and foot_heights.min() < 0.01, "Kharon walker lifts a diagonal pair while the other feet plant")
+	driver.advance_event(2.0,false)
+	var wound_tip: Vector3 = driver.walker.ram_tip
+	driver.advance_event(2.5,true)
+	var contact_tip: Vector3 = driver.walker.ram_tip
+	check(wound_tip.y - contact_tip.y > 4.5 and driver.walker.to_global(contact_tip).distance_to(driver.global_position) < 0.01, "The raised pile driver actually strikes the fixed contact point on the warning boundary")
+	check(driver.scar.visible and not driver.stone.visible and not driver.wake.visible, "The desert walker strikes through the sand without meteor geometry")
+	driver.advance_event(5.3,true)
+	check(driver.walker.chassis.position.x > 16 and driver.walker.ram_tip.y > 2, "The rig retracts its hammer and strides away after impact")
+	driver.free()
+	course.free()
+
 func check(condition: bool, description: String) -> void:
 	if condition:
 		print("PASS: ", description)
 	else:
 		push_error("FAIL: " + description)
 		failures += 1
-

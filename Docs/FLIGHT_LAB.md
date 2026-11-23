@@ -6,6 +6,19 @@ with a local Hall of Fame and repeat tours.
 The original 75-second, non-lethal
 training range is still available separately.
 
+## Surface hazards
+
+During a ground sortie, a sound and an amber contact mark warn where a local hazard will strike. Steer away or time a barrel roll. Weather can destroy enemies and installations without awarding a kill or credits.
+
+| World | What to watch for |
+| --- | --- |
+| Ignis Prime | Incandescent bombs arc out of nearby volcanic cones. Molten channels spill downhill and light the rock around them. |
+| Cryo-Vex | Cracks spread before a pressure rupture heaves the ice upward. On rare sorties a shaggy Glacier Mauler rises from the snow and pounds the ice. |
+| Vespera-9 | A derailed maglev drops out of the skyline trailing sparks. Its nose hits first, then the carriage skids. A banded planet with dusty rings is visible during the orbital dogfight. |
+| Xylo-Mire | A shadow crosses the canopy. Look up for the hooked hand that closes around a target and lifts it into the dark. |
+| Thalassa Reach | A branching lightning leader can hit a ship, tower, or offshore platform. Solid structures can intercept the discharge. |
+| Kharon Dunes | Watch for meteor trails over the dunes and for the mechanical siege walker planting its feet before a ground strike. |
+
 Selecting a sector locks its lighting for the sortie. Seconds 00–14 of the current
 minute give twilight, 15–29 morning, 30–44 daylight, and 45–59 midnight.
 Vale and Lark comment on arrival. Astra Market sells a forward headlight for 200
@@ -565,7 +578,7 @@ Developer assistance remains marked for the entire operation, including later to
   entire engine nacelle, with a larger fragment burst and cascading explosion.
   Destroyed sections stay gone. Damaged sockets continue venting smoke or ichor.
 - The boss health bar tracks progress along the available victory routes.
-  Target labels identify the systems called out in the computer's briefing.
+  The computer's briefing identifies the systems. Optional brackets mark the hitboxes.
 
 ## Peripheral-field refinements from v0.6.1
 

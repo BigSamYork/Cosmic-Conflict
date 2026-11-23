@@ -12,6 +12,8 @@ var weapon_lamp := SpotLight3D.new()
 var credit_hoops := preload("res://scripts/credit_hoops.gd").new()
 var combat_lights := CombatLighting.new()
 var surface_weather := SurfaceWeather.new()
+var surface_events := preload("res://scripts/surface_events.gd").new()
+var canopy_shade := 0.0
 var surface_flight := false
 const PlayerDestruction := preload("res://scripts/player_destruction.gd")
 var ship_loss: PlayerDestruction
@@ -545,6 +547,7 @@ func _build_world(training: bool = true) -> void:
 			for i in range(10):
 				var lightning := StormLightning.new()
 				lightning.site = i
+				lightning.storm_seed = surface_events.random.randi()
 				lightning.phase = i * 1.1
 				lightning.position = FrontierArt.floor_point(-8 if i % 2 == 0 else 8, 460 + i * 320)
 				lightning.aim_requested.connect(_storm_aim)
@@ -878,6 +881,11 @@ func _physics_process(delta: float) -> void:
 	_advance_ocean(delta)
 	if not lightning_fields.is_empty():
 		_advance_storm(delta, previous)
+	if is_campaign and campaign.phase == "ground" and campaign.sector != "thalassa":
+		surface_events.advance(self, delta, to_global(previous), camera.global_position)
+		if campaign.sector == "xylo":
+			var claw := surface_events.effect
+			_set_canopy_shade(claw.eclipse_strength(camera.global_position) if claw != null else 0.0)
 	for ice in falling_ice:
 		if ice.advance(delta, previous, camera.position, flight.collision_radius):
 			_solid_contact(ice.global_position.direction_to(camera.position), "FALLING RUIN" if ice is RuinFall else "FALLING ICE", FallingIce.DAMAGE)
@@ -1603,7 +1611,7 @@ func _advance_storm(delta: float, previous: Vector3) -> void:
 func _storm_aim(field: StormLightning, cycle: int) -> void:
 	# A leader picks a vicinity during warning. The actual discharge ray can
 	# miss a moving fighter or be intercepted by another object on the way down.
-	var kind := posmod(cycle + field.site, 4)
+	var kind := posmod(cycle + field.site + field.storm_seed, 4)
 	if kind == 0:
 		return
 	var best := 125.0 * 125.0
@@ -1961,6 +1969,9 @@ func _update_contacts() -> void:
 	hud.gate_warning = false
 	hud.lightning_warning = false
 	hud.acid_warning = false
+	if surface_events.warning() and not camera.is_position_behind(surface_events.effect.global_position):
+		var point: Vector3 = surface_events.effect.global_position
+		hud.contacts.append({"screen": camera.unproject_position(point), "distance": camera.global_position.distance_to(point), "color": VectorArt.AMBER, "label": surface_events.warning_text()})
 	for field in xylo_fields:
 		if field.kind == XyloField.Kind.ACID and (field.warning() or field.active(field.age)) and camera.global_position.distance_to(field.global_position) < 120 and not camera.is_position_behind(field.global_position):
 			hud.acid_warning = true
@@ -2017,11 +2028,9 @@ func _update_contacts() -> void:
 		if not target.guided_lockable and target is EnemyFighter:
 			tint = VesperaArt.SIGNAL.darkened(0.25)
 			stealth_seen = stealth_seen or distance < 160
-		var label: String = "SHIMMER" if not target.guided_lockable and target is EnemyFighter and distance < 160 else ("EMITTER" if distance < 160 else "") if target is GateEmitter else "DRONE BAY / STOP REINFORCEMENTS" if target is DroneBay else "THERMAL PROJECTOR" if target is ThermalEmitter else "RADAR / JAM TRACKING" if target is RadarDish else "WEB NODE" if target is WebNode else ""
+		var label: String = "SHIMMER" if not target.guided_lockable and target is EnemyFighter and distance < 160 else ("EMITTER" if distance < 160 else "") if target is GateEmitter else "RADAR / JAM TRACKING" if target is RadarDish else "WEB NODE" if target is WebNode else ""
 		if target is PirateSkirmisher:
 			label = ("GUARDIAN" if target.biological else "PIRATE") + (" / RETURNING FIRE" if target.engaged else " / OPTIONAL")
-		elif target is BossRadar:
-			label = "RADAR"
 		elif target is FallingIce:
 			tint = VectorArt.AMBER
 			label = ("RUIN" if target is RuinFall else "ICE") + (" / SHOOT OR KEEP CENTER" if target.warning() else " / FALLING / EVADE" if target.started else " / SHOOT TO CLEAR")
@@ -2029,8 +2038,6 @@ func _update_contacts() -> void:
 			label = "BROOD EGG / HOLD FIRE" if target.infested else "NUTRIENT CARGO" if target.cargo else "EGG" if distance < 80 else ""
 			if flight.elapsed > 12:
 				_voice_event("xylo_egg")
-		if target is BossPart and boss != null:
-			label = boss.part_label(target)
 		var contact := {"screen": camera.unproject_position(target.aim_point()), "distance": distance, "color": tint, "label": label}
 		if target is BossPart:
 			contact["boss_part"] = true
@@ -2177,6 +2184,8 @@ func _apply_settings() -> void:
 			music.set_level(int(settings["music_volume"]), bool(settings["mute"]) or automated_session or not automation.is_empty())
 
 func _clear_stage() -> void:
+	surface_events.reset()
+	_set_canopy_shade(0.0)
 	credit_hoops.clear()
 	weapon_lamp.light_energy = 0
 	_end_ship_loss()
@@ -2355,10 +2364,20 @@ func _advance_ocean(delta: float) -> void:
 			if material.shader == FrontierArt.WATER_ARRIVAL:
 				material.set_shader_parameter("wave_time", ocean_age)
 
-func _apply_sector_light() -> void:
+func _set_canopy_shade(amount: float) -> void:
+	if is_equal_approx(amount, canopy_shade):
+		return
+	canopy_shade = amount
+	RenderingServer.global_shader_parameter_set("sector_ambient", _sector_illumination())
+
+func _sector_illumination() -> Vector3:
 	var active := is_campaign and campaign != null and campaign.phase != "market"
 	var tint: Vector3 = SKY_LIGHT[campaign.sky_quarter] if active else Vector3.ONE
-	RenderingServer.global_shader_parameter_set("sector_ambient", tint)
+	return tint * Vector3.ONE.lerp(Vector3(0.18, 0.23, 0.33), canopy_shade)
+
+func _apply_sector_light() -> void:
+	var active := is_campaign and campaign != null and campaign.phase != "market"
+	RenderingServer.global_shader_parameter_set("sector_ambient", _sector_illumination())
 	get_world_3d().environment.sky.sky_material.set_shader_parameter("sun_height", [-0.015, 0.08, 0.25, -0.55][campaign.sky_quarter] if active else 0.25)
 	headlamp.visible = active and campaign.headlight
 
@@ -2584,6 +2603,8 @@ func _load_phase() -> void:
 	_enter_phase(false)
 
 func _enter_phase(continuous: bool) -> void:
+	surface_events.reset()
+	_set_canopy_shade(0.0)
 	credit_hoops.clear()
 	if campaign.phase == "launch":
 		_prepare_launch()

@@ -106,6 +106,15 @@ func verify_solar_disc() -> void:
 	var hidden: Image = await image("")
 	check(frost_ring.get_pixel(1316, 669).b > 0.35 and hidden.get_pixel(1316, 669).b < 0.25,
 		"Cryo-Vex's ice ring extends beyond the lunar limb and hides with the moon")
+	material.set_shader_parameter("icy_mix", 0.0)
+	material.set_shader_parameter("city_mix", 1.0)
+	material.set_shader_parameter("atmosphere_mix", 0.0)
+	camera.look_at(Vector3(0.34, 0.12, -1))
+	var empty_orbit: Image = await image("")
+	material.set_shader_parameter("planet_visibility", 1.0)
+	var gas_giant: Image = await image("vespera-orbital-rings.png")
+	check(changed_pixels(empty_orbit, gas_giant, Rect2i(1270, 605, 80, 50)) > 600,
+		"Vespera's orbital ring extends beyond the planet's illuminated limb")
 	scene.queue_free()
 	await process_frame
 

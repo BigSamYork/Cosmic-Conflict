@@ -10,6 +10,7 @@ const STROKES := [0.0, 0.22, 0.53]
 const HEIGHT_M := 105.0
 const VIEW_RANGE := 680.0
 var site := 0
+var storm_seed := 0
 var landing := Vector3.DOWN
 var reduced := false
 var pilot_radius := 2.5
@@ -71,7 +72,7 @@ func _prepare(cycle: int) -> void:
 	cycle_id = cycle
 	next_stroke = 0
 	var rng := RandomNumberGenerator.new()
-	rng.seed = hash(Vector2i(site + 173, cycle))
+	rng.seed = hash(Vector3i(site + 173, cycle, storm_seed))
 	landing = Vector3(rng.randf_range(-2, 2), -1.0, rng.randf_range(-3, 3))
 	aim_requested.emit(self, cycle)
 	ring.position = landing + Vector3.UP * 1.2

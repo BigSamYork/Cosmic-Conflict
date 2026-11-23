@@ -29,6 +29,8 @@ func run() -> void:
 	game.campaign.phase = "ground"
 	await game._load_phase()
 	var field: StormLightning = game.lightning_fields[0]
+	# Hold the storm over the test rig for the leader and return-stroke measurements.
+	field.storm_seed = 0
 	field.age = StormLightning.CYCLE + 0.8
 	field.advance(0.01, field.global_position, field.global_position)
 	var destination := field.to_global(field.landing)

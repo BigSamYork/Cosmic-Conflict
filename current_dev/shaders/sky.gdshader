@@ -54,15 +54,48 @@ vec3 solar_disc(vec3 background, vec3 ray) {
 	return color;
 }
 
+// Project a tilted annulus into the same space as the sphere so its far limb
+// disappears behind the planet and its near limb can cast a shadow on the disc.
+vec3 vespera_giant(vec3 background, vec3 p3, float body, float reveal) {
+	vec2 p = mat2(vec2(0.96, 0.28), vec2(-0.28, 0.96)) * p3.xy;
+	const vec3 pole = vec3(0.0, 0.916515, 0.4);
+	vec3 sun = normalize(vec3(-0.60, 0.47, 0.64));
+	vec3 sphere = vec3(p, p3.z);
+	float latitude = dot(sphere, pole);
+	float band = 0.5 + 0.5 * sin(latitude * 26.0 + 1.2 * sin(p.x * 3.0 + latitude * 6.0));
+	vec3 gas = mix(vec3(0.48, 0.32, 0.37), vec3(0.91, 0.72, 0.57), 0.24 + 0.57 * band);
+	float t = -dot(sphere, pole) / dot(sun, pole);
+	float shadow_radius = length(sphere + sun * t);
+	float shade = step(0.0, t) * smoothstep(1.20, 1.32, shadow_radius) * (1.0 - smoothstep(2.01, 2.13, shadow_radius));
+	gas *= (0.15 + 0.85 * max(0.0, dot(sphere, sun))) * (1.0 - 0.46 * shade);
+	vec3 color = mix(background, gas * reveal, body);
+	vec3 ring = vec3(p, -p.y * pole.y / pole.z);
+	float radius = length(ring);
+	float edge = smoothstep(1.18, 1.25, radius) * (1.0 - smoothstep(2.08, 2.15, radius));
+	float gap = smoothstep(0.018, 0.046, abs(radius - 1.74));
+	float lanes = 0.70 + 0.19 * sin(radius * 49.0) + 0.09 * cos(radius * 105.0);
+	float lit = 1.0 - 0.68 * step(dot(ring, sun), 0.0) * (1.0 - smoothstep(0.90, 1.05, length(cross(ring, sun))));
+	vec3 dust = mix(vec3(0.74, 0.46, 0.31), vec3(0.96, 0.82, 0.67), smoothstep(1.27, 2.10, radius));
+	float visible = mix(1.0, step(p3.z, ring.z), body);
+	return mix(color, dust * lanes * lit * reveal, edge * (0.13 + 0.87 * gap) * visible);
+}
+
 vec3 lunar_disc(vec3 background, vec3 ray) {
 	vec3 axis = normalize(vec3(0.62, 0.3, -1.0));
-	if (planet_visibility <= 0.0 || dot(ray, axis) < 0.98) {
+	bool giant = city_mix > 0.99 && atmosphere_mix < 0.01;
+	if (giant) {
+		axis = normalize(vec3(0.34, 0.12, -1.0));
+	}
+	if (planet_visibility <= 0.0 || dot(ray, axis) < (giant ? 0.964 : 0.98)) {
 		return background;
 	}
 	vec2 p = disc_coords(ray, axis, 0.093);
 	float r = length(p);
 	float body = 1.0 - smoothstep(0.992, 1.008, r);
 	vec3 n = vec3(p, sqrt(max(0.0, 1.0 - r * r)));
+	if (giant) {
+		return vespera_giant(background, n, body, planet_visibility);
+	}
 	vec3 rock = mix(vec3(0.60, 0.39, 0.35), vec3(0.60, 0.83, 0.90), icy_mix);
 	rock = mix(rock, vec3(0.67, 0.46, 0.69), city_mix);
 	rock = mix(rock, vec3(0.51, 0.61, 0.38), swamp_mix);
