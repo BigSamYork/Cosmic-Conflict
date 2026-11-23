@@ -13,13 +13,18 @@ var effect: Node3D
 var carried: Node3D
 var sector := ""
 var kind := ""
-var mauler_seen := false
+var mauler_slot := 1
+var cryo_events := 0
+var pilot_caught := false
+var grip_offset := Vector3.ZERO
+var entry_basis := Basis.IDENTITY
 var age := 0.0
 var delay := 0.0
 
 func reset() -> void:
 	_clear_effect()
-	mauler_seen = false
+	cryo_events = 0
+	mauler_slot = random.randi_range(1, 2)
 	delay = random.randf_range(4.5, 7.0)
 
 func _clear_effect() -> void:
@@ -27,6 +32,7 @@ func _clear_effect() -> void:
 		effect.queue_free()
 	effect = null
 	carried = null
+	pilot_caught = false
 	sector = ""
 	kind = ""
 	age = 0.0
@@ -49,23 +55,33 @@ func advance(game, delta: float, previous: Vector3, pilot: Vector3) -> void:
 	var before := age
 	age += delta
 	var reduced: bool = game.settings["reduced_effects"]
+	if sector == "xylo":
+		effect.shake_enabled = game.settings["shake"] and not reduced
 	if before < CONTACT and age >= CONTACT:
 		effect.advance_event(CONTACT, reduced)
 		var pilot_at_contact := previous.lerp(pilot, (CONTACT - before) / delta)
 		_impact(game, pilot_at_contact)
-	effect.advance_event(minf(age, DURATION), reduced)
+	var end_time := CLAW.LAND_AT if pilot_caught else DURATION
+	effect.advance_event(minf(age, end_time), reduced)
 	if carried != null:
 		carried.global_position = effect.grasp_point()
-	if age >= DURATION:
+	if pilot_caught and before < CLAW.THROW_AT and age >= CLAW.THROW_AT:
+		game.hud.show_message("CLAW RELEASE / BRACE FOR IMPACT")
+	if age >= end_time:
+		if pilot_caught and game.flight.hull > 0:
+			if game._apply_pilot_damage("CANOPY CLAW THROW", 35.0, true):
+				game.sound.play_sound(game.sound.impact)
+				game.hud.show_message("CLAW THROW / HULL IMPACT")
 		_clear_effect()
 		delay = random.randf_range(6.5, 13.0)
 
 func _start(game) -> void:
 	sector = game.campaign.sector
 	kind = sector
-	if sector == "cryo" and not mauler_seen and random.randf() < 0.08:
-		mauler_seen = true
-		kind = "cryo_creature"
+	if sector == "cryo":
+		cryo_events += 1
+		if cryo_events == mauler_slot:
+			kind = "cryo_creature"
 	elif sector == "kharon" and random.randf() < 0.35:
 		kind = "kharon_walker"
 	var flight: FlightState = game.flight
@@ -85,7 +101,7 @@ func _start(game) -> void:
 		var lane := GroundRoute.point(target.travel) if route != null and route.selected else FlightState.rail_point(target.travel)
 		if absf(local.x - lane.x) <= 32.0:
 			candidates.append(target)
-	if not candidates.is_empty() and random.randf() < (0.90 if sector == "xylo" else 0.70):
+	if kind != "cryo_creature" and not candidates.is_empty() and random.randf() < (0.45 if sector == "xylo" else 0.70):
 		at = game.world.to_local(candidates[random.randi_range(0, candidates.size() - 1)].aim_point())
 	var script: Script = IGNEOUS if sector in ["ignis", "kharon"] else CLAW if sector == "xylo" else FRONTIER
 	effect = script.new()
@@ -115,6 +131,8 @@ func _start(game) -> void:
 	age = 0.0
 	effect.advance_event(0.0, game.settings["reduced_effects"])
 	game.sound.play_sound(load("res://assets/hazards/%s_warning.wav" % kind))
+	if kind == "cryo_creature":
+		game.hud.show_message("GLACIER MAULER AHEAD / EVADE ITS PAWS")
 
 func _eligible(target: RangeTarget) -> bool:
 	if target.destroyed or target.is_queued_for_deletion() or not target.is_visible_in_tree():
@@ -137,9 +155,14 @@ func _in_reach(at: Vector3, margin: float = 0.0) -> bool:
 func _impact(game, pilot: Vector3) -> void:
 	game.sound.play_sound(load("res://assets/hazards/%s_impact.wav" % kind))
 	if game.flight.roll_remaining <= 0.0 and _in_reach(pilot, game.flight.collision_radius):
-		var hit: bool = game._apply_pilot_damage(NAMES[kind], 50.0 if sector == "xylo" else 42.0)
-		if sector == "xylo" and hit:
+		if sector == "xylo" and game.flight.hull > 0.0:
+			pilot_caught = true
+			effect.pilot_caught = true
+			grip_offset = effect.to_local(pilot)
+			entry_basis = game.camera.global_basis.orthonormalized()
+			game.hud.show_message("CANOPY CLAW / SHIP IN ITS GRIP")
 			return # One set of talons can only seize one victim.
+		game._apply_pilot_damage(NAMES[kind], 42.0)
 	var closest: RangeTarget
 	for target: RangeTarget in game.targets:
 		if not _eligible(target) or not _in_reach(target.aim_point()):
@@ -152,6 +175,23 @@ func _impact(game, pilot: Vector3) -> void:
 			game._storm_contact(target, target.aim_point(), -effect.global_basis.y)
 	if closest != null:
 		_snatch(closest)
+
+func pilot_pose(rail: Transform3D) -> Transform3D:
+	if not pilot_caught:
+		return rail
+	var t := minf(age, CLAW.THROW_AT)
+	var lift := smoothstep(CONTACT, 3.52, t)
+	# Keep the cockpit between the fingers. Preserve the offset at contact so
+	# a grazing catch pulls the ship in without teleporting it to the palm.
+	var offset := grip_offset.lerp(Vector3(0, -0.7, 3.2), lift)
+	var held: Vector3 = effect.to_global(effect.pilot_hold(t) + offset)
+	var shake: float = effect.shake_wave(t)
+	var attitude := entry_basis * Basis.from_euler(Vector3(-0.25 * lift + 0.04 * shake, 0.08 * lift, 0.14 * lift + 0.13 * shake))
+	var thrown := clampf((age - CLAW.THROW_AT) / (CLAW.LAND_AT - CLAW.THROW_AT), 0.0, 1.0)
+	var arc := 4.0 * thrown * (1.0 - thrown)
+	var position := held.lerp(rail.origin, thrown) + effect.global_basis * Vector3(8.0, 10.0, -9.0) * arc
+	var rotation := attitude.slerp(rail.basis, thrown) * Basis.from_euler(Vector3(-0.19 * arc, 0, -0.26 * arc))
+	return Transform3D(rotation, position)
 
 func _snatch(victim: RangeTarget) -> void:
 	# Carry a render-only snapshot. The original target stops firing and colliding immediately.
