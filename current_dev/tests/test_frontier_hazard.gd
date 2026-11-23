@@ -48,9 +48,11 @@ func run() -> void:
 				var beast = event.creature
 				var left: Vector3 = beast.wrists[0].global_position
 				if age == 1.95:
-					check(left.y > 10, "Mauler raises its paws before impact")
+					check(left.y > 16, "Mauler raises its paws above the flight lane before impact")
 				elif age == 2.5:
-					check(left.length() < 2 and left.y < 0.8, "Mauler strikes at the aimed contact point")
+					var right: Vector3 = beast.wrists[1].global_position
+					var strike := left.lerp(right, 0.5)
+					check(Vector2(strike.x, strike.z).length() < 0.1 and strike.y < 1.1 and left.distance_to(right) > 4, "Both giant paws bracket the marked strike on the ice")
 				elif age == 4.9:
 					check(beast.position.length() > 27, "Mauler visibly retreats")
 				camera.position = Vector3(11, 7, 21)

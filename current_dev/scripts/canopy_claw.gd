@@ -2,6 +2,8 @@ extends Node3D
 
 const Art = preload("res://scripts/canopy_claw_art.gd")
 const CONTACT := 2.5
+const THROW_AT := 4.6
+const LAND_AT := 5.95
 # Plane of Xylo's swamp beneath the impact point, expressed in course-local metres.
 var floor_offset := 0.0
 var upper: MeshInstance3D
@@ -14,6 +16,8 @@ var second_joints: Array[Node3D] = []
 var talons: Array[Node3D] = []
 var hold := Vector3.ZERO
 var eclipse := 0.0
+var pilot_caught := false
+var shake_enabled := true
 
 func _ready() -> void:
 	upper = Art.part("upper")
@@ -62,6 +66,11 @@ func advance_event(age: float, reduced: bool) -> void:
 	hold = grip + Vector3(-46 * lifting, 82 * lifting, -18 * lifting)
 	var curl := smoothstep(2.16, CONTACT, age)
 	var roll := lerpf(-0.24, 0.0, reaching) - 0.48 * lifting
+	if pilot_caught and age >= CONTACT:
+		var recoil := smoothstep(THROW_AT, THROW_AT + 0.8, age)
+		hold = pilot_hold(minf(age, THROW_AT)) + Vector3(-35, 62, 10) * recoil
+		roll = -0.30 * smoothstep(CONTACT, CONTACT + 0.9, age) + 0.18 * shake_wave(age)
+		curl = 1.0 - smoothstep(THROW_AT - 0.08, THROW_AT + 0.13, age)
 	palm.position = hold + Vector3.UP * 6.8
 	palm.rotation = Vector3(-0.13 * (1.0 - reaching) - lifting * 0.30, -0.10 + 0.20 * entering - 0.6 * lifting, roll)
 	var wrist := palm.transform * Vector3(0, 1.35, 0)
@@ -89,6 +98,16 @@ func _align(segment: MeshInstance3D, start: Vector3, end: Vector3) -> void:
 
 func grasp_point() -> Vector3:
 	return to_global(hold)
+
+func shake_wave(t: float) -> float:
+	var envelope := smoothstep(3.18, 3.47, t) * (1.0 - smoothstep(4.21, 4.43, t))
+	return envelope * sin((t - 3.18) * 15.4) if shake_enabled else 0.0
+
+func pilot_hold(t: float) -> Vector3:
+	var lift := smoothstep(CONTACT, 3.52, t)
+	var windup := smoothstep(4.16, 4.44, t)
+	var fling := smoothstep(4.44, THROW_AT, t)
+	return Vector3(-8, 25, -10) * lift + Vector3(-5, 4, 4) * windup + Vector3(9, -5, -13) * fling + Vector3(2.8, 0.85, 0) * shake_wave(t)
 
 # Maximum shadow lies under the reaching forearm. Pilots well outside its
 # footprint retain their local daylight; HUD and instruments are handled by

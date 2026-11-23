@@ -33,9 +33,14 @@ func _ready() -> void:
 	material.shader = SURFACE
 	material.set_shader_parameter("ice", sector == "cryo")
 	if sector == "cryo" and creature_encounter:
+		# Scale the approach and the anatomy around the paw strike together.
+		# The beast clears the canyon skyline while the feet still hit the marker.
+		var stride := Node3D.new()
+		stride.scale = Vector3.ONE * 1.55
+		add_child(stride)
 		creature = MAULER.new()
 		creature.approach_side = signf(yaw)
-		add_child(creature)
+		stride.add_child(creature)
 	elif sector == "cryo":
 		ice = _instances(Art.glacier_block(), material, BLOCKS)
 		for i in range(BLOCKS):

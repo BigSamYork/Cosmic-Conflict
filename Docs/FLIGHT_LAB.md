@@ -13,9 +13,9 @@ During a ground sortie, a sound and an amber contact mark warn where a local haz
 | World | What to watch for |
 | --- | --- |
 | Ignis Prime | Incandescent bombs arc out of nearby volcanic cones. Molten channels spill downhill and light the rock around them. |
-| Cryo-Vex | Cracks spread before a pressure rupture heaves the ice upward. On rare sorties a shaggy Glacier Mauler rises from the snow and pounds the ice. |
+| Cryo-Vex | A shaggy Glacier Mauler steps into the flight lane once per ground sortie, during the first or second hazard. Watch for its raised paws and dodge the slam. Other ruptures heave the ice upward. |
 | Vespera-9 | A derailed maglev drops out of the skyline trailing sparks. Its nose hits first, then the carriage skids. A banded planet with dusty rings is visible during the orbital dogfight. |
-| Xylo-Mire | A shadow crosses the canopy. Look up for the hooked hand that closes around a target and lifts it into the dark. |
+| Xylo-Mire | A shadow crosses the canopy. Steer clear or roll before the hooked hand closes. If it catches your ship, it lifts you, shakes you, then throws you back into the flight lane for 35 direct hull damage. |
 | Thalassa Reach | A branching lightning leader can hit a ship, tower, or offshore platform. Solid structures can intercept the discharge. |
 | Kharon Dunes | Watch for meteor trails over the dunes and for the mechanical siege walker planting its feet before a ground strike. |
 

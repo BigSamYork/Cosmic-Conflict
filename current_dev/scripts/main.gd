@@ -827,7 +827,14 @@ func _physics_process(delta: float) -> void:
 	var canyon_contact := false
 	if is_campaign and campaign.phase in ["ground", "ground_boss"] and campaign.sector in ["ignis", "cryo"]:
 		canyon_contact = _limit_canyon_travel()
-	_update_camera()
+	_update_camera(false)
+	if is_campaign and campaign.phase == "ground" and campaign.sector == "xylo":
+		# Resolve the physical ship pose before targeting, weapon origins,
+		# swept collisions, pickups and cockpit instruments sample the player.
+		surface_events.advance(self, delta, to_global(previous), camera.global_position)
+		camera.global_transform = surface_events.pilot_pose(camera.global_transform)
+		var claw := surface_events.effect
+		_set_canopy_shade(claw.eclipse_strength(camera.global_position) if claw != null else 0.0)
 	_advance_rock_fragments(delta, previous, camera.position)
 	_advance_parasites(delta)
 	for target in targets:
@@ -881,11 +888,8 @@ func _physics_process(delta: float) -> void:
 	_advance_ocean(delta)
 	if not lightning_fields.is_empty():
 		_advance_storm(delta, previous)
-	if is_campaign and campaign.phase == "ground" and campaign.sector != "thalassa":
+	if is_campaign and campaign.phase == "ground" and campaign.sector not in ["thalassa", "xylo"]:
 		surface_events.advance(self, delta, to_global(previous), camera.global_position)
-		if campaign.sector == "xylo":
-			var claw := surface_events.effect
-			_set_canopy_shade(claw.eclipse_strength(camera.global_position) if claw != null else 0.0)
 	for ice in falling_ice:
 		if ice.advance(delta, previous, camera.position, flight.collision_radius):
 			_solid_contact(ice.global_position.direction_to(camera.position), "FALLING RUIN" if ice is RuinFall else "FALLING ICE", FallingIce.DAMAGE)
@@ -922,17 +926,17 @@ func _physics_process(delta: float) -> void:
 	if is_campaign and flight.hull <= 0.0:
 		mode = Mode.TRANSITION
 		_eject.call_deferred()
-	elif is_campaign and ((boss != null and boss.defeated()) or flight.complete()):
+	elif is_campaign and ((boss != null and boss.defeated()) or (flight.complete() and not surface_events.pilot_caught)):
 		mode = Mode.TRANSITION
 		_finish_phase.call_deferred()
-	elif flight.complete():
+	elif not is_campaign and flight.complete():
 		mode = Mode.COMPLETE
 		_set_pointer(false)
 		sound.pause_sounds(true)
 		hud.show_menu("complete", settings)
 	physics_cost_ms = float(Time.get_ticks_usec() - physics_start) / 1000.0
 
-func _update_camera() -> void:
+func _update_camera(apply_grip: bool = true) -> void:
 	camera.transform = director.frame if is_campaign else FlightState.rail_frame(flight.distance)
 	camera.position += camera.basis * Vector3(flight.offset.x, flight.offset.y, 0.0)
 	camera.rotate_object_local(Vector3.FORWARD, -flight.offset.x * 0.007)
@@ -941,6 +945,8 @@ func _update_camera() -> void:
 		camera.rotate_object_local(Vector3.FORWARD, flight.evade_bank)
 	if bool(settings["shake"]) and flight.damage_flash > 0.0:
 		camera.position.y += sin(flight.elapsed * 70.0) * flight.damage_flash * 0.25
+	if apply_grip and surface_events.pilot_caught:
+		camera.global_transform = surface_events.pilot_pose(camera.global_transform)
 
 func _limit_canyon_travel() -> bool:
 	var frame := director.ground_course.affine_inverse() * director.frame
@@ -3129,6 +3135,9 @@ func _eject() -> void:
 	if ship_loss != null or campaign.ship.is_empty():
 		return
 	_clear_parasites()
+	if surface_events.pilot_caught:
+		surface_events.reset()
+		_set_canopy_shade(0.0)
 	sequence = ""
 	var lost_ship := campaign.ship
 	var lost_primary := campaign.primary_level

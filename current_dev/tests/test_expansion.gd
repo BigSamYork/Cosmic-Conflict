@@ -333,6 +333,8 @@ func verify_surface_events() -> void:
 		await phase(sector, "ground")
 		var events = game.surface_events
 		events.random.seed = 13 if kind != sector else 4
+		if sector == "cryo":
+			events.mauler_slot = 1 if kind == "cryo_creature" else 2
 		events.delay = 0.0
 		game._physics_process(1.0 / 60.0)
 		check(events.kind == kind and events.warning() and events.effect.get_parent() == game.world, "%s starts a live, warned surface event" % kind)
@@ -371,11 +373,50 @@ func verify_surface_events() -> void:
 		center = events.effect.global_position
 		game.flight.roll_remaining = 0
 		game.flight.impact_cooldown = 0
+		var previous_hull: float = game.flight.hull
 		events.advance(game, 2.6, center, center)
 		var hit_health: float = game.flight.shields
-		check(hit_health < health, "%s hits a pilot who stays inside the impact" % sector)
+		if sector == "xylo":
+			check(events.pilot_caught and game.flight.hull == previous_hull and hit_health == health, "The talons catch the pilot before any throw damage")
+			events.advance(game, 1.0, center, center)
+			game._update_camera()
+			var hand: Vector3 = events.effect.grasp_point()
+			check(events.effect.to_local(hand).y > 20 and game.camera.global_position.distance_to(hand) < 4, "The physical cockpit travels up with the live hand")
+			game.mode = game.Mode.PAUSE
+			var lifted: Transform3D = game.camera.global_transform
+			game._physics_process(0.5)
+			check(game.camera.global_transform == lifted and is_equal_approx(events.age, 3.6), "Pause freezes the lifted ship and the claw together")
+			game.mode = game.Mode.FLIGHT
+			events.advance(game, 0.21, center, center)
+			game._update_camera()
+			check(absf(events.effect.to_local(lifted.origin).x - events.effect.to_local(game.camera.global_position).x) > 1.0, "The claw shakes the ship laterally while it remains in the grip")
+			events.advance(game, 1.35, center, center)
+			game._update_camera()
+			check(game.camera.global_position.distance_to(events.effect.grasp_point()) > 8 and game.flight.hull == previous_hull, "The ship separates from the opening hand before impact")
+			events.advance(game, 1.0, center, center)
+			check(not events.pilot_caught and game.flight.hull == previous_hull - 35 and game.flight.shields == health, "The throw deals direct hull damage once with shields charged")
+		else:
+			check(hit_health < health, "%s hits a pilot who stays inside the impact" % sector)
 		events.advance(game, 0.5, center, center)
 		check(game.flight.shields == hit_health, "The aftermath cannot repeat the hit")
+		if sector == "xylo":
+			check(game.flight.hull == previous_hull - 35, "The released claw cannot deal the throw damage twice")
+	for seed_value in [5, 13, 42, 81]:
+		await phase("cryo", "ground")
+		var events = game.surface_events
+		events.random.seed = seed_value
+		events.reset()
+		var sightings := 0
+		for slot in range(3):
+			events.advance(game, events.delay + 0.01, Vector3.ZERO, Vector3.ZERO)
+			if events.kind == "cryo_creature":
+				sightings += 1
+				var head: Vector3 = events.effect.creature.head.global_position
+				var view: Rect2 = game.get_viewport().get_visible_rect()
+				check(slot < 2 and not game.camera.is_position_behind(head) and view.has_point(game.camera.unproject_position(head)), "The mauler enters the forward view in the first two Cryo hazards")
+			var away: Vector3 = events.effect.global_position + Vector3.UP * 100
+			events.advance(game, 6.0, away, away)
+		check(sightings == 1, "Cryo schedules exactly one mauler in this sortie")
 	await phase("xylo", "orbit")
 	check(game.surface_events.effect == null, "Loading an orbital phase clears every active surface effect")
 
