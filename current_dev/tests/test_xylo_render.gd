@@ -207,6 +207,21 @@ func verify_swamp() -> void:
 	game.cursor = Vector2(960, 535)
 	game.fire_primary()
 	var extended: Image = await image("xylo-canopy-breach.png")
+	# Hold the camera, wet skin and tongue at the same instant. Releasing
+	# just the two lobe poses should change both silhouettes independently.
+	for side in [-1.0, 1.0]:
+		var parameter := &"left_lobe" if side < 0.0 else &"right_lobe"
+		var pose: Vector3 = hatchling.body.get_instance_shader_parameter(parameter)
+		hatchling.body.set_instance_shader_parameter(parameter, Vector3.ZERO)
+		await RenderingServer.frame_post_draw
+		var relaxed: Image = root.get_texture().get_image()
+		var center: Vector2 = game.camera.unproject_position(hatchling.to_global(Vector3(0.31 * side, -0.84, 0.31)))
+		var other: Vector2 = game.camera.unproject_position(hatchling.to_global(Vector3(-0.31 * side, -0.84, 0.31)))
+		var patch_size := Vector2i(30, 30)
+		check(changed(extended, relaxed, Rect2i(Vector2i(center) - patch_size/2, patch_size)) > 65, "The lower lobe visibly deforms under the tongue's pull")
+		check(changed(extended, relaxed, Rect2i(Vector2i(other) - patch_size/2, patch_size)) < 8, "Releasing one lobe leaves the other lobe planted at its own pose")
+		hatchling.body.set_instance_shader_parameter(parameter, pose)
+		await RenderingServer.frame_post_draw
 	check(hatchling.tongue.get_child_count() == 4 and float(hatchling.muscle.get_shader_parameter(&"aperture")) > 0.8, "Four hooks spread open during the reach")
 	check(game.sound.voices.any(func(voice: AudioStreamPlayer) -> bool: return voice.stream == preload("res://assets/sfx/canopy_fracture.wav")), "The first puncture plays Small Glass Pane Shatter")
 	hatchling.tongue.hide()

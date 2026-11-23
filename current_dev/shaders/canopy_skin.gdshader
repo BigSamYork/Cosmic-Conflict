@@ -3,6 +3,8 @@ render_mode unshaded, cull_disabled;
 
 instance uniform float grip_age = 0.0;
 instance uniform float pressure = 0.0;
+instance uniform vec3 left_lobe = vec3(0.0);
+instance uniform vec3 right_lobe = vec3(0.0);
 varying vec3 skin_position;
 
 float hash(vec3 p) {
@@ -24,6 +26,26 @@ float tissue(vec3 p) {
 
 void vertex() {
 	skin_position = VERTEX;
+	// The two pendulous copper pods are below the mouth. The other copper
+	// faces here belong to the toes, outside this band of the ventral mesh.
+	if (abs(UV.x-0.32) < 0.01 && abs(VERTEX.x) < 0.55 && VERTEX.y < -0.46) {
+		// The pods overlap slightly at the seam. Their outward normals
+		// distinguish which pod an inner vertex belongs to.
+		float side = sign(VERTEX.x-0.23*NORMAL.x);
+		vec3 motion = side < 0.0 ? left_lobe : right_lobe;
+		float d = clamp((-0.46-VERTEX.y)/0.61,0.0,1.0);
+		float weight = d*d*(3.0-2.0*d);
+		float slope = -6.0*d*(1.0-d)/0.61;
+		vec3 offset = VERTEX-vec3(side*0.255,-0.46,0.17);
+		float narrow = -0.5*motion.y;
+		vec3 delta = vec3(motion.x+narrow*offset.x, motion.y*offset.y, motion.z+narrow*offset.z);
+		VERTEX += weight*delta;
+		// Inverse-transpose of the deformation gradient keeps reflections
+		// attached to the changing curvature as the tissue compresses.
+		NORMAL.xz /= 1.0+weight*narrow;
+		NORMAL.y = (NORMAL.y-slope*dot(NORMAL.xz,delta.xz))/(1.0+weight*motion.y+slope*delta.y);
+		NORMAL = normalize(NORMAL);
+	}
 	float flex = sin(grip_age * 3.8 + VERTEX.y * 3.0);
 	VERTEX.z += 0.022 * flex * exp(-3.0 * dot(VERTEX.xy, VERTEX.xy));
 	float foot = smoothstep(1.04,1.41,abs(VERTEX.x));

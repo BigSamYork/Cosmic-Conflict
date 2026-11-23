@@ -92,6 +92,9 @@ func advance(delta: float) -> int:
 	var release := clampf((age - LEAP - LATCH) / SLIDE, 0, 1)
 	body.set_instance_shader_parameter(&"grip_age", attached_time * (0.3 if reduced_motion else 1.0))
 	body.set_instance_shader_parameter(&"pressure", smoothstep(0.83, 1.0, reach) * (1.0 - smoothstep(0.0, 0.25, release)))
+	var amplitude := 0.30 if reduced_motion else 1.0
+	body.set_instance_shader_parameter(&"left_lobe", _lobe_motion(age - LEAP, -1.0) * amplitude)
+	body.set_instance_shader_parameter(&"right_lobe", _lobe_motion(age - LEAP, 1.0) * amplitude)
 	var side := -1.0 if lean < 0.0 else 1.0
 	# Both upper side panes are inside the external gun muzzles. Leave the
 	# sight line between the two gun barrels open.
@@ -108,6 +111,22 @@ func advance(delta: float) -> int:
 	else:
 		tongue.hide()
 	return count
+
+func _lobe_motion(t: float, side: float) -> Vector3:
+	# The free ends lag the impact, then pick up the tongue's side-to-side
+	# pull. Different periods keep the two lobes from swinging in lockstep.
+	var landed := maxf(t, 0.0)
+	var rate := 11.0 + 0.9 * side
+	var landing := exp(-2.4 * landed) * sin(rate * landed)
+	var breach := maxf(t - BREACH_TIME, 0.0)
+	var recoil := exp(-2.8 * breach) * sin((rate + 2.0) * breach)
+	var pull := smoothstep(0.0, 0.55, breach) * (1.0 - smoothstep(LATCH - 1.0, LATCH, t))
+	var swing := 0.034 * sin(t * (3.1 + 0.17 * side) + side * 0.45)
+	swing += 0.18 * landing + 0.095 * recoil + pull * 0.105 * sin(2.33 * breach - 0.65 + side * 0.24)
+	var stretch := -0.23 * landing + 0.14 * recoil + 0.052 * sin(t * 4.0 + side * 0.65)
+	var peel := maxf(t - LATCH, 0.0)
+	stretch += 0.21 * exp(-2.3 * peel) * sin(8.5 * peel)
+	return Vector3(swing, stretch, 0.10 * landing - 0.13 * recoil + 0.031 * sin(t * 3.8 + side))
 
 func _advance_tongue(t: float, rect: Rect2, side: float, half_height: float) -> void:
 	var glass_depth := BODY_DEPTH - scale.z * PAD_PLANE
