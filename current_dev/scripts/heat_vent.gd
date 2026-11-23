@@ -30,6 +30,7 @@ func _ready() -> void:
 	warning_ring = batch.build()
 	add_child(warning_ring)
 	volcano = VolcanoEruption.new()
+	volcano.terrain_height = _rim_height
 	add_child(volcano)
 	plume = volcano.jet
 	cone_body = StaticBody3D.new()

@@ -47,6 +47,7 @@ func _ready() -> void:
 		towers.append(tower)
 	for i in range(3):
 		var supply := SupplyPickup.new()
+		supply.hide()
 		supply.kind = ["shield", "ordnance", "flare"][i]
 		supply.transform = GroundRoute.frame(2020.0 + i * 220)
 		add_child(supply)

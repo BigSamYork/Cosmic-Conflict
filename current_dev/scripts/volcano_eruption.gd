@@ -5,7 +5,7 @@ const CRATER_HEIGHT: float = 3.65
 const PROFILE: Array[Vector2] = [Vector2(4.3, 0), Vector2(3.35, 0.8), Vector2(2.35, 2.1), Vector2(1.05, 4.2), Vector2(0.64, 4.0), Vector2(0.5, 3.3)]
 const SMOKE_COUNT: int = 30
 const CINDER_COUNT: int = 16
-static var smoke_mesh: SphereMesh
+static var smoke_mesh: QuadMesh
 static var smoke_material: ShaderMaterial
 
 var cone: Node3D
@@ -13,28 +13,35 @@ var jet: Node3D
 var smoke: MultiMeshInstance3D
 var cinders: Array[MultiMeshInstance3D] = []
 var lava_material: ShaderMaterial
+var terrain_height: Callable
+var lava_light := OmniLight3D.new()
 
 func _ready() -> void:
 	cone = cone_model()
 	add_child(cone)
-	var lava := lava_model()
+	var lava := MeshInstance3D.new()
+	lava.mesh = _lava_mesh()
+	lava.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	lava_material = ShaderMaterial.new()
 	lava_material.shader = preload("res://shaders/volcanic_lava.gdshader")
 	lava_material.render_priority = 1
-	lava.get_child(0).material_override = lava_material
+	lava.material_override = lava_material
 	add_child(lava)
+	lava_light.light_color = Color("#ff792e")
+	lava_light.omni_range = 12.0
+	lava_light.omni_attenuation = 1.45
+	lava_light.position.y = 2.6
+	lava_light.distance_fade_enabled = true
+	lava_light.distance_fade_begin = 85.0
+	lava_light.distance_fade_length = 30.0
+	add_child(lava_light)
 	jet = EncounterArt.heat_plume()
 	jet.position.y = CRATER_HEIGHT
 	add_child(jet)
 	if smoke_mesh == null:
-		smoke_mesh = SphereMesh.new()
-		smoke_mesh.radius = 1.0
-		smoke_mesh.height = 2.0
-		smoke_mesh.radial_segments = 16
-		smoke_mesh.rings = 8
-		smoke_material = ShaderMaterial.new()
-		smoke_material.shader = preload("res://shaders/volcanic_smoke.gdshader")
-	smoke = _instances(smoke_mesh, smoke_material, SMOKE_COUNT)
+		smoke_mesh = QuadMesh.new()
+		smoke_mesh.size = Vector2(3.9,3.9)
+	smoke = _instances(smoke_mesh, ash_material(), SMOKE_COUNT)
 	add_child(smoke)
 	var stones := cinder_model()
 	for mesh: MeshInstance3D in stones.get_children():
@@ -58,6 +65,7 @@ func update_visual(time: float, eruption_age: float, active: bool, cooling: floa
 	lava_material.set_shader_parameter("activity", (0.12 + warming * 0.32) if eruption_age < 0 else 1.0 - smoothstep(0.1, 1, cooling))
 	lava_material.set_shader_parameter("flow_amount", 0.2 + warming * 0.5 if eruption_age < 0 else minf(1, 0.7 + eruption_age * 0.5))
 	lava_material.set_shader_parameter("flow_time", time)
+	lava_light.light_energy = 0.38 + 0.52 * (warming if eruption_age < 0 else 1.0 - cooling) + 0.03 * sin(time * 2.4)
 	for i in range(SMOKE_COUNT):
 		var at: Vector3
 		var size: Vector3
@@ -100,6 +108,33 @@ func update_visual(time: float, eruption_age: float, active: bool, cooling: floa
 		for instances in cinders:
 			instances.multimesh.set_instance_transform(i, transform)
 			instances.multimesh.set_instance_color(i, Color(1, 1, 1, alpha))
+
+static func ash_material() -> ShaderMaterial:
+	if smoke_material == null:
+		smoke_material = ShaderMaterial.new()
+		smoke_material.shader = preload("res://shaders/volcanic_smoke.gdshader")
+		smoke_material.set_shader_parameter("density_map",_density_map())
+	return smoke_material
+
+# One shared RG texture supplies irregular density and internally lit folds to all
+# puffs. Baking the turbulence keeps the fragment shader to a single texture read.
+static func _density_map() -> ImageTexture:
+	var img := Image.create_empty(96,96,false,Image.FORMAT_RG8)
+	var noise := FastNoiseLite.new()
+	noise.seed = 527
+	noise.frequency = 1.0
+	noise.fractal_octaves = 4
+	for y in img.get_height():
+		for x in img.get_width():
+			var p := (Vector2(x,y)+Vector2(0.5,0.5))/48.0-Vector2.ONE
+			var q := p*3.5 + Vector2(noise.get_noise_2dv(p*2.3),noise.get_noise_2dv(p*2.3+Vector2(8,5)))*1.4
+			var billow := noise.get_noise_2dv(q)*0.55+noise.get_noise_2dv(q*2.1)*0.25
+			var edge := 0.73 - p.length() + billow * 0.33
+			var density := smoothstep(-0.06,0.27,edge) * (0.62+0.38*smoothstep(-0.26,0.34,billow))
+			var ridge := billow-noise.get_noise_2dv(q+Vector2(-0.20,-0.21))*0.60
+			img.set_pixel(x,y,Color(density,clampf(0.48+2.2*ridge,0,1),0))
+	img.generate_mipmaps()
+	return ImageTexture.create_from_image(img)
 
 static func _instances(mesh: Mesh, material: Material, count: int) -> MultiMeshInstance3D:
 	var instances := MultiMesh.new()
@@ -146,23 +181,64 @@ static func _slope_point(progress: float, angle: float) -> Vector3:
 	var level: int = floori(step)
 	return _cone_point(angle, 3 - level).lerp(_cone_point(angle, 2 - level), step - level) + Vector3.UP * 0.04
 
-static func lava_model() -> Node3D:
-	var cached: Node3D = VectorArt.cached_model("volcanic_lava")
-	if cached != null:
-		return cached
-	var batch := GeometryBatch.new()
-	for stream in range(7):
-		for step in range(16):
-			var t: float = step / 16.0
-			var next: float = (step + 1) / 16.0
-			var angle: float = stream * TAU / 7 + sin(t * 9 + stream) * 0.12
-			var next_angle: float = stream * TAU / 7 + sin(next * 9 + stream) * 0.12
-			for core in [false, true]:
-				var width: float = (0.055 if core else 0.13) * (1.0 - t * 0.45)
-				var offset: Vector3 = Vector3.UP * (0.025 if core else 0)
-				var points := PackedVector3Array([_slope_point(t, angle - width) + offset, _slope_point(t, angle + width) + offset, _slope_point(next, next_angle + width) + offset, _slope_point(next, next_angle - width) + offset])
-				batch.surface(points, PackedInt32Array([0, 1, 2, 0, 2, 3]), Color("#ffd978") if core else Color("#ee5827"))
-	return VectorArt.remember_model("volcanic_lava", batch.build())
+# A raised middle and slower edges give each lobe a viscous cross-section.
+# The runout follows the lowest accessible outlet instead of climbing the canyon walls.
+func _lava_mesh() -> ArrayMesh:
+	var surface := SurfaceTool.new()
+	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for stream in 6:
+		var base_angle := stream * TAU / 6.0
+		var path := PackedVector3Array()
+		for step in 19:
+			var t := step / 18.0
+			var angle := base_angle + 0.11 * sin(t * 6.5 + stream)
+			path.append(_slope_point(t, angle))
+		var head := path[-1]
+		var heading := Vector2(head.x, head.z).normalized()
+		for step in 18:
+			var best := heading
+			var best_cost := INF
+			for turn in [-0.72, -0.36, 0.0, 0.36, 0.72]:
+				var direction := heading.rotated(turn + 0.08 * sin(step * 0.8 + stream))
+				var probe := head + Vector3(direction.x, 0, direction.y) * 0.64
+				var cost := _floor_at(probe) + 0.16 * absf(turn)
+				if cost < best_cost:
+					best_cost = cost
+					best = direction
+			var next := head + Vector3(best.x, 0, best.y) * 0.64
+			next.y = _floor_at(next) + 0.07
+			if next.y > head.y + 0.20:
+				break
+			path.append(next)
+			head = next
+			heading = best
+		# Build all five rails before stitching the cross-sections together.
+		var rows: Array[PackedVector3Array] = []
+		for step in path.size():
+			var delta := path[mini(step+1,path.size()-1)] - path[maxi(0,step-1)]
+			var side := Vector3(delta.z, 0, -delta.x).normalized()
+			var width := 0.22 + 0.56 * smoothstep(0, 20, step) + 0.10 * sin(step * 0.7 + stream)
+			width *= 1.0 - 0.79 * smoothstep(path.size()-5, path.size()-1, step)
+			var row := PackedVector3Array()
+			for col in 5:
+				var cross_channel := (col - 2.0) * 0.5
+				var point := path[step] + side * width * cross_channel
+				if step > 18:
+					point.y = _floor_at(point) + 0.07
+				point.y += (1 - cross_channel * cross_channel) * 0.09
+				row.append(point)
+			rows.append(row)
+		for step in range(path.size()-1):
+			for col in 4:
+				for corner: Vector2i in [Vector2i(0,0), Vector2i(1,0), Vector2i(0,1), Vector2i(1,0), Vector2i(1,1), Vector2i(0,1)]:
+					var x := col + corner.x
+					var y := step + corner.y
+					surface.set_uv(Vector2(x / 4.0, y / 36.0))
+					surface.add_vertex(rows[y][x])
+	return surface.commit()
+
+func _floor_at(point: Vector3) -> float:
+	return float(terrain_height.call(point)) if terrain_height.is_valid() else 0.0
 
 static func cinder_model() -> Node3D:
 	var cached: Node3D = VectorArt.cached_model("volcanic_cinder")

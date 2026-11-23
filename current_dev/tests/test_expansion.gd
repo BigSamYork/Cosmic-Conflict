@@ -29,6 +29,7 @@ func run() -> void:
 	game.set_process(false)
 	game.set_physics_process(false)
 	await verify_worlds()
+	await verify_surface_events()
 	await verify_boss_radars()
 	await verify_transitions()
 	await verify_player_destruction()
@@ -326,6 +327,58 @@ func verify_ocean_tiles() -> void:
 	game._apply_settings()
 	check(game.ocean_material.shader == FrontierArt.WATER_REFLECTION, "Full effects restores reflections on already streamed water")
 
+func verify_surface_events() -> void:
+	for kind: String in ["ignis", "cryo", "cryo_creature", "vespera", "xylo", "kharon", "kharon_walker"]:
+		var sector := kind.get_slice("_", 0)
+		await phase(sector, "ground")
+		var events = game.surface_events
+		events.random.seed = 13 if kind != sector else 4
+		events.delay = 0.0
+		game._physics_process(1.0 / 60.0)
+		check(events.kind == kind and events.warning() and events.effect.get_parent() == game.world, "%s starts a live, warned surface event" % kind)
+		# Keep the fixture separate from any natural victim already at the selected site.
+		events.effect.position.x += 72.0
+		var center: Vector3 = events.effect.global_position
+		var target := GroundTurret.new()
+		game.world.add_child(target)
+		target.global_position = center
+		game.targets.append(target)
+		var wallet: int = game.campaign.credits
+		var kills: int = game.flight.destroyed
+		var health: float = game.flight.shields
+		var safe := center + Vector3.RIGHT * 90.0
+		game.mode = game.Mode.PAUSE
+		game._physics_process(3.0)
+		check(events.age == 0 and not target.destroyed, "Pause holds the warning and the target")
+		game.mode = game.Mode.FLIGHT
+		events.advance(game, 2.49, safe, safe)
+		check(events.warning() and not target.destroyed, "World damage waits for the advertised impact")
+		game.flight.roll_remaining = 0.1
+		events.advance(game, 0.05, center, center)
+		check(target.destroyed and not events.warning() and game.flight.shields == health, "%s removes a target while a rolling pilot evades" % sector)
+		check(game.campaign.credits == wallet and game.flight.destroyed == kills, "Environmental casualties pay no bounty")
+		if sector == "xylo":
+			var grip: Vector3 = events.carried.global_position
+			events.advance(game, 1.0, safe, safe)
+			check(events.carried.get_child_count() > 0 and events.carried.global_position.y > grip.y + 10, "The clenched hand lifts the victim's own visible geometry")
+		events.advance(game, 3.0, safe, safe)
+		check(events.effect == null and events.delay > 0, "The aftermath retires before another warning")
+		events.random.seed = 13
+		events.delay = 0
+		events.advance(game, 0.01, safe, safe)
+		if kind == "cryo_creature":
+			check(events.kind == "cryo", "A rare mauler cannot reappear on the same sortie")
+		center = events.effect.global_position
+		game.flight.roll_remaining = 0
+		game.flight.impact_cooldown = 0
+		events.advance(game, 2.6, center, center)
+		var hit_health: float = game.flight.shields
+		check(hit_health < health, "%s hits a pilot who stays inside the impact" % sector)
+		events.advance(game, 0.5, center, center)
+		check(game.flight.shields == hit_health, "The aftermath cannot repeat the hit")
+	await phase("xylo", "orbit")
+	check(game.surface_events.effect == null, "Loading an orbital phase clears every active surface effect")
+
 func verify_boss_radars() -> void:
 	for sector in SectorCatalog.AVAILABLE:
 		for stage in ["ground_boss", "orbit_boss"]:
@@ -336,6 +389,9 @@ func verify_boss_radars() -> void:
 			game.flight.distance += 60 * FlightState.SPEED
 			game.director.advance(stage, 0, game.flight.distance, 60, game.targets)
 			game._update_camera()
+			game._update_contacts()
+			var boss_contacts: Array = game.hud.contacts.filter(func(c: Dictionary) -> bool: return c.get("boss_part", false))
+			check(not boss_contacts.is_empty() and boss_contacts.all(func(c: Dictionary) -> bool: return c.label.is_empty()), "%s %s hitbox markers have no overhead text" % [sector, stage])
 			check(boss.pursuit_range < (114 if stage == "orbit_boss" else 84), "%s %s closer framing reaches the approved range" % [sector, stage])
 			var all_visible: bool = true
 			for part in [boss.parts[0], boss.parts[1], boss.core]:

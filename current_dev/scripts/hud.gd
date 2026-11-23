@@ -820,7 +820,7 @@ func _draw_console() -> void:
 		draw_polyline(rail, Color(spill, intensity * 0.5), 4, true)
 		draw_polyline(rail, Color(spill, intensity), 1.3, true)
 		_draw_canopy_rail(side, spill, intensity)
-		if flight.hull / flight.max_hull < (0.62 if side < 0 else 0.31) and not flight.training:
+		if flight.fractured_panes(flight.hull) >= (1 if side < 0 else 2):
 			_draw_glass_fracture(side)
 	draw_set_transform_matrix(Transform2D.IDENTITY)
 

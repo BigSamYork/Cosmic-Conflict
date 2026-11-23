@@ -178,6 +178,20 @@ func say(event: String) -> bool:
 	line_started.emit(id, selected["text"], event)
 	return true
 
+func panic_at_breach() -> void:
+	const EVENT := "canopy_panic"
+	if not enabled() or paused or not policy.can_start(EVENT, 98):
+		return
+	arrival_reply.clear()
+	player.stop()
+	player.bus = "Master"
+	player.stream = preload("res://assets/voice/canopy_panic.wav")
+	player.play()
+	policy.started(EVENT, 98, 8.0)
+	last_line = EVENT
+	speaking_changed.emit(true)
+	line_started.emit(EVENT, "Aah! Get it off me! Get it off!", EVENT)
+
 func say_arrival(quarter: int, headlight: bool) -> bool:
 	if not enabled() or paused or policy.speaking:
 		return false

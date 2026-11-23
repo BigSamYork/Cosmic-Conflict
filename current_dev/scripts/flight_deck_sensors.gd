@@ -93,7 +93,7 @@ func scan(pilot: Camera3D, state: FlightState, targets: Array[RangeTarget], miss
 		if cargo.active:
 			_add_return(pilot.to_local(cargo.global_position), &"salvage")
 	for supply: SupplyPickup in supplies:
-		if supply.active:
+		if supply.active and supply.is_visible_in_tree():
 			_add_return(pilot.to_local(supply.global_position), &"salvage")
 	returns.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a.priority < b.priority)
 	if returns.size() > MAX_RETURNS:

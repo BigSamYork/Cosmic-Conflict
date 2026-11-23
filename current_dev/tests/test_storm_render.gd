@@ -29,6 +29,8 @@ func run() -> void:
 	game.campaign.phase = "ground"
 	await game._load_phase()
 	var field: StormLightning = game.lightning_fields[0]
+	# Hold the storm over the test rig for the leader and return-stroke measurements.
+	field.storm_seed = 0
 	field.age = StormLightning.CYCLE + 0.8
 	field.advance(0.01, field.global_position, field.global_position)
 	var destination := field.to_global(field.landing)
@@ -73,6 +75,7 @@ func run() -> void:
 			frame.save_png(captures.path_join("strike-%03d.png" % i))
 	check(bright > leader + 15 and returned > fading + 10, "The native bolt brightens on the first and return strokes (%d, %d, %d, %d)" % [leader, bright, fading, returned])
 	check(not rig.visible and rig.collision_layer == 0 and not game.explosions.is_empty(), "A normal storm cycle detonates its offshore structure in the rendered scene")
+	check(game.sound.voices.any(func(voice: AudioStreamPlayer) -> bool: return voice.stream == preload("res://assets/sfx/thunder_crack.wav")), "A nearby lightning strike plays the supplied Thunder Crack recording")
 	game.settings["reduced_effects"] = true
 	game._apply_settings()
 	field.age = StormLightning.CYCLE * 2 + StormLightning.WARNING - 0.02

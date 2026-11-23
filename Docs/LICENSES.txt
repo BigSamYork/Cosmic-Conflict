@@ -27,7 +27,9 @@ Recordings were converted to Ogg Vorbis and level-matched for the game.
 Recorded sound effects
 Water Splash on Cement Series (YouTube Audio Library) — organic destruction
 Gun Powder Ignite — mechanical and stone destruction
-One effect was excerpted from each supplied recording.
+Thunder Crack — planetary lightning
+Monster Alien Growl Tense — canopy parasite
+Small Glass Pane Shatter — cockpit glass punctures and damage fractures
 
 Computer dialogue combines text supplied by the project owner with original
 additional lines. The voices of Lark and Captain Tomas Vale were rendered

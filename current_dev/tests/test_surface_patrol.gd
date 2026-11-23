@@ -16,6 +16,13 @@ func run() -> void:
 	pilot.make_current()
 	for job in SurfacePatrol.Job.values():
 		verify_job(job)
+	for missing_hull in [0.0, 20.0]:
+		begin(SurfacePatrol.Job.REPAIR)
+		flight.hull = flight.max_hull - missing_hull
+		var message := fly_formation()
+		check(flight.hull == flight.max_hull - maxf(0, missing_hull - 12), "Tender restores up to twelve hull per visit")
+		check(message.contains("ALREADY SOUND") if missing_hull == 0 else message.contains("12 HULL RESTORED"), "Tender reports its actual repair")
+		patrol.free()
 	verify_failure_paths()
 	var rovers := XyloRovers.new()
 	root.add_child(rovers)
@@ -54,6 +61,17 @@ func cross_gate(distance: float, side: float) -> String:
 	var at := patrol._pose(distance, side, route)
 	return patrol.advance(0.016, at * Vector3(0, 0, 4), at * Vector3(0, 0, -4), campaign, flight, route)
 
+func fly_formation() -> String:
+	flight.offset = Vector2(patrol.lane_sign * 8.2, 2.6)
+	flight.precision_hold = true
+	var message := ""
+	while flight.distance < patrol.station_distance + 250 and patrol.current >= 0:
+		var previous := pilot.position
+		flight.advance(1.0 / 60, false)
+		pilot.position = FlightState.rail_frame(flight.distance) * Vector3(flight.offset.x, flight.offset.y, 0)
+		message = patrol.advance(1.0 / 60, previous, pilot.position, campaign, flight, route)
+	return message
+
 func verify_job(job: int) -> void:
 	begin(job)
 	var d := patrol.station_distance
@@ -63,13 +81,14 @@ func verify_job(job: int) -> void:
 		SurfacePatrol.Job.SLALOM:
 			cross_gate(d, side)
 			cross_gate(d + 74.0, -side)
-			cross_gate(d + 148.0, side)
+			var final_gate := patrol._pose(d + 148.0, side, route)
+			flight.distance = d + 168.0
+			var message := patrol.advance(0.6, final_gate * Vector3.BACK, final_gate * (Vector3.FORWARD * 20), campaign, flight, route)
+			check(message.contains("+380 SCORE"), "Crossing the final gate on a long tick reports the earned score")
 		SurfacePatrol.Job.ESCORT, SurfacePatrol.Job.REPAIR:
 			flight.hull = flight.max_hull - 4.0
-			flight.distance = d + 190.0
-			var point := patrol._pose(d + 201.6, side, route).origin
-			for _i in range(22):
-				patrol.advance(0.1, point, point, campaign, flight, route)
+			var message := fly_formation()
+			check(message.contains("HULL RESTORED") if job == SurfacePatrol.Job.REPAIR else message.contains("ESCORT COMPLETE"), "Holding formation at normal flight speed completes " + SurfacePatrol.LABELS[job])
 			if job == SurfacePatrol.Job.REPAIR:
 				check(is_equal_approx(flight.hull, flight.max_hull), "A repair transfer respects the hull maximum")
 		SurfacePatrol.Job.COURIER, SurfacePatrol.Job.CEASEFIRE, SurfacePatrol.Job.INTERCEPT:

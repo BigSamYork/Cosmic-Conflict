@@ -348,6 +348,12 @@ func primary_name() -> String:
 func primary_damage_label() -> String:
 	return "4 x 1 / VOLLEY" if primary_level == 1 else "3 / BEAM TICK" if primary_level == 2 else "DAMAGE 1"
 
+func fractured_panes(at_hull: float) -> int:
+	if training:
+		return 0
+	var fraction := at_hull / max_hull
+	return int(fraction < 0.62) + int(fraction < 0.31)
+
 func impact(reason: String = "PROXIMITY IMPACT", damage: float = 18.0, direct_hull: bool = false) -> bool:
 	if roll_remaining > 0.0 and not direct_hull:
 		return false

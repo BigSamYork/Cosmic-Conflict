@@ -12,6 +12,8 @@ var weapon_lamp := SpotLight3D.new()
 var credit_hoops := preload("res://scripts/credit_hoops.gd").new()
 var combat_lights := CombatLighting.new()
 var surface_weather := SurfaceWeather.new()
+var surface_events := preload("res://scripts/surface_events.gd").new()
+var canopy_shade := 0.0
 var surface_flight := false
 const PlayerDestruction := preload("res://scripts/player_destruction.gd")
 var ship_loss: PlayerDestruction
@@ -545,6 +547,7 @@ func _build_world(training: bool = true) -> void:
 			for i in range(10):
 				var lightning := StormLightning.new()
 				lightning.site = i
+				lightning.storm_seed = surface_events.random.randi()
 				lightning.phase = i * 1.1
 				lightning.position = FrontierArt.floor_point(-8 if i % 2 == 0 else 8, 460 + i * 320)
 				lightning.aim_requested.connect(_storm_aim)
@@ -814,7 +817,7 @@ func _physics_process(delta: float) -> void:
 		campaign.stats["shots"] += shots
 		if ground_branch != null and campaign.phase == "ground":
 			if ground_branch.route.advance(flight.distance, flight.offset.x):
-				hud.show_message("HAZARD ROUTE SELECTED / SUPPLIES AT REJOIN" if ground_branch.route.selected else "SAFE ROUTE SELECTED")
+				hud.show_message("HAZARD ROUTE SELECTED / SUPPLIES AHEAD" if ground_branch.route.selected else "SAFE ROUTE SELECTED")
 				_voice_route(ground_branch.route.selected)
 		if mission_world != null:
 			mission_world.advance(delta, director.frame)
@@ -878,6 +881,11 @@ func _physics_process(delta: float) -> void:
 	_advance_ocean(delta)
 	if not lightning_fields.is_empty():
 		_advance_storm(delta, previous)
+	if is_campaign and campaign.phase == "ground" and campaign.sector != "thalassa":
+		surface_events.advance(self, delta, to_global(previous), camera.global_position)
+		if campaign.sector == "xylo":
+			var claw := surface_events.effect
+			_set_canopy_shade(claw.eclipse_strength(camera.global_position) if claw != null else 0.0)
 	for ice in falling_ice:
 		if ice.advance(delta, previous, camera.position, flight.collision_radius):
 			_solid_contact(ice.global_position.direction_to(camera.position), "FALLING RUIN" if ice is RuinFall else "FALLING ICE", FallingIce.DAMAGE)
@@ -897,7 +905,7 @@ func _physics_process(delta: float) -> void:
 				hud.show_message("SPORE STATIC / RADAR ONLY / FLIGHT CONTROLS UNAFFECTED")
 				_voice_event("xylo_spores")
 	if ground_branch != null and is_campaign and campaign.phase == "ground":
-		for message in ground_branch.advance(delta, previous, camera.position, campaign, flight):
+		for message in ground_branch.advance(delta, to_global(previous), camera.global_position, campaign, flight):
 			hud.show_message(message)
 		hud.objective = ground_branch.objective(flight.distance)
 	if mission_world != null and mission_world.advance_webs(delta, previous, camera.position, flight.collision_radius):
@@ -1019,6 +1027,8 @@ func _apply_pilot_damage(reason: String, damage: float = 18.0, direct_hull: bool
 	var previous_shields: float = flight.shields
 	var previous_multiplier: int = campaign.combo_multiplier() if is_campaign else 1
 	var damaged: bool = flight.impact(reason, damage, direct_hull)
+	if damaged and flight.fractured_panes(flight.hull) > flight.fractured_panes(previous_hull):
+		sound.play_glass_break()
 	if not automation.is_empty():
 		automation_hull_damage += maxf(0, previous_hull - flight.hull)
 	if is_campaign and flight.hull < previous_hull:
@@ -1308,7 +1318,12 @@ func _advance_parasites(delta: float) -> void:
 	var audible := false
 	for i in range(parasites.size()-1, -1, -1):
 		var hatchling := parasites[i]
+		var glass_was_intact := not hatchling.breached
 		var bites := hatchling.advance(delta)
+		if glass_was_intact and hatchling.breached and not hatchling.finished():
+			if hatchling.made_hole:
+				sound.play_glass_break()
+			computer_voice.panic_at_breach()
 		if bites > 0 and flight.hull > 0:
 			_apply_pilot_damage("CANOPY PARASITE", flight.max_hull * CanopyParasite.HULL_FRACTION * bites / CanopyParasite.BITES, true)
 		audible = audible or hatchling.gripping()
@@ -1323,6 +1338,11 @@ func _clear_parasites() -> void:
 		hatchling.hide()
 		hatchling.queue_free()
 	parasites.clear()
+	if camera != null:
+		for pane in camera.get_children():
+			if pane.is_in_group(&"punctured_canopy"):
+				camera.remove_child(pane)
+				pane.queue_free()
 	if sound != null:
 		sound.set_parasite_audible(false)
 
@@ -1603,7 +1623,7 @@ func _advance_storm(delta: float, previous: Vector3) -> void:
 func _storm_aim(field: StormLightning, cycle: int) -> void:
 	# A leader picks a vicinity during warning. The actual discharge ray can
 	# miss a moving fighter or be intercepted by another object on the way down.
-	var kind := posmod(cycle + field.site, 4)
+	var kind := posmod(cycle + field.site + field.storm_seed, 4)
 	if kind == 0:
 		return
 	var best := 125.0 * 125.0
@@ -1961,6 +1981,9 @@ func _update_contacts() -> void:
 	hud.gate_warning = false
 	hud.lightning_warning = false
 	hud.acid_warning = false
+	if surface_events.warning() and not camera.is_position_behind(surface_events.effect.global_position):
+		var point: Vector3 = surface_events.effect.global_position
+		hud.contacts.append({"screen": camera.unproject_position(point), "distance": camera.global_position.distance_to(point), "color": VectorArt.AMBER, "label": surface_events.warning_text()})
 	for field in xylo_fields:
 		if field.kind == XyloField.Kind.ACID and (field.warning() or field.active(field.age)) and camera.global_position.distance_to(field.global_position) < 120 and not camera.is_position_behind(field.global_position):
 			hud.acid_warning = true
@@ -2017,11 +2040,9 @@ func _update_contacts() -> void:
 		if not target.guided_lockable and target is EnemyFighter:
 			tint = VesperaArt.SIGNAL.darkened(0.25)
 			stealth_seen = stealth_seen or distance < 160
-		var label: String = "SHIMMER" if not target.guided_lockable and target is EnemyFighter and distance < 160 else ("EMITTER" if distance < 160 else "") if target is GateEmitter else "DRONE BAY / STOP REINFORCEMENTS" if target is DroneBay else "THERMAL PROJECTOR" if target is ThermalEmitter else "RADAR / JAM TRACKING" if target is RadarDish else "WEB NODE" if target is WebNode else ""
+		var label: String = "SHIMMER" if not target.guided_lockable and target is EnemyFighter and distance < 160 else ("EMITTER" if distance < 160 else "") if target is GateEmitter else "RADAR / JAM TRACKING" if target is RadarDish else "WEB NODE" if target is WebNode else ""
 		if target is PirateSkirmisher:
 			label = ("GUARDIAN" if target.biological else "PIRATE") + (" / RETURNING FIRE" if target.engaged else " / OPTIONAL")
-		elif target is BossRadar:
-			label = "RADAR"
 		elif target is FallingIce:
 			tint = VectorArt.AMBER
 			label = ("RUIN" if target is RuinFall else "ICE") + (" / SHOOT OR KEEP CENTER" if target.warning() else " / FALLING / EVADE" if target.started else " / SHOOT TO CLEAR")
@@ -2029,8 +2050,6 @@ func _update_contacts() -> void:
 			label = "BROOD EGG / HOLD FIRE" if target.infested else "NUTRIENT CARGO" if target.cargo else "EGG" if distance < 80 else ""
 			if flight.elapsed > 12:
 				_voice_event("xylo_egg")
-		if target is BossPart and boss != null:
-			label = boss.part_label(target)
 		var contact := {"screen": camera.unproject_position(target.aim_point()), "distance": distance, "color": tint, "label": label}
 		if target is BossPart:
 			contact["boss_part"] = true
@@ -2046,8 +2065,8 @@ func _update_contacts() -> void:
 	if ground_branch != null and is_campaign and campaign.phase == "ground":
 		for supply in ground_branch.supplies:
 			var distance: float = camera.global_position.distance_to(supply.global_position)
-			if supply.active and distance < 250 and not camera.is_position_behind(supply.global_position):
-				hud.contacts.append({"screen": camera.unproject_position(supply.global_position), "distance": distance, "color": supply.color(), "label": supply.label() + " / FLY THROUGH"})
+			if supply.active and supply.is_visible_in_tree() and distance < 250 and not camera.is_position_behind(supply.global_position):
+				hud.contacts.append({"screen": camera.unproject_position(supply.global_position), "distance": distance, "color": supply.color(), "label": supply.label(campaign, flight)})
 	for pickup in mineral_pickups:
 		hud.tractor_active = hud.tractor_active or pickup.being_pulled
 		if pickup.active and not camera.is_position_behind(pickup.global_position) and camera.position.distance_to(pickup.global_position) < 200:
@@ -2177,6 +2196,8 @@ func _apply_settings() -> void:
 			music.set_level(int(settings["music_volume"]), bool(settings["mute"]) or automated_session or not automation.is_empty())
 
 func _clear_stage() -> void:
+	surface_events.reset()
+	_set_canopy_shade(0.0)
 	credit_hoops.clear()
 	weapon_lamp.light_energy = 0
 	_end_ship_loss()
@@ -2355,10 +2376,20 @@ func _advance_ocean(delta: float) -> void:
 			if material.shader == FrontierArt.WATER_ARRIVAL:
 				material.set_shader_parameter("wave_time", ocean_age)
 
-func _apply_sector_light() -> void:
+func _set_canopy_shade(amount: float) -> void:
+	if is_equal_approx(amount, canopy_shade):
+		return
+	canopy_shade = amount
+	RenderingServer.global_shader_parameter_set("sector_ambient", _sector_illumination())
+
+func _sector_illumination() -> Vector3:
 	var active := is_campaign and campaign != null and campaign.phase != "market"
 	var tint: Vector3 = SKY_LIGHT[campaign.sky_quarter] if active else Vector3.ONE
-	RenderingServer.global_shader_parameter_set("sector_ambient", tint)
+	return tint * Vector3.ONE.lerp(Vector3(0.18, 0.23, 0.33), canopy_shade)
+
+func _apply_sector_light() -> void:
+	var active := is_campaign and campaign != null and campaign.phase != "market"
+	RenderingServer.global_shader_parameter_set("sector_ambient", _sector_illumination())
 	get_world_3d().environment.sky.sky_material.set_shader_parameter("sun_height", [-0.015, 0.08, 0.25, -0.55][campaign.sky_quarter] if active else 0.25)
 	headlamp.visible = active and campaign.headlight
 
@@ -2584,6 +2615,8 @@ func _load_phase() -> void:
 	_enter_phase(false)
 
 func _enter_phase(continuous: bool) -> void:
+	surface_events.reset()
+	_set_canopy_shade(0.0)
 	credit_hoops.clear()
 	if campaign.phase == "launch":
 		_prepare_launch()
@@ -3116,7 +3149,7 @@ func _eject() -> void:
 	add_child(ship_loss)
 	ship_loss.reactor_burst.connect(func() -> void:
 		sound.play_destruction(ImpactSpray.Surface.HULL)
-		sound.play_thunder())
+		sound.play_reactor_blast())
 	ship_loss.begin(camera.global_transform, lost_ship, lost_primary, settings["reduced_effects"])
 	music.set_paused(false)
 	music.request_scene(AmbientMusic.SHIP_LOSS)
