@@ -190,6 +190,9 @@ func verify_sector_arrival(game: Node3D, destination: String) -> void:
 	await game._capture(destination + "-planet-ground-active.png")
 
 func verify_curved_silhouette(game: Node3D, destination: String) -> void:
+	# Measure geometry under constant illumination. Sortie lighting can be
+	# midnight, when even solid terrain falls below the mask threshold.
+	RenderingServer.global_shader_parameter_set("sector_ambient", Vector3.ONE)
 	var environment: Environment
 	var layers: Array[CanvasLayer] = []
 	for child in game.get_children():
@@ -264,6 +267,7 @@ func verify_curved_silhouette(game: Node3D, destination: String) -> void:
 	environment.glow_enabled = glow
 	for layer in layers:
 		layer.show()
+	game._apply_sector_light()
 
 func terrain_coverage(terrain: Image, envelope: Image) -> Vector2i:
 	var result := Vector2i.ZERO
