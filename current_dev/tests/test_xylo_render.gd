@@ -178,7 +178,7 @@ func verify_swamp() -> void:
 	game._advance_explosions(1.0)
 	game._advance_parasites(CanopyParasite.LEAP + 0.6)
 	var latch: Image = await image("xylo-canopy-latch.png")
-	check(changed(shell, latch, Rect2i(320, 110, 470, 390)) > 40000, "The parasite is visible on the upper port canopy pane")
+	check(changed(shell, latch, Rect2i(760, 280, 395, 220)) > 40000, "The main body fills the upper central windshield")
 	check(game.sound.parasite_voice.playing and game.sound.parasite_voice.stream.loop_mode == AudioStreamWAV.LOOP_FORWARD, "The attached parasite plays a looping growl")
 	var hatchling: CanopyParasite = game.parasites[0]
 	var bounds := hatchling.body.get_aabb()
@@ -193,12 +193,16 @@ func verify_swamp() -> void:
 	for tier in range(3):
 		for muzzle in GunAppearance.muzzle_points(tier):
 			highest_gun = minf(highest_gun, (art * muzzle).y)
-	var lowest_body := 0.0
-	for vertex: Vector3 in hatchling.body.mesh.get_meta("fragment_vertices"):
-		# Include the depth shift of the planted toes in the projection.
-		vertex.z = minf(CanopyParasite.PAD_PLANE, vertex.z + smoothstep(1.04, 1.41, absf(vertex.x))*0.37)
-		lowest_body = maxf(lowest_body, game.camera.unproject_position(hatchling.to_global(vertex)).y)
-	check(lowest_body < highest_gun - 20.0, "Body, toes and tail leave a visible gap above all three gun mounts")
+	var mouth: Vector2 = game.camera.unproject_position(hatchling.to_global(CanopyParasite.MOUTH))
+	check(mouth.distance_to(Vector2(912, 343)) < 6.0, "The mouth lands at the marked position in the 1080p cockpit")
+	hatchling.hide()
+	await RenderingServer.frame_post_draw
+	var empty_pane: Image = root.get_texture().get_image()
+	hatchling.show()
+	var silhouette := changed_bounds(latch, empty_pane)
+	print("CANOPY_SILHOUETTE ", silhouette)
+	check(absf(silhouette.position.x - 434) < 55 and absf(silhouette.end.x - 1668) < 55 and silhouette.position.y < 36, "The visible grip spans the marked upper windshield")
+	check(silhouette.end.y > 550 and silhouette.end.y < highest_gun - 8.0, "The entire rendered grip reaches the lower edge of the outline and clears all three gun mounts")
 	var planted_toe: Node3D = hatchling.toe_prints.get_child(0)
 	var footprint := planted_toe.global_position
 	check(not hatchling.breached and not hatchling.tongue.visible, "The glass is intact when the body first latches")
@@ -227,7 +231,9 @@ func verify_swamp() -> void:
 	hatchling.tongue.hide()
 	await RenderingServer.frame_post_draw
 	var hidden: Image = root.get_texture().get_image()
-	check(changed(extended, hidden, Rect2i(805, 383, 240, 145)) > 1200, "The grasping tip actually renders on the pilot's side of the opening")
+	var wrist: Vector3 = hatchling.muscle.get_shader_parameter(&"tip")
+	var wrist_pixel: Vector2 = game.camera.unproject_position(hatchling.to_global(wrist))
+	check(changed(extended, hidden, Rect2i(Vector2i(wrist_pixel) - Vector2i(60, 60), Vector2i(120, 120))) > 1200, "The grasping tip actually renders on the pilot's side of the opening")
 	hatchling.tongue.show()
 	check(hatchling.wound.visible and hatchling.tongue.visible, "The tongue extends through the fractured side pane")
 	var tip: Vector3 = hatchling.transform * Vector3(hatchling.muscle.get_shader_parameter(&"tip"))
@@ -267,6 +273,26 @@ func image(filename: String) -> Image:
 	if not capture_dir.is_empty():
 		check(frame.save_png(capture_dir.path_join(filename)) == OK, "Biological field capture saved")
 	return frame
+
+func changed_bounds(a: Image, b: Image) -> Rect2i:
+	# A few isolated pixels also change on the moving egg fleet behind the
+	# canopy. Measure patches of solid coverage at twelve-pixel resolution.
+	const TILE := 12
+	var first := a.get_size()
+	var last := Vector2i.ZERO
+	for y in range(0, a.get_height() - TILE + 1, TILE):
+		for x in range(0, a.get_width() - TILE + 1, TILE):
+			var covered := 0
+			for dy in range(1, TILE, 3):
+				for dx in range(1, TILE, 3):
+					var delta := a.get_pixel(x + dx, y + dy) - b.get_pixel(x + dx, y + dy)
+					if absf(delta.r) + absf(delta.g) + absf(delta.b) > 0.28:
+						covered += 1
+			if covered >= 7:
+				var center := Vector2i(x + TILE/2, y + TILE/2)
+				first = first.min(center)
+				last = last.max(center)
+	return Rect2i(first, last - first)
 
 func changed(a: Image, b: Image, region: Rect2i) -> int:
 	var count: int = 0

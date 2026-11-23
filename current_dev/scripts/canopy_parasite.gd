@@ -9,6 +9,9 @@ const HULL_FRACTION := 0.10
 const SKIN := preload("res://shaders/canopy_skin.gdshader")
 const BREACH_TIME := 1.65 # Seconds after latch.
 const BODY_DEPTH := 1.45
+const CLOSE_DEPTH := 1.20
+const MOUTH := Vector3(0, 0.05, 0.44)
+const CENTER_MOUTH := Vector2(0.475, 0.318)
 # Local Z of the flattened toe pads on the pilot-facing side of the mesh.
 const PAD_PLANE := 0.49
 
@@ -49,6 +52,9 @@ func launch(camera: Camera3D, at: Vector3, tilt: float, reduced: bool) -> void:
 			var toe := MeshInstance3D.new()
 			toe.mesh = pad
 			toe.position = Vector3(side * (1.49 + 0.13*cos(j)), 1.07 - 0.77*j, PAD_PLANE + 0.004)
+			if lean < 0.0:
+				# The close latch braces the outer feet across the upper windshield.
+				toe.position += Vector3(0.345, 0.36, 0.0) * smoothstep(0.52, 1.37, absf(toe.position.x))
 			toe.rotation.z = side * (0.48 - 0.24*j)
 			toe.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 			toe_prints.add_child(toe)
@@ -86,28 +92,40 @@ func advance(delta: float) -> int:
 	var count := due - bites
 	bites = due
 	var rect := pilot.get_viewport().get_visible_rect()
-	var half_height := pilot.project_position(rect.get_center(), BODY_DEPTH).distance_to(
-		pilot.project_position(Vector2(rect.get_center().x, rect.position.y), BODY_DEPTH))
+	var close_latch := lean < 0.0
+	var depth := CLOSE_DEPTH if close_latch else BODY_DEPTH
+	var half_height := pilot.project_position(rect.get_center(), depth).distance_to(
+		pilot.project_position(Vector2(rect.get_center().x, rect.position.y), depth))
 	var reach := clampf(age / LEAP, 0, 1)
 	var release := clampf((age - LEAP - LATCH) / SLIDE, 0, 1)
 	body.set_instance_shader_parameter(&"grip_age", attached_time * (0.3 if reduced_motion else 1.0))
-	body.set_instance_shader_parameter(&"pressure", smoothstep(0.83, 1.0, reach) * (1.0 - smoothstep(0.0, 0.25, release)))
+	var pressure := smoothstep(0.83, 1.0, reach) * (1.0 - smoothstep(0.0, 0.25, release))
+	body.set_instance_shader_parameter(&"pressure", pressure)
+	body.set_instance_shader_parameter(&"wide_grip", pressure if close_latch else 0.0)
 	var amplitude := 0.30 if reduced_motion else 1.0
 	body.set_instance_shader_parameter(&"left_lobe", _lobe_motion(age - LEAP, -1.0) * amplitude)
 	body.set_instance_shader_parameter(&"right_lobe", _lobe_motion(age - LEAP, 1.0) * amplitude)
 	var side := -1.0 if lean < 0.0 else 1.0
-	# Both upper side panes are inside the external gun muzzles. Leave the
-	# sight line between the two gun barrels open.
-	var seat := pilot.to_local(pilot.project_position(rect.position + rect.size * Vector2(0.5 + side * 0.205, 0.27), BODY_DEPTH))
+	# Keep a separate starboard foothold for another simultaneous hatch.
+	var seat := pilot.to_local(pilot.project_position(rect.position + rect.size * Vector2(0.705, 0.27), depth))
+	var latch_scale := Vector3.ONE * half_height * 0.26
+	var roll := lean
+	if close_latch:
+		var fit := minf(1.0, rect.size.aspect() / (16.0 / 9.0))
+		latch_scale = Vector3(0.556, 0.298, 0.395) * half_height * fit
+		roll = lean * 0.5
+		var mouth_offset := Basis(Vector3.BACK, roll) * (MOUTH * latch_scale)
+		var mouth_pixel := rect.position + rect.size * CENTER_MOUTH
+		seat = pilot.to_local(pilot.project_position(mouth_pixel, depth - mouth_offset.z)) - mouth_offset
 	position = pilot.to_local(emergence).lerp(seat, 1.0 - pow(1.0 - reach, 3))
 	position.y += half_height * (sin(reach * PI) * 0.5 + 3.5 * release * release)
 	position.x += lean * half_height * release
 	position.x += side * half_height * sin(reach * PI) * 0.9
-	rotation = Vector3((1 - reach) * 0.95, (1 - reach) * 0.65, lean + release * 0.32)
-	scale = Vector3.ONE * lerpf(1.6, half_height * 0.26, reach)
+	rotation = Vector3((1 - reach) * 0.95, (1 - reach) * 0.65, roll + release * 0.32)
+	scale = (Vector3.ONE * 1.6).lerp(latch_scale, reach)
 	toe_prints.visible = reach >= 1.0 and release < 0.025
 	if reach >= 1.0:
-		_advance_tongue(attached_time, rect, side, half_height)
+		_advance_tongue(attached_time, rect, side, half_height, depth)
 	else:
 		tongue.hide()
 	return count
@@ -128,9 +146,10 @@ func _lobe_motion(t: float, side: float) -> Vector3:
 	stretch += 0.21 * exp(-2.3 * peel) * sin(8.5 * peel)
 	return Vector3(swing, stretch, 0.10 * landing - 0.13 * recoil + 0.031 * sin(t * 3.8 + side))
 
-func _advance_tongue(t: float, rect: Rect2, side: float, half_height: float) -> void:
-	var glass_depth := BODY_DEPTH - scale.z * PAD_PLANE
-	var pane_point := rect.position + rect.size * Vector2(0.5 + side * 0.145, 0.34)
+func _advance_tongue(t: float, rect: Rect2, side: float, half_height: float, depth: float) -> void:
+	var glass_depth := depth - scale.z * PAD_PLANE
+	var pane_uv := Vector2(0.545, 0.385) if side < 0.0 else Vector2(0.645, 0.34)
+	var pane_point := rect.position + rect.size * pane_uv
 	var hole := pilot.to_local(pilot.project_position(pane_point, glass_depth))
 	var since := maxf(t - BREACH_TIME, 0.0)
 	if not breached and t >= BREACH_TIME:
@@ -138,7 +157,7 @@ func _advance_tongue(t: float, rect: Rect2, side: float, half_height: float) -> 
 		_puncture(side)
 	if is_instance_valid(wound):
 		wound.position = hole
-		wound.scale = Vector3.ONE * half_height * glass_depth / BODY_DEPTH * 0.72
+		wound.scale = Vector3.ONE * half_height * glass_depth / depth * 0.72
 		if made_hole:
 			wound.set_instance_shader_parameter(&"opening", minf(1.0, 0.38 + since * 4.0))
 			wound.set_instance_shader_parameter(&"shard_time", minf(0.7, since))
@@ -149,14 +168,15 @@ func _advance_tongue(t: float, rect: Rect2, side: float, half_height: float) -> 
 		return
 	var grasp := (0.5 + 0.5 * cos(since * 2.6)) * smoothstep(0.0, 0.36, since) * retract
 	var sway := 0.38 if reduced_motion else 1.0
-	var aim := rect.position + rect.size * Vector2(0.5 - side * (0.016 + 0.067 * sin(since * 2.33) * sway), 0.421 + 0.031 * cos(since * 2.2) * sway)
+	var aim_center := Vector2(0.61, 0.465) if side < 0.0 else Vector2(0.484, 0.421)
+	var sweep := Vector2(-side * 0.067 * sin(since * 2.33), 0.031 * cos(since * 2.2))
+	var aim := rect.position + rect.size * (aim_center + sweep * sway)
 	var tip := pilot.to_local(pilot.project_position(aim, lerpf(0.73, 0.41, grasp)))
 	var local := transform.affine_inverse()
-	var root := Vector3(0, 0.05, 0.44)
-	var gate := root.lerp(local * hole, press)
+	var gate := MOUTH.lerp(local * hole, press)
 	var thrust := smoothstep(0.0, 0.34, since) * retract
 	var end := gate.lerp(local * tip, thrust * (0.53 + 0.47 * grasp))
-	muscle.set_shader_parameter(&"mouth", root)
+	muscle.set_shader_parameter(&"mouth", MOUTH)
 	muscle.set_shader_parameter(&"gate", gate)
 	muscle.set_shader_parameter(&"tip", end)
 	muscle.set_shader_parameter(&"eye", local * Vector3.ZERO)

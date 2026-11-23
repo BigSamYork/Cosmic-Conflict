@@ -3,6 +3,7 @@ render_mode unshaded, cull_disabled;
 
 instance uniform float grip_age = 0.0;
 instance uniform float pressure = 0.0;
+instance uniform float wide_grip = 0.0;
 instance uniform vec3 left_lobe = vec3(0.0);
 instance uniform vec3 right_lobe = vec3(0.0);
 varying vec3 skin_position;
@@ -54,6 +55,15 @@ void vertex() {
 	VERTEX.z += pressure * foot * 0.37;
 	VERTEX.z = mix(VERTEX.z, min(VERTEX.z,0.49), pressure);
 	VERTEX.xy *= 1.0 + 0.015*flex*(1.0-foot);
+	// Spread the feet across the pane and tuck the striped tail up alongside
+	// the abdomen as the creature flattens against the central windshield.
+	float brace = smoothstep(0.52,1.37,abs(skin_position.x));
+	float tail = (1.0-step(0.003,abs(UV.x-0.16)))*smoothstep(0.54,0.76,-skin_position.y);
+	float angle = wide_grip*tail*0.9;
+	mat2 bend = mat2(vec2(cos(angle),sin(angle)),vec2(-sin(angle),cos(angle)));
+	vec2 hinge = vec2(0.0,-0.76);
+	VERTEX.xy = hinge + bend*(VERTEX.xy-hinge) + wide_grip*brace*vec2(0.345,0.36);
+	NORMAL.xy = bend*NORMAL.xy;
 }
 
 void fragment() {
