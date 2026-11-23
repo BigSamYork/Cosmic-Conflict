@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: build-release
@@ -21,6 +21,10 @@ jobs:
     timeout-minutes: 120
     env:
       BUILD_SHA: ${{ github.event_name == 'workflow_dispatch' && github.sha || github.event.pull_request.merge_commit_sha }}
+    outputs:
+      sha: ${{ env.BUILD_SHA }}
+      version: ${{ steps.version.outputs.version }}
+      godot: ${{ steps.toolchain.outputs.godot }}
     defaults:
       run:
         shell: pwsh
@@ -102,20 +106,93 @@ jobs:
           path: releases/${{ steps.version.outputs.version }}/app/
           if-no-files-found: error
 
+  macos:
+    needs: build
+    runs-on: macos-latest
+    timeout-minutes: 60
+    env:
+      VERSION: ${{ needs.build.outputs.version }}
+      GODOT_RELEASE: ${{ needs.build.outputs.godot }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.build.outputs.sha }}
+          persist-credentials: false
+
+      - name: Cache verified Mac toolchain
+        id: cache
+        uses: actions/cache@v6
+        with:
+          path: .tools/mac
+          key: godot-${{ needs.build.outputs.godot }}-mac-universal-v1
+
+      - name: Install Godot and macOS export template
+        if: steps.cache.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .tools/mac
+          cd "$RUNNER_TEMP"
+          base="https://github.com/godotengine/godot-builds/releases/download/$GODOT_RELEASE"
+          editor="Godot_v${GODOT_RELEASE}_macos.universal.zip"
+          templates="Godot_v${GODOT_RELEASE}_export_templates.tpz"
+          for file in SHA512-SUMS.txt "$editor" "$templates"; do
+            curl -fsSL --retry 3 "$base/$file" -o "$file"
+          done
+          for file in "$editor" "$templates"; do
+            awk -v f="$file" '$2 == f { print; found=1 } END { exit !found }' SHA512-SUMS.txt > check.sha512
+            shasum -a 512 -c check.sha512
+          done
+          ditto -x -k "$editor" "$GITHUB_WORKSPACE/.tools/mac"
+          unzip -p "$templates" templates/macos.zip > "$GITHUB_WORKSPACE/.tools/mac/macos.zip"
+
+      - name: Export, verify and package universal app
+        shell: bash
+        run: bash tools/build-macos.sh
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: CosmicConflict-${{ env.VERSION }}-macOS-${{ needs.build.outputs.sha }}
+          path: releases/${{ env.VERSION }}/CosmicConflict-${{ env.VERSION }}-macOS-universal.zip
+          if-no-files-found: error
+
+  release:
+    needs: [build, macos]
+    if: github.event.pull_request.merged == true || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.build.outputs.version }}
+      BUILD_SHA: ${{ needs.build.outputs.sha }}
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: CosmicConflict-${{ env.VERSION }}-Setup-${{ env.BUILD_SHA }}
+          path: release
+      - uses: actions/download-artifact@v7
+        with:
+          name: CosmicConflict-${{ env.VERSION }}-app-${{ env.BUILD_SHA }}
+          path: release/app
+      - uses: actions/download-artifact@v7
+        with:
+          name: CosmicConflict-${{ env.VERSION }}-macOS-${{ env.BUILD_SHA }}
+          path: release
       - name: Create tag and release
-        if: github.event.pull_request.merged == true || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+        shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ steps.version.outputs.version }}
+          GH_REPO: ${{ github.repository }}
         run: |
-          $folder = "releases/$env:VERSION"
+          $folder = "release"
           $installer = "$folder/CosmicConflict-$env:VERSION-Setup.exe"
           $portable = "$folder/CosmicConflict-$env:VERSION-Windows-x64.zip"
+          $mac = "$folder/CosmicConflict-$env:VERSION-macOS-universal.zip"
           Compress-Archive -Path "$folder/app/*" -DestinationPath $portable -Force
           $notes = @(
             '| File | SHA-256 |'
             '| --- | --- |'
-            foreach ($file in $installer, $portable) { "| $(Split-Path $file -Leaf) | ``$((Get-FileHash $file -Algorithm SHA256).Hash)`` |" }
+            foreach ($file in $installer, $portable, $mac) { "| $(Split-Path $file -Leaf) | ``$((Get-FileHash $file -Algorithm SHA256).Hash)`` |" }
           ) -join "`n"
-          gh release create "v$env:VERSION" $installer $portable --target $env:BUILD_SHA --title "Cosmic Conflict $env:VERSION" --notes $notes --generate-notes
+          gh release create "v$env:VERSION" $installer $portable $mac --target $env:BUILD_SHA --title "Cosmic Conflict $env:VERSION" --notes $notes --generate-notes
           if ($LASTEXITCODE -ne 0) { throw 'Release creation failed.' }

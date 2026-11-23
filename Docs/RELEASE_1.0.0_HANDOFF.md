@@ -21,6 +21,13 @@
 
 ## Final validation
 
+For subsequent CI releases, the Build workflow packages Windows x64 and
+universal macOS (Apple Silicon and Intel) from the same commit and version.
+A manual run on a non-main branch produces test artifacts only. On a merged
+PR or a manual run on `main`, both builds must pass before the release is
+published. The Mac ZIP preserves the `.app` bundle and includes the manual.
+The app is ad-hoc signed, not Apple Developer ID signed or notarized.
+
 | Test | Result |
 | --- | --- |
 | Release build, Godot 4.7.2 | 25 successful headless test invocations, including campaign completion, flight continuity, combat, saving, voice and editor exit. [Build log](../releases/1.0.0/validation/release-build.log) |
