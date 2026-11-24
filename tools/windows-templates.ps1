@@ -1,6 +1,6 @@
-# Fetch only Windows entries from the official 1.28 GB multi-platform ZIP.
+# Fetch the selected entries from the official multi-platform export archive.
 # HTTPS authenticates the source; ZIP CRC-32 verifies extracted entry integrity.
-function Install-WindowsTemplates([string]$Url, [string]$Destination, [string]$Cache) {
+function Install-ExportTemplates([string]$Url, [string]$Destination, [string[]]$Names) {
     Add-Type -AssemblyName System.Net.Http
     Add-Type -AssemblyName System.IO.Compression
     if (-not ('CosmosCrc32' -as [type])) {
@@ -69,7 +69,7 @@ public static class CosmosCrc32 {
             $extraLength = [BitConverter]::ToUInt16($directory, $offset + 30)
             $commentLength = [BitConverter]::ToUInt16($directory, $offset + 32)
             $name = [Text.Encoding]::UTF8.GetString($directory, $offset + 46, $nameLength)
-            if ($name -in @('templates/windows_debug_x86_64.exe', 'templates/windows_release_x86_64.exe')) {
+            if ($name.StartsWith('templates/') -and $name.Substring(10) -in $Names) {
                 $found++
                 $filename = $name.Substring('templates/'.Length)
                 $output = Join-Path $Destination $filename
@@ -99,6 +99,6 @@ public static class CosmosCrc32 {
             }
             $offset += 46 + $nameLength + $extraLength + $commentLength
         }
-        if ($found -ne 2) { throw "Expected two Windows x86_64 templates, found $found." }
+        if ($found -ne $Names.Count) { throw "Expected $($Names.Count) export templates, found $found." }
     } finally { $client.Dispose() }
 }

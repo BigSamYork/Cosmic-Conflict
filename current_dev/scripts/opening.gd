@@ -56,6 +56,8 @@ func _ready() -> void:
 		drone.play()
 	$Overlay/Title.text = book.title
 	$Overlay/Skip.pressed.connect(_finish)
+	if OS.has_feature("android"):
+		$Overlay/Skip.text = "Skip"
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	_next_cue()
 

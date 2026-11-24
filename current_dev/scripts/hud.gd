@@ -258,7 +258,10 @@ func show_menu(next_mode: String, current_settings: Dictionary) -> void:
 		_add_label(stack, "Prototype only. No campaign progress or credits saved.", 18, MUTED)
 		_add_button(stack, "FLY AGAIN", func() -> void: launch_requested.emit())
 	_add_settings(stack)
-	_add_label(stack, "Mouse aim + steer / WASD thrusters / Hold F to hold line\nShift dash / B roll / LMB fire / V burst governor / Space secondary\nC flares / X shield surge / R scope range / I repeat boss recon\n0–3 reactor / RMB or Esc pause / F11 fullscreen / ` developer panel", 16, MUTED)
+	if OS.has_feature("android"):
+		_add_label(stack, "Drag the left stick or touch the canopy to aim and steer.\nHold FIRE while aiming. ORD launches your secondary weapon.", 16, MUTED)
+	else:
+		_add_label(stack, "Mouse aim + steer / WASD thrusters / Hold F to hold line\nShift dash / B roll / LMB fire / V burst governor / Space secondary\nC flares / X shield surge / R scope range / I repeat boss recon\n0–3 reactor / RMB or Esc pause / F11 fullscreen / ` developer panel", 16, MUTED)
 	if mode == "title":
 		_add_button(stack, "CREDITS & LICENSES", func() -> void: show_menu("credits", settings))
 	else:
@@ -962,4 +965,5 @@ func _draw() -> void:
 		_text(Vector2(center.x - 100, center.y + 125), flight.last_impact, 20, AMBER)
 	if Time.get_ticks_msec() / 1000.0 < message_until:
 		_text(Vector2(center.x - 280, height - 250), message, 20, AMBER)
-	_text(Vector2(48, height - 24), "WASD  THRUST    B  ROLL    R  RADAR    RMB / ESC  FLIGHT CONTROLS", 14, MUTED)
+	if not OS.has_feature("android"):
+		_text(Vector2(48, height - 24), "WASD  THRUST    B  ROLL    R  RADAR    RMB / ESC  FLIGHT CONTROLS", 14, MUTED)
