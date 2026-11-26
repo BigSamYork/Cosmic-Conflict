@@ -5,7 +5,48 @@ var failures: int = 0
 func _initialize() -> void:
 	call_deferred("run")
 
+func verify_sector_tactics() -> void:
+	for sector in SectorCatalog.AVAILABLE:
+		var arena := MissionWorld.new()
+		root.add_child(arena)
+		arena.build("orbit", Transform3D.IDENTITY, sector)
+		var light := arena.targets[0] as EnemyFighter
+		var heavy := arena.targets[2] as EnemyFighter
+		heavy.global_position = light.global_position + Vector3.RIGHT * 40
+		match sector:
+			"cryo":
+				heavy.receive_hit(heavy.armor)
+				arena.advance(0.02, Transform3D.IDENTITY)
+				check(light.stun_remaining > 0, "A shattered Cryo relay stuns a nearby escort")
+			"xylo":
+				light.receive_hit(1)
+				arena.advance(0.02, Transform3D.IDENTITY)
+				check(light.armor == light.initial_armor, "A living brood nurse repairs a damaged escort")
+			"vespera":
+				var before := light.global_position
+				light.receive_hit(1)
+				check(light.global_position.distance_to(before) >= 17.0 and light.guided_lockable, "A surviving scout skips sideways but can be reacquired")
+			"thalassa":
+				var tips := PackedVector3Array()
+				light.missile_requested.connect(func(at: Vector3, _dir: Vector3) -> void: tips.append(at))
+				light.cooldown = 0
+				light.advance(0.1, Vector3.ZERO, Vector3.ZERO)
+				check(tips.size() == 2 and tips[0].distance_to(tips[1]) > 10, "A forked salvo comes from two distinct wingtips")
+			"ignis", "kharon":
+				var ship := light if sector == "ignis" else heavy
+				ship.phase = 0
+				ship.advance(5, Vector3.ZERO, Vector3.ZERO)
+				var start := ship.global_position
+				ship.advance(0.5, Vector3.ZERO, Vector3.ZERO)
+				var forward_travel := (ship.global_position - start).dot(ship.velocity.normalized())
+				if sector == "ignis":
+					check(forward_travel > ship.velocity.length() * 0.8, "Ignis interceptor surges forward during its boost")
+				else:
+					check(forward_travel < ship.velocity.length() * 0.25, "Kharon heavy brakes to guard its position")
+		arena.free()
+
 func run() -> void:
+	verify_sector_tactics()
 	var scene: PackedScene = load("res://main.tscn")
 	var game: Node3D = scene.instantiate()
 	root.add_child(game)
