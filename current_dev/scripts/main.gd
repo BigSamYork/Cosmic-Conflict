@@ -749,7 +749,26 @@ func _input(event: InputEvent) -> void:
 	if automated_session or not automation.is_empty() or (touch_controls != null and touch_controls.handle(event)):
 		get_viewport().set_input_as_handled()
 
+func _grant_test_credits() -> void:
+	if not campaign.tour_result.is_empty():
+		hud.show_message("CONTINUE THE TOUR BEFORE GRANTING TEST CREDITS")
+		return
+	if campaign.phase == "market":
+		var next := campaign.copy()
+		next.credits += 1000
+		next.assisted = true
+		if not _save_campaign(next, _grant_test_credits):
+			return
+		_show_market()
+	else:
+		campaign.credits += 1000
+		campaign.assisted = true
+	hud.show_message("DEVELOPER GRANT / +1,000 CR")
+
 func _unhandled_input(event: InputEvent) -> void:
+	if is_campaign and mode in [Mode.FLIGHT, Mode.MARKET, Mode.DEBUG] and event is InputEventKey and event.pressed and not event.echo and (event.unicode == 43 or event.keycode in [KEY_PLUS, KEY_KP_ADD] or (event.keycode == KEY_EQUAL and event.shift_pressed)):
+		_grant_test_credits()
+		return
 	if mode == Mode.FLIGHT and is_campaign:
 		for power: String in CampaignState.POWER_MODES:
 			if event.is_action_pressed("power_" + power):
@@ -2734,6 +2753,10 @@ func _enter_phase(continuous: bool) -> void:
 			scene.build(campaign.phase, director.origin, campaign.sector)
 		world = scene
 		mission_world = scene
+		scene.encounter_notice.connect(hud.show_message)
+		scene.rock_shattered.connect(func(rock: Asteroid) -> void:
+			_spawn_breakup(rock, true)
+			_spawn_rock_fragments(rock))
 		targets = scene.targets
 		boss = scene.boss
 	var titles: Dictionary = {"ground": "GROUND ASSAULT / " + SectorCatalog.name_for(campaign.sector).to_upper(), "ground_boss": SectorCatalog.GROUND_BOSSES[campaign.sector].to_upper() + " / PURSUIT", "orbit": "ORBITAL DOGFIGHT / AUTO TRACKING", "orbit_boss": SectorCatalog.ORBITAL_BOSSES[campaign.sector].to_upper() + " / PURSUIT", "asteroids": "ASTEROID ESCAPE / AVOIDANCE ONLINE"}
@@ -2743,6 +2766,8 @@ func _enter_phase(continuous: bool) -> void:
 	hud.objective = "GOLD: MINE / CYAN: COLLECT / VIOLET: VOLATILE / RUST: EVADE" if campaign.phase == "asteroids" else "WEB NODES: SHOOT OR DODGE / RED RADAR: HOSTILES" if campaign.phase == "orbit" else "RADARS JAM TURRETS / AIM HIGH TO SHEAR A TOWER"
 	if campaign.phase == "asteroids" and campaign.sector == "xylo":
 		hud.objective = "DODGE EGG SHIPS / GOLD CARGO / GUARDIANS RETALIATE IF ATTACKED"
+	elif campaign.phase == "orbit":
+		hud.objective = MissionWorld.DOGFIGHT_BRIEFS[campaign.sector]
 	display_ship.hide()
 	if not continuous:
 		cursor = get_viewport().get_visible_rect().size * 0.5
@@ -2835,8 +2860,9 @@ func _begin_sequence(kind: String) -> void:
 			director.begin_transition(end, duration, 180, FlightState.SPEED)
 			hud.objective = "ATMOSPHERIC DESCENT / CANYON APPROACH"
 		"ground_victory":
-			director.begin_transition(end, duration, 0, 0)
-			hud.objective = "HOLDING ON TARGET / CONFIRMING DESTRUCTION"
+			end = director.ground_course * FlightState.rail_frame(flight.distance + FlightState.SPEED * duration)
+			director.begin_transition(end, duration, FlightState.SPEED, FlightState.SPEED)
+			hud.objective = "KEEPING PACE / CONFIRMING DESTRUCTION"
 		"orbital_victory":
 			end.origin -= end.basis.z * FlightState.SPEED * duration
 			director.begin_transition(end, duration, FlightState.SPEED, FlightState.SPEED)
@@ -2856,6 +2882,8 @@ func _begin_sequence(kind: String) -> void:
 					target.spawn_position = target.global_position
 					target.age = 0
 					target.motion_age = 0
+					target.drive_clock = 0
+					target.sector_tactic = false
 					target.velocity = -director.frame.basis.z * 90.0
 					target.lifetime = 5.0
 			end = FlightDirector.orbital_boss_entry(director.frame)
@@ -2917,10 +2945,7 @@ func _advance_sequence(delta: float) -> void:
 	var previous_transition_time: float = director.transition_time
 	var finished: bool
 	if sequence == "ground_victory":
-		# Brake over the first second, leaving the wreck at a safe viewing distance.
-		var before := maxf(0.0, 1.0 - (sequence_time - delta))
-		var after := maxf(0.0, 1.0 - sequence_time)
-		flight.distance += 0.5 * FlightState.SPEED * (before * before - after * after)
+		flight.distance += FlightState.SPEED * delta
 		director.frame = director.ground_course * FlightState.rail_frame(flight.distance)
 		finished = sequence_time >= duration
 	elif sequence == "belt_exit":
@@ -2984,7 +3009,12 @@ func _advance_sequence(delta: float) -> void:
 	if boss != null and not boss.orbital and boss.death_time >= 0 and sequence in ["ground_victory", "ascent"]:
 		var weight := smoothstep(0.0, 0.45, sequence_time) if sequence == "ground_victory" else 1.0 - smoothstep(0.0, 0.9, sequence_time)
 		if weight > 0:
-			var aim := camera.global_position.direction_to(boss.model.global_position)
+			var focus := boss.model.global_position
+			for blast in explosions:
+				if blast.source == boss:
+					focus = blast.global_position
+					break
+			var aim := camera.global_position.direction_to(focus)
 			if aim.length_squared() > 0.0 and absf(aim.dot(director.ground_course.basis.y)) < 0.999:
 				var toward_wreck := Basis.looking_at(aim, director.ground_course.basis.y)
 				camera.global_basis = camera.global_basis.slerp(toward_wreck, weight)
@@ -3603,7 +3633,7 @@ func _run_music_test() -> void:
 	music.set_paused(false)
 	music.request_scene("station")
 	await get_tree().create_timer(4.5).timeout
-	_check(music.current == "station" and music.players[music.active].playing and not music.players[1 - music.active].playing, "Docking crossfades to Look Busy and releases the previous recording")
+	_check(music.current == "station" and music.players[music.active].playing and not music.players[1 - music.active].playing, "Docking crossfades to the opening score and releases the previous recording")
 	music.set_level(0, false)
 	_check(not music.players[0].playing and not music.players[1].playing, "Packaged music volume zero stops playback")
 	_finish_automation()

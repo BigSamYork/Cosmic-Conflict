@@ -317,12 +317,12 @@ func _show_equipped_ship(state: CampaignState) -> void:
 func show_market(state: CampaignState, error: String = "") -> void:
 	campaign = state
 	mode = "market"
-	var stack: VBoxContainer = _menu_stack(1140, 160)
+	var stack: VBoxContainer = _menu_stack(1140, 110)
 	if not state.ship.is_empty():
 		_show_equipped_ship(state)
 	_add_label(stack, "ASTRA MARKET / SAFE HARBOR", 28, CYAN)
 	var ship_name: String = "NO SHIP / EJECTION POD" if state.ship.is_empty() else CampaignState.SHIPS[state.ship]["name"]
-	_add_label(stack, "%s     |     %d CREDITS     |     PRIMARY LV %d" % [ship_name, state.credits, state.primary_level], 22, WHITE)
+	_add_label(stack, "%s     |     %d CREDITS" % [ship_name, state.credits], 22, WHITE)
 	var result: String = SectorCatalog.name_for(state.sector).to_upper() + " COMPLETE" if state.last_result == "completed" else "PILOT RECOVERED" if state.last_result == "ejected" else "DOCKED"
 	_add_label(stack, "%s / Ships and shields are fully repaired here, free of charge.\nHull purchases transfer fitted upgrades. Ejection loses the ship and its equipment." % result, 18, MUTED)
 	if state.last_result == "completed":
@@ -336,7 +336,20 @@ func show_market(state: CampaignState, error: String = "") -> void:
 	grid.columns = 2
 	grid.add_theme_constant_override("h_separation", 14)
 	grid.add_theme_constant_override("v_separation", 10)
-	_add_label(stack, "SHIP EQUIPMENT / SCROLL FOR ALL MODULES", 16, CYAN)
+	var manifest := PackedStringArray()
+	if not state.ship.is_empty():
+		manifest.append(["Pulse guns", "Quad Plasma", "Tachyon Beam"][state.primary_level])
+		for id: String in CampaignState.SECONDARIES:
+			if state.owns_secondary(id):
+				manifest.append(CampaignState.SECONDARIES[id].name + (" [ACTIVE]" if state.selected_secondary == id else ""))
+		if state.tractor: manifest.append("Tractor")
+		if state.headlight: manifest.append("Headlight")
+		if state.countermeasures: manifest.append("Flares %d/%d" % [state.flares, CampaignState.FLARE_CAPACITY])
+		for tier in [["Shield", state.shield_level], ["Cooling", state.heat_sink_level], ["Armor", state.hull_armor_level]]:
+			if tier[1] > 0: manifest.append("%s %d/2" % tier)
+		manifest.append("Ordnance %d/%d" % [state.ammo, CampaignState.SHIPS[state.ship].ammo])
+	var loadout := _add_label(stack, "ON BOARD: " + ("No ship or equipment" if manifest.is_empty() else "  /  ".join(manifest)), 17, CYAN)
+	loadout.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_add_secondary_selector(stack, state)
 	var scroll := ScrollContainer.new()
 	scroll.name = "EquipmentScroll"
@@ -386,8 +399,11 @@ func show_market(state: CampaignState, error: String = "") -> void:
 		var fitted: bool = item == state.ship or (item == "secondary" and state.secondary) or (item == "tractor" and state.tractor) or (item == "headlight" and state.headlight) or (item == "swarm" and state.swarm_launcher) or (item == "emp" and state.emp_launcher) or (item == "countermeasures" and state.countermeasures)
 		var maximum: bool = (item == "primary" and state.primary_level >= 2) or (item == "shield" and state.shield_level >= 2) or (item == "cooling" and state.heat_sink_level >= 2) or (item == "armor" and state.hull_armor_level >= 2)
 		if fitted or maximum:
-			button.text = "EQUIPPED" if fitted else "MAXIMUM LEVEL"
+			button.text = "ON BOARD" if fitted else "ON BOARD / MAX LEVEL"
 			button.disabled = true
+		var purchases: int = state.purchase_counts.get(item, 0)
+		if purchases > 0:
+			_add_label(details, "PURCHASED x%d" % purchases, 15, AMBER)
 	_add_label(stack, "Enemies %d    Bosses %d    Asteroids %d    Ejections %d    Earned %d / Spent %d%s" % [state.stats["enemies"], state.stats["bosses"], state.stats["asteroids"], state.stats["ejections"], state.earned, state.spent, "    DEVELOPER-ASSISTED" if state.assisted else ""], 17, MUTED)
 	_add_label(stack, "SCORE %d / BEST STREAK %d / MINERAL CORES %d\nFLY THROUGH GREEN $ HOOPS TO EARN CREDITS" % [state.combat_score, state.best_streak, state.stats["minerals"]], 17, AMBER)
 	var accuracy: float = minf(100.0, 100.0 * state.debrief["hits"] / state.debrief["shots"]) if state.debrief["shots"] > 0 else 0.0
@@ -584,7 +600,7 @@ func show_debug(god_mode: bool, zero_heat: bool = false, infinite_ammo: bool = f
 	mode = "debug"
 	var stack: VBoxContainer = _menu_stack(860)
 	_add_label(stack, "DEVELOPER TESTING / ASSISTED RUN", 27, AMBER)
-	_add_label(stack, "Training jumps use a separate test save.\nCampaign cheats mark the current operation as assisted.", 20, MUTED)
+	_add_label(stack, "Training jumps use a separate test save.\nCampaign cheats mark the current operation as assisted.  [+] Grant 1,000 credits.", 20, MUTED)
 	var sectors := HBoxContainer.new()
 	stack.add_child(sectors)
 	for id in SectorCatalog.AVAILABLE:

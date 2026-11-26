@@ -25,6 +25,28 @@ Vale and Lark comment on arrival. Astra Market sells a forward headlight for 200
 credits. Enable **Target brackets and distances** in settings for range overlays.
 Completed sectors carry a checkmark on the current tour’s map.
 
+In Astra Market, **On Board** shows the current hull's fittings and ammunition.
+Each purchase made with this version also leaves a **Purchased** count on its
+card. Receipts survive ejection; the equipment does not. Older saves still
+show their actual loadout, but cannot reconstruct past receipts. During flight
+or at the market, **+** (including keypad plus) grants 1,000 testing credits.
+This marks the run assisted and does not increase earned credits or score.
+
+## Orbital encounters
+
+An occasional meteor or tumbling asteroid crosses every dogfight. Cryo-Vex's
+escape belt also has rogue rocks that plow through breakable asteroids; Ignis
+Prime's belt has fiery meteor impacts. Xylo-Mire keeps its egg-ship field.
+
+| Dogfight | Tactic |
+| --- | --- |
+| Ignis Prime | Light fighters surge forward in afterburner bursts; lead the boost. |
+| Cryo-Vex | Destroy a relay gunship to stun nearby escorts. |
+| Vespera-9 | A scout can blink sideways once after a nonlethal hit. Reacquire it while it is visible. |
+| Xylo-Mire | Heavy brood nurses regenerate damaged escorts within 155 m. Break up their formation. |
+| Thalassa Reach | Light interceptors fire forked salvos from opposite wingtips. |
+| Kharon Dunes | Heavy sentries periodically brake and turn their shields toward you. Flank them. |
+
 Fly through the green hoops marked **$** to earn upgrade money. Each hoop pays
 once. A 100-credit hoop is common (60%); a 1,000-credit hoop is rare (1%).
 
@@ -164,8 +186,8 @@ historical; the current rules above and reference sections take precedence.
   kicks your ship off course and deals 14 hull damage through shields. The automatic
   centerline stays clear. Clearing ice awards no credits, enemy kill or streak.
   Pause freezes the warning and fall.
-- Kevin MacLeod’s “Fanfare for Space” accompanies the opening. “Look Busy”
-  plays in Astra Market. Each world loops its own recording through ground
+- Kevin MacLeod’s “Fanfare for Space” accompanies the opening and plays
+  in Astra Market. Each world loops its own recording through ground
   combat, orbital flight and both bosses. Docking crossfades to the market
   score. Pause holds playback and computer speech lowers the music.
 - **Music controls:** the title/pause menu has a separate music slider, default

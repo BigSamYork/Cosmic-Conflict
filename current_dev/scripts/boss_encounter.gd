@@ -279,7 +279,7 @@ func advance(delta: float, pilot: Vector3, velocity: Vector3) -> void:
 	stun_remaining = maxf(0.0, stun_remaining - delta)
 	age += delta
 	advance_visuals(delta)
-	if pursuing and (orbital or death_time < 0.0):
+	if pursuing:
 		_update_pursuit()
 	elif orbital:
 		position = anchor + Vector3(sin(age * 0.3) * 4.0, sin(age * 0.5) * 1.5, 0)

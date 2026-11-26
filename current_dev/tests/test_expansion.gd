@@ -504,6 +504,8 @@ func verify_transitions() -> void:
 		check(game.director.transition_duration == durations[id], "Actual autopilot director uses the exact requested duration for " + id)
 		var elapsed: float = 0
 		var saw_fracture := false
+		var flight_mark: float = game.flight.distance
+		var boss_mark: Vector3 = game.boss.global_position if id == "ground_victory" else Vector3.ZERO
 		while game.sequence == id and elapsed <= durations[id] + 1:
 			game._physics_process(1.0 / 60)
 			elapsed += 1.0 / 60
@@ -513,6 +515,7 @@ func verify_transitions() -> void:
 					var view: Vector3 = -game.camera.global_basis.z
 					saw_fracture = saw_fracture or view.dot(game.camera.global_position.direction_to(blast.global_position)) > 0.98
 		if id == "ground_victory":
+			check(game.flight.distance - flight_mark >= FlightState.SPEED * (durations[id] - 0.05) and game.boss.global_position.distance_to(boss_mark) > 80.0, "Pilot and wreck keep traveling throughout the destruction pass")
 			check(saw_fracture and game.sequence == "ascent" and game.explosions.is_empty(), "Autopilot watches the breakup and finishes the blast before pulling up")
 		check(absf(elapsed - durations[id]) <= 1.0 / 60 + 0.00001, "Measured simulation duration matches the handoff schedule for " + id)
 	await phase("ignis", "orbit")
