@@ -35,6 +35,7 @@ var damage_history_complete: bool = true
 var tour_damage_complete: bool = true
 var tour_result: Dictionary = {}
 var ship: String = "rook"
+var parked_ships: Array[String] = []
 var credits: int = 0
 var earned: int = 0
 var spent: int = 0
@@ -264,6 +265,8 @@ func purchase(item: String) -> String:
 		return "The free rescue ship is available only when no replacement is affordable."
 	if item == ship:
 		return "This ship is already equipped."
+	if parked_ships.has(item):
+		return "Already in your hangar. Switch to this hull for free."
 	if not SHIPS.has(item) and ship.is_empty():
 		return "Obtain a ship before purchasing equipment."
 	if item == "primary" and primary_level >= 2:
@@ -299,8 +302,7 @@ func purchase(item: String) -> String:
 	if cost > 0:
 		purchase_counts[item] = int(purchase_counts.get(item, 0)) + 1
 	if SHIPS.has(item):
-		ship = item
-		ammo = mini(ammo, int(SHIPS[ship]["ammo"]))
+		_equip_hull(item)
 	elif item == "primary":
 		primary_level += 1
 	elif item == "shield":
@@ -335,9 +337,24 @@ func purchase(item: String) -> String:
 	shields = shield_capacity()
 	return ""
 
+func _equip_hull(item: String) -> void:
+	parked_ships.erase(item)
+	if not ship.is_empty() and ship != "emergency":
+		parked_ships.append(ship)
+	ship = item
+	ammo = mini(ammo, int(SHIPS[ship]["ammo"]))
+	hull = hull_capacity()
+	shields = shield_capacity()
+
+func switch_hull(item: String) -> String:
+	if phase != "market" or not tour_result.is_empty() or not parked_ships.has(item):
+		return "Only a parked hull can be selected at Astra Market."
+	_equip_hull(item)
+	return ""
+
 func to_dict() -> Dictionary:
 	return {"schema": SCHEMA, "phase": phase, "sector": sector, "sky_quarter": sky_quarter, "headlight": headlight, "cleared_sectors": cleared_sectors.duplicate(), "replays_unlocked": replays_unlocked, "ship": ship, "credits": credits, "earned": earned, "spent": spent,
-		"purchase_counts": purchase_counts.duplicate(), "primary_level": primary_level, "shield_level": shield_level, "heat_sink_level": heat_sink_level, "power_mode": power_mode, "secondary": secondary, "ammo": ammo,
+		"parked_ships": parked_ships.duplicate(), "purchase_counts": purchase_counts.duplicate(), "primary_level": primary_level, "shield_level": shield_level, "heat_sink_level": heat_sink_level, "power_mode": power_mode, "secondary": secondary, "ammo": ammo,
 		"hull": hull, "shields": shields, "sortie_id": sortie_id, "settled_sortie_id": settled_sortie_id,
 		"last_result": last_result, "assisted": assisted, "stats": stats.duplicate(),
 		"combo_kills": combo_kills, "best_streak": best_streak, "combat_score": combat_score, "combo_bonus_credits": combo_bonus_credits,
@@ -535,6 +552,21 @@ func restore(source: Dictionary) -> String:
 	required_sectors.assign(data["required_sectors"])
 	replays_unlocked = data["replays_unlocked"]
 	ship = saved_ship
+	parked_ships.clear()
+	if data.has("parked_ships"):
+		if not data.parked_ships is Array:
+			return "Invalid hangar."
+		for id in data.parked_ships:
+			if not id is String or not SHIPS.has(id) or id in [saved_ship, "emergency"] or parked_ships.has(id):
+				return "Invalid parked hull."
+			parked_ships.append(id)
+	elif data.stats.ejections == 0:
+		# Earlier saves recorded purchases but not which hull was lost in an ejection.
+		for id in receipts:
+			if SHIPS.has(id) and id not in [saved_ship, "emergency"] and receipts[id] > 0:
+				parked_ships.append(id)
+		if saved_ship != "rook" and not parked_ships.has("rook"):
+			parked_ships.append("rook")
 	purchase_counts.clear()
 	for item in receipts:
 		purchase_counts[item] = int(receipts[item])

@@ -394,8 +394,9 @@ func show_market(state: CampaignState, error: String = "") -> void:
 		row.add_child(details)
 		_add_label(details, descriptions[item][0], 22, WHITE)
 		_add_label(details, descriptions[item][1], 16, MUTED)
-		var item_id: String = item
-		var button: Button = _add_button(details, "BUY / %d CR" % state.price(item), func() -> void: purchase_requested.emit(item_id))
+		var parked := state.parked_ships.has(item)
+		var item_id: String = "switch:" + item if parked else item
+		var button: Button = _add_button(details, "IN HANGAR / SWITCH FREE" if parked else "BUY / %d CR" % state.price(item), func() -> void: purchase_requested.emit(item_id))
 		var fitted: bool = item == state.ship or (item == "secondary" and state.secondary) or (item == "tractor" and state.tractor) or (item == "headlight" and state.headlight) or (item == "swarm" and state.swarm_launcher) or (item == "emp" and state.emp_launcher) or (item == "countermeasures" and state.countermeasures)
 		var maximum: bool = (item == "primary" and state.primary_level >= 2) or (item == "shield" and state.shield_level >= 2) or (item == "cooling" and state.heat_sink_level >= 2) or (item == "armor" and state.hull_armor_level >= 2)
 		if fitted or maximum:

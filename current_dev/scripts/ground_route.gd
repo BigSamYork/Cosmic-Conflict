@@ -4,7 +4,9 @@ extends RefCounted
 const FORK: float = 1260.0
 const REJOIN: float = 2940.0
 const TURN_LENGTH: float = 420.0
-const OFFSET: float = 84.0
+const OFFSET: float = 116.0
+const WARNING_DISTANCE := 840.0
+const HAZARD_COMMIT_X := 2.0
 
 var selected: bool = false
 var locked: bool = false
@@ -13,7 +15,7 @@ var completed: bool = false
 func advance(distance: float, lateral: float) -> bool:
 	if locked or distance < FORK:
 		return false
-	selected = lateral > 0.0
+	selected = lateral >= HAZARD_COMMIT_X
 	locked = true
 	return true
 

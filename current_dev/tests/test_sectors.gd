@@ -99,13 +99,15 @@ func verify_arrival_equipment_and_hoops() -> void:
 	root.add_child(rings)
 	state.phase = "ground"
 	var flight := FlightState.new()
-	var director := FlightDirector.new()
-	rings.advance(0, Vector3.ZERO, Vector3.ZERO, state, flight, director)
-	rings._spawn(Transform3D.IDENTITY)
+	flight.elapsed = 55
+	rings.advance(55, Vector3.ZERO, Vector3.ZERO, state, flight)
+	check(rings.hoop == null, "Time in the field without shooting never creates credits")
+	rings.drop_from_hit(Vector3(0, 0, 3), Basis.IDENTITY)
+	check(rings.hoop.global_position == Vector3(0, 0, 3), "Salvage opens where the shot landed")
 	var prize: int = rings.value
-	check(rings.advance(0.1, Vector3(6, 0, 8), Vector3(6, 0, -8), state, flight, director) == 0, "Passing beside a hoop leaves it available")
-	check(rings.advance(0.1, Vector3(1, 0, 8), Vector3(-1, 0, -8), state, flight, director) == prize and state.credits == prize, "Crossing the opening credits the wallet")
-	check(rings.advance(0.1, Vector3(0, 0, -8), Vector3(0, 0, 8), state, flight, director) == 0 and state.credits == prize, "A collected hoop cannot pay again")
+	check(rings.advance(0.1, Vector3(6, 0, 8), Vector3(6, 0, -8), state, flight) == 0, "Passing beside a hoop leaves it available")
+	check(rings.advance(0.1, Vector3(1, 0, 8), Vector3(-1, 0, -8), state, flight) == prize and state.credits == prize, "Crossing the opening credits the wallet")
+	check(rings.advance(0.1, Vector3(0, 0, -8), Vector3(0, 0, 8), state, flight) == 0 and state.credits == prize, "A collected hoop cannot pay again")
 	var counts := {}
 	for roll in 100:
 		var amount: int = rings.prize(roll)

@@ -12,6 +12,15 @@ func verify_sector_tactics() -> void:
 		arena.build("orbit", Transform3D.IDENTITY, sector)
 		var light := arena.targets[0] as EnemyFighter
 		var heavy := arena.targets[2] as EnemyFighter
+		if sector == "cryo":
+			var lasers: Array[EnemyFighter] = []
+			arena.laser_requested.connect(func(source: EnemyFighter) -> void: lasers.append(source))
+			light.laser_cooldown = 0
+			light.advance(0, light.spawn_position - light.velocity.normalized() * 80, Vector3.ZERO)
+			check(lasers.is_empty(), "Dogfighters cannot fire a laser backward")
+			light.advance(0, light.global_position + light.velocity.normalized() * 80, Vector3.ZERO)
+			light.advance(0.01, light.global_position + light.velocity.normalized() * 80, Vector3.ZERO)
+			check(lasers == [light], "A lined-up dogfighter fires down its nose once, then cools down")
 		heavy.global_position = light.global_position + Vector3.RIGHT * 40
 		match sector:
 			"cryo":

@@ -65,7 +65,7 @@ func advance(delta: float, previous: Vector3, pilot: Vector3, campaign: Campaign
 	var contract := patrol.advance(delta, previous, pilot, campaign, flight, route)
 	if not contract.is_empty():
 		messages.append(contract)
-	if not announced and flight.distance >= GroundRoute.FORK - 480:
+	if not announced and flight.distance >= GroundRoute.FORK - GroundRoute.WARNING_DISTANCE:
 		announced = true
 		messages.append("FORK AHEAD / FLY LEFT FOR SAFE / RIGHT FOR HAZARD")
 	for supply in supplies:
@@ -77,6 +77,8 @@ func advance(delta: float, previous: Vector3, pilot: Vector3, campaign: Campaign
 	return messages
 
 func objective(distance: float) -> String:
+	if not route.locked and distance >= GroundRoute.FORK - GroundRoute.WARNING_DISTANCE:
+		return "FORK IN %ds / LEFT OR CENTER: SAFE     RIGHT: HAZARD" % ceili(maxf(0, GroundRoute.FORK - distance) / FlightState.SPEED)
 	if not patrol.prompt.is_empty():
 		return patrol.prompt
 	if distance >= GroundRoute.REJOIN:

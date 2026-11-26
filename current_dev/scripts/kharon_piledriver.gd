@@ -1,4 +1,4 @@
-extends Node3D
+extends RangeTarget
 
 const STRIDE := 5.8
 const YAW := 0.38
@@ -11,8 +11,15 @@ var shoes: Array[Node3D] = []
 var foot_lifts := PackedFloat32Array()
 var ground_height: Callable
 var ram_tip := Vector3.ZERO
+var hitboxes: Array[CollisionShape3D] = []
+var panels: Array[Node3D] = []
+var last_age := 0.0
+var disabled_at := -1.0
 
 func _ready() -> void:
+	armor = 36
+	collision_layer = 2
+	collision_mask = 0
 	chassis = FleetArt.model("kharon_driver_chassis", "ground")
 	ram = FleetArt.model("kharon_driver_ram", "ground")
 	add_child(chassis)
@@ -28,12 +35,36 @@ func _ready() -> void:
 		lower.append(shin)
 		shoes.append(shoe)
 		foot_lifts.append(0.0)
+	panels.assign([chassis, ram])
+	panels.append_array(upper)
+	panels.append_array(lower)
+	panels.append_array(shoes)
+	for panel in panels:
+		var hitbox := CollisionShape3D.new()
+		var mesh: Mesh = panel.get_child(0).mesh
+		hitbox.shape = mesh.create_convex_shape()
+		add_child(hitbox)
+		hitboxes.append(hitbox)
+
+func receive_hit(damage: int = 1) -> bool:
+	if destroyed: return false
+	armor = maxi(0, armor - damage)
+	if armor == 0:
+		destroyed = true
+		disabled_at = last_age
+		collision_layer = 0
+	return destroyed
 
 func _pose_link(link: Node3D, a: Vector3, b: Vector3) -> void:
 	var delta := b - a
 	link.transform = Transform3D(Basis.looking_at(delta.normalized()) * Basis.from_scale(Vector3(1,1,delta.length()/5.0)), a)
 
 func advance(age: float) -> void:
+	last_age = age
+	var slump := 0.0
+	if destroyed:
+		slump = smoothstep(0, 0.7, age - disabled_at)
+		age = disabled_at
 	# Each planted foot stays at its last world-space foothold until the next stride.
 	# The two diagonal pairs alternate; at the strike the chassis arrests its lateral motion.
 	var walk_x := -17.0 * (1.0-smoothstep(-0.24,1.96,age)) + 24.0*smoothstep(3.25,5.8,age)
@@ -41,12 +72,14 @@ func advance(age: float) -> void:
 	var floor_y := float(ground_height.call(walk_x,0))
 	var body_position := Vector3(walk_x, floor_y + 7.7 + 0.25*cos(walk_x*TAU/STRIDE) - squash*1.35,0)
 	var pitch := -0.10*squash + 0.035*sin(walk_x*TAU/STRIDE)
+	body_position.y -= slump * 3.8
+	pitch -= slump * 0.33
 	chassis.transform = Transform3D(TURN * Basis(Vector3.RIGHT,pitch),body_position)
 	# The crosshead pulls back for a full second, then fires the striped ram at the lock point.
 	var tip_y := 2.2 + 2.65*smoothstep(0.55,1.86,age)
 	tip_y *= 1.0 - smoothstep(2.18,2.5,age)
 	tip_y += 2.7*smoothstep(2.78,3.65,age)
-	ram_tip = Vector3(walk_x,floor_y+tip_y,0)
+	ram_tip = Vector3(walk_x,floor_y+tip_y*(1.0-slump),0)
 	ram.transform = Transform3D(TURN,ram_tip)
 	for i in 4:
 		var side := -1.0 if i<2 else 1.0
@@ -74,3 +107,6 @@ func advance(age: float) -> void:
 		var knee := hip + axis*half + bend*sqrt(reach*reach-half*half)
 		_pose_link(upper[i],hip,knee)
 		_pose_link(lower[i],knee,ankle)
+	if not destroyed:
+		for i in panels.size():
+			hitboxes[i].transform = panels[i].transform

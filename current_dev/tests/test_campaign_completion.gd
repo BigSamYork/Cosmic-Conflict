@@ -294,7 +294,7 @@ func verify_difficulty() -> void:
 		world.build("orbit", Transform3D.IDENTITY, "vespera")
 		var fighter: EnemyFighter = world.targets[0]
 		var heavy: EnemyFighter = world.targets[2]
-		check(fighter.armor == ceili(2 * factor) and heavy.armor == ceili(10 * factor), "Actual orbital light/heavy health follows bounded scaling in tour %d" % tour)
+		check(fighter.armor == ceili(6 * factor) and heavy.armor == ceili(18 * factor), "Actual orbital light/heavy health follows bounded scaling in tour %d" % tour)
 		check(fighter.lifetime == 23 and fighter.velocity.length() < 17 and world.wave_index == 1, "Tour %d does not scale wave counts, lifetime or flight speed" % tour)
 		world.queue_free()
 		var branch := GroundBranch.new()

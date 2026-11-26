@@ -5,6 +5,7 @@ signal missile_requested(origin: Vector3, direction: Vector3)
 signal sweep_requested(emitter: ThermalEmitter)
 signal rock_shattered(rock: Asteroid)
 signal encounter_notice(text: String)
+signal laser_requested(fighter: EnemyFighter)
 const CrossingRock := preload("res://scripts/crossing_rock.gd")
 const DOGFIGHT_BRIEFS := {
 	"ignis": "SOLAR SLINGSHOT / LEAD THE BOOSTING INTERCEPTORS",
@@ -180,6 +181,7 @@ func spawn_wave(pilot: Transform3D) -> void:
 		add_child(fighter)
 		fighter.global_position = fighter.spawn_position
 		fighter.cooldown = 2.5 + i
+		fighter.laser_requested.connect(laser_requested.emit)
 		fighter.missile_requested.connect(func(at: Vector3, direction: Vector3) -> void: missile_requested.emit(at, direction))
 		if fighter.web_layer:
 			fighter.web_requested.connect(_request_web)
@@ -224,16 +226,14 @@ func _advance_crossings(delta: float, pilot: Transform3D) -> void:
 		crossing.advance_crossing(delta)
 		if phase == "asteroids":
 			for target in targets.duplicate():
-				if not target is Asteroid or target == crossing or target.destroyed or target.fragment or target.indestructible:
+				if not target is Asteroid or target == crossing or target.destroyed or ((target.fragment or target.indestructible) and not crossing.meteor):
 					continue
 				var point := Geometry3D.get_closest_point_to_segment(target.global_position, before, crossing.global_position)
 				if point.distance_to(target.global_position) <= crossing.collision_radius() + target.collision_radius():
+					if crossing.meteor:
+						target.indestructible = false # Iron cores resist pilot weapons, not meteor impacts.
 					target.receive_hit(target.armor)
 					rock_shattered.emit(target)
-					if crossing.meteor:
-						crossing.receive_hit(crossing.armor)
-						rock_shattered.emit(crossing)
-						break
 	if crossing.destroyed or crossing.age >= 4.0:
 		targets.erase(crossing)
 		crossing.queue_free()

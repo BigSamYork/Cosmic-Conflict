@@ -164,7 +164,7 @@ static func canyon_clearance(point: Vector3, branching: bool, icy: bool, radius:
 	var row := floorf(-point.z / 8.0) * 8.0
 	var v := (-point.z - row) / 8.0
 	var x := point.x - lerpf(FlightState.rail_point(row).x, FlightState.rail_point(row + 8).x, v)
-	if absf(x) + radius > 108.0:
+	if x - radius < -108.0 or x + radius > (153.0 if branching else 108.0):
 		return -INF
 	var column := floorf(x / 9.0) * 9.0
 	var u := (x - column) / 9.0
@@ -221,18 +221,18 @@ static func terrain_chunk(start: float, branching: bool = false, icy: bool = fal
 	var scenery: Array[Transform3D] = []
 	var points := PackedVector3Array()
 	var triangles := PackedInt32Array()
-	const COLUMNS: int = 25
+	var columns := 30 if branching else 25
 	const ROWS: int = 17
 	for row in range(ROWS):
 		var travel: float = start + float(row) * 8.0
-		for column in range(COLUMNS):
+		for column in range(columns):
 			var x: float = float(column - 12) * 9.0
 			points.append(ground_point(x, travel, branching))
 	for row in range(ROWS - 1):
-		for column in range(COLUMNS - 1):
-			var a: int = row * COLUMNS + column
+		for column in range(columns - 1):
+			var a: int = row * columns + column
 			var b: int = a + 1
-			var c: int = a + COLUMNS
+			var c: int = a + columns
 			var d: int = c + 1
 			triangles.append_array(PackedInt32Array([a, c, b, b, c, d]))
 	terrain.surface(points, triangles, Color.WHITE)
@@ -279,7 +279,7 @@ static func _ice_chunk(start: float, branching: bool) -> Node3D:
 	var scenery: Array[Transform3D] = []
 	for row in range(16):
 		var travel: float = start + row * 8.0
-		for column in range(24):
+		for column in range(29 if branching else 24):
 			var x: float = (column - 12) * 9.0
 			var a: Vector3 = ground_point(x, travel, branching)
 			var b: Vector3 = ground_point(x + 9, travel, branching)

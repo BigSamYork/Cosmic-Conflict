@@ -17,7 +17,7 @@ During a ground sortie, a sound and an amber contact mark warn where a local haz
 | Vespera-9 | A derailed maglev drops out of the skyline trailing sparks. Its nose hits first, then the carriage skids. A banded planet with dusty rings is visible during the orbital dogfight. |
 | Xylo-Mire | A shadow crosses the canopy. Steer clear or roll before the hooked hand closes. If it catches your ship, it lifts you, shakes you, then throws you back into the flight lane for 35 direct hull damage. |
 | Thalassa Reach | A branching lightning leader can hit a ship, tower, or offshore platform. Solid structures can intercept the discharge. |
-| Kharon Dunes | Watch for meteor trails over the dunes and for the mechanical siege walker planting its feet before a ground strike. |
+| Kharon Dunes | The siege walker plants its feet before striking. Its chassis and limbs take hits; twelve 3-damage Tachyon hits disable it. Disable it before the strike and it slumps without bringing the ram down. |
 
 Selecting a sector locks its lighting for the sortie. Seconds 00–14 of the current
 minute give twilight, 15–29 morning, 30–44 daylight, and 45–59 midnight.
@@ -31,12 +31,24 @@ card. Receipts survive ejection; the equipment does not. Older saves still
 show their actual loadout, but cannot reconstruct past receipts. During flight
 or at the market, **+** (including keypad plus) grants 1,000 testing credits.
 This marks the run assisted and does not increase earned credits or score.
+Buying a hull parks your previous hull (except the free rescue skiff). Select
+**In Hangar / Switch Free** to change ships without buying one twice. Fittings
+transfer; ammunition is limited by the new bay. Ejection costs the active hull
+and its fittings, not parked ships. Older saves with ejections don't identify
+which hulls survived, so receipts alone don't restore those ships.
+
+The ground fork now gives about 20 seconds' warning. Left or center stays on
+the safe route; steer deliberately right for the hazard route. The two routes
+separate by up to 116 m before rejoining.
 
 ## Orbital encounters
 
 An occasional meteor or tumbling asteroid crosses every dogfight. Cryo-Vex's
 escape belt also has rogue rocks that plow through breakable asteroids; Ignis
-Prime's belt has fiery meteor impacts. Xylo-Mire keeps its egg-ship field.
+Prime's meteors keep traveling and shatter every belt rock in their path,
+including iron cores. Xylo-Mire keeps its egg-ship field. Dogfight scouts,
+web layers, and gunships have 6, 9, and 18 armor respectively before tour scaling.
+Combat ships with a clear nose-on firing line can fire lasers; cover blocks them.
 
 | Dogfight | Tactic |
 | --- | --- |
@@ -47,7 +59,8 @@ Prime's belt has fiery meteor impacts. Xylo-Mire keeps its egg-ship field.
 | Thalassa Reach | Light interceptors fire forked salvos from opposite wingtips. |
 | Kharon Dunes | Heavy sentries periodically brake and turn their shields toward you. Flank them. |
 
-Fly through the green hoops marked **$** to earn upgrade money. Each hoop pays
+Shoot down a target, then fly through the green **$** hoop at the hit location.
+Hoops no longer spawn on a timer in empty space. Each hoop pays
 once. A 100-credit hoop is common (60%); a 1,000-credit hoop is rare (1%).
 
 Choose **New Operation / Choose Sector** to start a live mission, or **Continue Saved
