@@ -18,7 +18,7 @@ app="$stage/package/Cosmic Conflict.app"
 plist="$app/Contents/Info.plist"
 exe="$app/Contents/MacOS/$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$plist")"
 [[ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$plist")" == "$VERSION" ]]
-lipo -verify_arch x86_64 arm64 "$exe"
+lipo "$exe" -verify_arch x86_64 arm64
 codesign --verify --deep --strict "$app"
 cd "$stage/package"
 "$exe" --headless --audio-driver Dummy --quit-after 10 > "$stage/smoke.log" 2>&1 || { cat "$stage/smoke.log"; exit 1; }
