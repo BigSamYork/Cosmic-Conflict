@@ -140,7 +140,16 @@ func verify_crossings() -> void:
 		if sector == "xylo":
 			check(world.crossing == null and broken.is_empty(), "Xylo's egg field is excluded")
 		elif sector == "ignis":
-			check(broken.size() >= 2 and world.crossing == null, "A meteor impacts a belt rock and breaks up")
+			check(not broken.is_empty() and world.crossing != null, "A meteor shatters the first rock without stopping")
+			if world.crossing != null:
+				var iron := Asteroid.new()
+				iron.routed = true
+				iron.indestructible = true
+				iron.course_position = world.crossing.global_position + world.crossing.drift * 0.2
+				world.add_child(iron)
+				world.targets.append(iron)
+				world.advance(0.45, Transform3D.IDENTITY)
+				check(iron.destroyed and broken.has(iron), "A subsequent iron core also breaks, even across a long frame")
 		else:
 			check(not broken.is_empty() and world.crossing != null, "The rogue breaks a rock and continues crossing")
 		world.free()

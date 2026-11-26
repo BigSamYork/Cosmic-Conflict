@@ -3,6 +3,9 @@ extends RangeTarget
 
 signal missile_requested(origin: Vector3, direction: Vector3)
 signal web_requested
+signal laser_requested(fighter: EnemyFighter)
+const LASER_RANGE := 150.0
+var laser_cooldown := 1.5
 var web_layer: bool = false
 var heavy: bool = false
 var cooldown: float = 2.0
@@ -72,6 +75,9 @@ func _ready() -> void:
 func reset() -> void:
 	super.reset()
 	armor = ceili((10 if has_directional_shield() else 4 if web_layer else 5 if heavy else 2) * health_scale)
+	if sector_tactic:
+		armor = ceili((18 if heavy else 9 if web_layer else 6) * health_scale)
+	laser_cooldown = 1.5
 	initial_armor = armor
 	skipped = false
 	drive_clock = 0
@@ -138,6 +144,12 @@ func advance(delta: float, pilot: Vector3, velocity: Vector3) -> void:
 		var bow := global_position.direction_to(pilot) if anchored else self.velocity.normalized()
 		if not bow.is_zero_approx():
 			global_basis = Basis.looking_at(bow, Vector3.RIGHT if absf(bow.y) > 0.99 else Vector3.UP)
+		if sector_tactic and not web_layer and not heavy:
+			var pass_time := fposmod(motion_age + phase, 11.0)
+			var sight := global_position.direction_to(pilot)
+			if not sight.is_zero_approx():
+				var track := smoothstep(4.0, 6.0, pass_time) * (1.0 - smoothstep(7.5, 9.0, pass_time))
+				global_basis = global_basis.slerp(Basis.looking_at(sight, Vector3.RIGHT if absf(sight.y) > 0.99 else Vector3.UP), track)
 		var bank: float = sin(motion_age * 0.8 + phase) * 0.28
 		if has_directional_shield():
 			var cycle: float = fposmod(age + phase, SHIELD_CYCLE)
@@ -147,6 +159,15 @@ func advance(delta: float, pilot: Vector3, velocity: Vector3) -> void:
 	_update_shield()
 	if stun_remaining > 0.0:
 		return
+	if sector_tactic and not web_layer:
+		laser_cooldown = maxf(0, laser_cooldown - moving_delta)
+		var gap := pilot - global_position
+		if laser_cooldown == 0 and gap.length() < LASER_RANGE and (-global_basis.z).dot(gap.normalized()) > cos(deg_to_rad(3)):
+			laser_requested.emit(self)
+			laser_cooldown = 3.5
+			if cloak != null:
+				cloak.reveal(1.4)
+				guided_lockable = true
 	if (not dogfight and (pilot - global_position).dot(approach_axis) < 35.0) or global_position.distance_to(pilot) > (180.0 if dogfight else 330.0):
 		return
 	if dogfight and not web_layer and velocity.length_squared() > 0.1 and velocity.normalized().dot((global_position - pilot).normalized()) < -0.15:

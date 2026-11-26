@@ -201,6 +201,11 @@ func _walker_floor(x: float, z: float) -> float:
 
 func _advance_walker(age: float, reduced: bool) -> void:
 	walker.advance(age)
+	if walker.destroyed and walker.disabled_at < CONTACT:
+		dust.hide()
+		chips.hide()
+		scar.hide()
+		return
 	var after := age - CONTACT
 	if after >= 0:
 		_update_ejecta(age,reduced)

@@ -38,7 +38,7 @@ func _clear_effect() -> void:
 	age = 0.0
 
 func warning() -> bool:
-	return is_instance_valid(effect) and age < CONTACT
+	return is_instance_valid(effect) and age < CONTACT and not (kind == "kharon_walker" and effect.walker.destroyed)
 
 func warning_text() -> String:
 	return NAMES[kind] + " / BREAK AWAY"
@@ -153,6 +153,7 @@ func _in_reach(at: Vector3, margin: float = 0.0) -> bool:
 	return local.length_squared() <= radius * radius
 
 func _impact(game, pilot: Vector3) -> void:
+	if kind == "kharon_walker" and effect.walker.destroyed: return
 	game.sound.play_sound(load("res://assets/hazards/%s_impact.wav" % kind))
 	if game.flight.roll_remaining <= 0.0 and _in_reach(pilot, game.flight.collision_radius):
 		if sector == "xylo" and game.flight.hull > 0.0:

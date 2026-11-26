@@ -22,7 +22,7 @@ func verify_geometry() -> void:
 			var director := FlightDirector.new()
 			director.ground_course = Transform3D(Basis(Vector3.UP, 0.8), Vector3(1700, 900, -2300))
 			director.ground_route = GroundRoute.new()
-			director.ground_route.advance(GroundRoute.FORK, 1 if hazard else -1)
+			director.ground_route.advance(GroundRoute.FORK, 5 if hazard else -5)
 			director.begin_phase("ground", Transform3D.IDENTITY)
 			var previous: Transform3D = director.frame
 			var max_step: float = 0
@@ -45,7 +45,7 @@ func verify_geometry() -> void:
 	check(not closed.advance(GroundRoute.FORK + 1, 8) and not closed.selected, "Center defaults to safe and crossing sides after commitment cannot reroute")
 	check(not closed.finish_hazard(GroundRoute.REJOIN + 100, true), "The default safe route cannot complete the hazard trench")
 	var selected := GroundRoute.new()
-	selected.advance(GroundRoute.FORK, 1)
+	selected.advance(GroundRoute.FORK, GroundRoute.HAZARD_COMMIT_X)
 	check(not selected.finish_hazard(GroundRoute.REJOIN - 0.1, true) and not selected.finish_hazard(GroundRoute.REJOIN, false), "Hazard completion requires reaching the rejoin alive")
 	check(selected.finish_hazard(GroundRoute.REJOIN, true) and not selected.finish_hazard(GroundRoute.REJOIN + 100, true), "Hazard completion triggers once")
 

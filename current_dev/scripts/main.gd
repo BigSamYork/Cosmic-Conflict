@@ -19,6 +19,7 @@ const SKY_LIGHT := [Vector3(0.53, 0.26, 0.50), Vector3(1.04, 0.69, 0.43), Vector
 var headlamp := SpotLight3D.new()
 var weapon_lamp := SpotLight3D.new()
 var credit_hoops := preload("res://scripts/credit_hoops.gd").new()
+const Piledriver := preload("res://scripts/kharon_piledriver.gd")
 var combat_lights := CombatLighting.new()
 var surface_weather := SurfaceWeather.new()
 var surface_events := preload("res://scripts/surface_events.gd").new()
@@ -898,7 +899,7 @@ func _physics_process(delta: float) -> void:
 		voice_nyx_cloaked = cloaked
 	_check_obstacles(previous, camera.position, canyon_contact)
 	if is_campaign:
-		var collected := credit_hoops.advance(delta, to_global(previous), camera.global_position, campaign, flight, director)
+		var collected := credit_hoops.advance(delta, to_global(previous), camera.global_position, campaign, flight)
 		if collected > 0:
 			hud.show_message("CREDIT HOOP / +%d CR" % collected)
 			sound.play_sound(sound.hit)
@@ -1235,6 +1236,14 @@ func _record_weapon_hit() -> void:
 func _strike(result: Dictionary, damage: int, secondary_hit: bool = false, record_hit: bool = true) -> bool:
 	var collider: Object = result["collider"]
 	var at: Vector3 = result["position"]
+	if collider is Piledriver:
+		if collider.destroyed: return false
+		if record_hit: _record_weapon_hit()
+		var armor_before: int = collider.armor
+		var disabled: bool = collider.receive_hit(collider.armor if one_hit_kill else damage)
+		_confirm_impact(result, armor_before, false)
+		hud.show_message("WALKER DISABLED" if disabled else "WALKER ARMOR / %d" % collider.armor)
+		return true
 	if collider is FallingIce:
 		if collider.destroyed or collider.expired:
 			return false
@@ -1297,6 +1306,8 @@ func _strike(result: Dictionary, damage: int, secondary_hit: bool = false, recor
 			if collider is DestructibleTower:
 				flight.towers_destroyed += 1
 			if is_campaign:
+				if campaign.phase in ["ground", "orbit", "asteroids"] and not (collider is Asteroid and collider.fragment):
+					credit_hoops.drop_from_hit(at, director.frame.basis)
 				if collider is Asteroid:
 					_resolve_asteroid(collider, false)
 				elif collider is EggShip:
@@ -1969,6 +1980,23 @@ func _clear_beams() -> void:
 	if tachyon_beam != null:
 		tachyon_beam.queue_free()
 		tachyon_beam = null
+
+func _fire_enemy_laser(fighter: EnemyFighter) -> void:
+	if mode != Mode.FLIGHT or campaign.phase != "orbit": return
+	var direction := -fighter.global_basis.z
+	var origin := fighter.global_position + direction * 6
+	var end := origin + direction * EnemyFighter.LASER_RANGE
+	var query := PhysicsRayQueryParameters3D.create(origin, end, 3, [fighter.get_rid()])
+	var obstruction := get_world_3d().direct_space_state.intersect_ray(query)
+	if not obstruction.is_empty(): end = obstruction.position
+	var closest := Geometry3D.get_closest_point_to_segment(camera.global_position, origin, end)
+	if camera.global_position.distance_to(closest) <= flight.collision_radius and flight.roll_remaining <= 0:
+		end = closest
+		if _apply_pilot_damage("INTERCEPTOR LASER", 6):
+			sound.play_sound(sound.impact)
+	var beam := VectorArt.lines(PackedVector3Array([origin, end]), VectorArt.HOSTILE)
+	add_child(beam)
+	beams.append({"node": beam, "remaining": 0.14})
 
 func _launch_missile(origin: Vector3, direction: Vector3) -> void:
 	if mode != Mode.FLIGHT or missiles.size() >= MAX_MISSILES:
@@ -2754,9 +2782,10 @@ func _enter_phase(continuous: bool) -> void:
 		world = scene
 		mission_world = scene
 		scene.encounter_notice.connect(hud.show_message)
+		scene.laser_requested.connect(_fire_enemy_laser)
 		scene.rock_shattered.connect(func(rock: Asteroid) -> void:
 			_spawn_breakup(rock, true)
-			_spawn_rock_fragments(rock))
+			if not rock.fragment: _spawn_rock_fragments(rock))
 		targets = scene.targets
 		boss = scene.boss
 	var titles: Dictionary = {"ground": "GROUND ASSAULT / " + SectorCatalog.name_for(campaign.sector).to_upper(), "ground_boss": SectorCatalog.GROUND_BOSSES[campaign.sector].to_upper() + " / PURSUIT", "orbit": "ORBITAL DOGFIGHT / AUTO TRACKING", "orbit_boss": SectorCatalog.ORBITAL_BOSSES[campaign.sector].to_upper() + " / PURSUIT", "asteroids": "ASTEROID ESCAPE / AVOIDANCE ONLINE"}
@@ -3321,7 +3350,7 @@ func _show_hall_of_fame(assisted_records: bool = false) -> void:
 
 func _market_purchase(item: String) -> void:
 	var next: CampaignState = campaign.copy()
-	var error: String = next.purchase(item)
+	var error: String = next.switch_hull(item.trim_prefix("switch:")) if item.begins_with("switch:") else next.purchase(item)
 	if not error.is_empty():
 		_show_market(error)
 		return
@@ -3419,8 +3448,11 @@ func _debug_action(action: String) -> void:
 	var next_one_hit: bool = not one_hit_kill if action == "one_hit" else one_hit_kill
 	next.assisted = true
 	if next.ship.is_empty() and (sector_warp or action in ["max", "refill"] or (action.begins_with("phase:") and action != "phase:market")):
+		next.parked_ships.erase("rook")
 		next.ship = "rook"
 	if action in ["rook", "hawk"]:
+		next.parked_ships.erase(action)
+		if next.ship != action and next.ship not in ["", "emergency"]: next.parked_ships.append(next.ship)
 		next.ship = action
 		next.ammo = mini(next.ammo, int(CampaignState.SHIPS[next.ship]["ammo"]))
 	if action == "reset_credits":

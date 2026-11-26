@@ -30,6 +30,7 @@ func run() -> void:
 	game.set_physics_process(false)
 	await verify_worlds()
 	await verify_surface_events()
+	await verify_walker_damage()
 	await verify_boss_radars()
 	await verify_transitions()
 	await verify_player_destruction()
@@ -40,6 +41,29 @@ func run() -> void:
 			check(DirAccess.remove_absolute(file) == OK, "Isolated expansion save removed")
 	print("EXPANSION_FAILURES=", failures)
 	quit(failures)
+
+func verify_walker_damage() -> void:
+	await phase("kharon", "ground")
+	var events = game.surface_events
+	events.random.seed = 13
+	events.delay = 0.0
+	game._physics_process(1.0 / 60.0)
+	var walker = events.effect.walker
+	events.advance(game, 0.5, Vector3.ZERO, Vector3.ZERO)
+	await physics_frame
+	await physics_frame
+	var center: Vector3 = walker.chassis.global_position
+	var ray := PhysicsRayQueryParameters3D.create(center + Vector3.UP * 50, center - Vector3.UP * 5, 2)
+	var hit: Dictionary = game.get_world_3d().direct_space_state.intersect_ray(ray)
+	check(hit.get("collider") == walker, "Primary weapons can acquire the walking chassis")
+	if hit.get("collider") != walker: return
+	for i in 11:
+		game._strike(hit, 3)
+	check(not walker.destroyed and not walker.scar_surfaces.is_empty(), "Eleven advanced hits scar the walker without destroying its model")
+	game._strike(hit, 3)
+	var shield: float = game.flight.shields
+	events.advance(game, 2.2, events.effect.global_position, events.effect.global_position)
+	check(walker.destroyed and walker.visible and walker.chassis.global_position.y < center.y - 2 and game.flight.shields == shield, "Disabled walker slumps in place and no longer strikes the pilot")
 
 func verify_player_destruction() -> void:
 	await phase("vespera", "orbit", "hawk")

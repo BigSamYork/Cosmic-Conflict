@@ -2,15 +2,14 @@ extends Node3D
 
 const RADIUS := 4.8
 var rng := RandomNumberGenerator.new()
-var phase_key := ""
-var next_time := 0.0
+var cooldown := 0.0
 var hoop: Node3D
 var symbol: Label3D
 var value := 0
 var age := 0.0
 
 func clear() -> void:
-	phase_key = ""
+	cooldown = 0
 	_remove_hoop()
 
 func _remove_hoop() -> void:
@@ -32,15 +31,15 @@ static func crossed(previous: Vector3, current: Vector3, clearance: float) -> bo
 	var point := previous.lerp(current, previous.z / (previous.z - current.z))
 	return Vector2(point.x, point.y).length() <= RADIUS - clearance
 
-func advance(delta: float, previous: Vector3, current: Vector3, campaign: CampaignState, flight: FlightState, director: FlightDirector) -> int:
+func drop_from_hit(at: Vector3, heading: Basis) -> void:
+	if hoop == null and cooldown <= 0:
+		_spawn(Transform3D(heading.orthonormalized(), at))
+		cooldown = rng.randf_range(10, 18)
+
+func advance(delta: float, previous: Vector3, current: Vector3, campaign: CampaignState, flight: FlightState) -> int:
 	if not campaign.phase in ["ground", "orbit", "asteroids"] or flight.hull <= 0:
 		return 0
-	var key := "%s/%d/%s/%s" % [campaign.operation_id, campaign.sortie_id, campaign.sector, campaign.phase]
-	if key != phase_key:
-		clear()
-		phase_key = key
-		rng.seed = key.hash()
-		next_time = rng.randf_range(9, 24)
+	cooldown = maxf(0, cooldown - delta)
 	if hoop != null:
 		age += delta
 		symbol.position.y = 0.45 * sin(age * 2.5)
@@ -50,16 +49,6 @@ func advance(delta: float, previous: Vector3, current: Vector3, campaign: Campai
 			return value
 		if age > 15:
 			_remove_hoop()
-	if flight.elapsed >= next_time and flight.elapsed < flight.duration - 6:
-		next_time = flight.elapsed + rng.randf_range(29, 44)
-		var ahead := flight.speed * rng.randf_range(3.0, 4.3)
-		var distance := flight.distance + ahead
-		var pose := director.frame.translated_local(Vector3.FORWARD * ahead)
-		if campaign.phase == "ground":
-			pose = director.ground_course * (GroundRoute.frame(distance) if director.ground_route != null and director.ground_route.selected else FlightState.rail_frame(distance))
-		elif campaign.phase == "asteroids":
-			pose = director.origin * FlightDirector.asteroid_frame(distance)
-		_spawn(pose.translated_local(Vector3(rng.randf_range(-8, 8), rng.randf_range(-2, 3), 0)))
 	return 0
 
 func _spawn(pose: Transform3D) -> void:

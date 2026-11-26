@@ -38,6 +38,7 @@ ArchitecturesInstallIn64BitMode=x64compatible
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
+SetupIconFile={#Root}\current_dev\cosmic-conflict.ico
 UninstallDisplayIcon={app}\CosmicConflict.exe
 DisableProgramGroupPage=yes
 InfoBeforeFile={#Root}\Docs\FLIGHT_LAB.md

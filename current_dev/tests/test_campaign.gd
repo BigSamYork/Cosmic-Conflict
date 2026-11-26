@@ -64,9 +64,13 @@ func run() -> void:
 	check(plated.purchase("armor").is_empty() and plated.hull_capacity() == 125 and plated.hull == 125, "Hull plating increases usable hull and repairs it at the market")
 	check(plated.purchase("armor").is_empty() and plated.hull_capacity() == 150 and not plated.purchase("armor").is_empty(), "Hull plating has two purchasable tiers")
 	plated.purchase("hawk")
+	var after_purchase := plated.credits
+	check(not plated.purchase("rook").is_empty() and plated.switch_hull("rook").is_empty(), "Parked Rook cannot be bought again but can be selected")
+	check(plated.credits == after_purchase and plated.copy().parked_ships == ["hawk"] and plated.switch_hull("hawk").is_empty(), "Switching costs nothing and the hangar survives a checkpoint")
 	check(plated.hull_armor_level == 2 and plated.hull_capacity() == 130 and plated.copy().hull == 130, "Hull swaps and save validation preserve fitted armor")
 	plated.phase = "ground"
 	plated.eject()
+	check(plated.copy().parked_ships == ["rook"] and not plated.switch_hull("hawk").is_empty(), "Ejection loses only the active Hawk; the parked Rook survives")
 	check(plated.hull_armor_level == 0 and plated.hull_capacity() == 0, "Ejection loses hull plating with the destroyed ship")
 	var accurate := CampaignState.new()
 	accurate.stats["shots"] = 40
