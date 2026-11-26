@@ -24,6 +24,8 @@ func run() -> void:
 		check(message.contains("ALREADY SOUND") if missing_hull == 0 else message.contains("12 HULL RESTORED"), "Tender reports its actual repair")
 		patrol.free()
 	verify_failure_paths()
+	for outcome in ["quiet", "miss", "fire"]:
+		verify_boarding(outcome)
 	var rovers := XyloRovers.new()
 	root.add_child(rovers)
 	var drivetrain: AnimationPlayer = rovers.drivetrains[0]
@@ -55,6 +57,34 @@ func begin(job: int) -> void:
 	patrol.job_order = [job, job, job]
 	flight.distance = SurfacePatrol.MARKS[0] - 140.0
 	patrol.advance(0.016, Vector3.ZERO, Vector3.ZERO, campaign, flight, route)
+
+func verify_boarding(scenario: String) -> void:
+	var scene := preload("res://scripts/vespera_boarding.gd").new()
+	root.add_child(scene)
+	var heard: Array[String] = []
+	scene.cue.connect(func(id: String) -> void: heard.append(id))
+	var cursor := scene.ENTRY - 515
+	var result := ""
+	var groups: Array[int] = []
+	while cursor < scene.EXIT + 100:
+		var offset := Vector3.RIGHT * 12 if scenario == "miss" else Vector3.ZERO
+		var previous := FlightState.rail_frame(cursor).origin + offset
+		cursor += 5
+		var pilot_pos := FlightState.rail_frame(cursor).origin + offset
+		var done := scene.advance(cursor, previous, pilot_pos, route, int(scenario == "fire" and cursor > scene.ENTRY + 22))
+		if scene.beat > 0:
+			var lit := scene.flares.filter(func(f: Label3D) -> bool: return f.visible).size()
+			if groups.is_empty() or groups[-1] != lit: groups.append(lit)
+		if not done.is_empty(): result = done
+	check(groups == [3, 2, 1, 0], scenario + ": three flares go dark one at a time")
+	check(heard.slice(0, 3) == ["clearance", "refusal", "handoff"], scenario + ": attendants receive the channel before boarding")
+	check(result == ("quiet" if scenario == "quiet" else "covered") and heard.count("divert") == int(scenario != "quiet"), scenario + ": quiet lane or covered ramp resolves exactly once")
+	var save := CampaignState.new()
+	save.vespera_boarding = result
+	check(save.copy().vespera_boarding == result, "Boarding outcome survives phase-boundary save/load")
+	save.eject()
+	check(save.vespera_boarding.is_empty(), "Ejection does not count as a rescue")
+	scene.free()
 
 func cross_gate(distance: float, side: float) -> String:
 	flight.distance = distance

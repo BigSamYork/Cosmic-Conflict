@@ -49,6 +49,8 @@ var transit_seconds: int = 0
 var menu: PanelContainer
 var message: String = ""
 var message_until: float = 0.0
+var story_caption := ""
+var story_seconds := 0.0
 var fps: float = 60.0
 var settings: Dictionary = {}
 var font: Font
@@ -105,6 +107,7 @@ func _ready() -> void:
 	_build_instrument_panels()
 
 func _process(_delta: float) -> void:
+	if mode == "flight": story_seconds = maxf(0, story_seconds - _delta)
 	var active: bool = mode in ["flight", "pause", "debug", "notice"]
 	instrument_panels.visible = active
 	if active and flight != null:
@@ -326,7 +329,7 @@ func show_market(state: CampaignState, error: String = "") -> void:
 	var result: String = SectorCatalog.name_for(state.sector).to_upper() + " COMPLETE" if state.last_result == "completed" else "PILOT RECOVERED" if state.last_result == "ejected" else "DOCKED"
 	_add_label(stack, "%s / Ships and shields are fully repaired here, free of charge.\nHull purchases transfer fitted upgrades. Ejection loses the ship and its equipment." % result, 18, MUTED)
 	if state.last_result == "completed":
-		var dispatch := _add_label(stack, "LARK   /   " + SectorCatalog.DISPATCH[state.sector], 18, CYAN)
+		var dispatch := _add_label(stack, "LARK   /   " + SectorCatalog.dispatch_for(state.sector, state.vespera_boarding), 18, CYAN)
 		dispatch.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	if not error.is_empty():
 		_add_label(stack, error, 19, VectorArt.HOSTILE)
@@ -502,7 +505,7 @@ func show_campaign_result(record: Dictionary, actions: Array[Dictionary], final_
 	_add_label(title, "%s MEDAL / RATING %d OF 1000" % [CampaignHonors.MEDALS[record["rank"]].to_upper(), record["rating"]], 24, AMBER)
 	_add_label(title, "%s / %s" % ["DEVELOPER-ASSISTED / SEPARATE RECORDS" if record["assisted"] else "UNASSISTED", record["completed_at"]], 17, MUTED)
 	if CampaignHonors.record_sectors(record).size() == SectorCatalog.AVAILABLE.size() and record["tour"] == 1:
-		var last_arrival: String = SectorCatalog.DISPATCH.get(final_sector, "")
+		var last_arrival: String = SectorCatalog.dispatch_for(final_sector, campaign.vespera_boarding if campaign != null else "")
 		var epilogue := _add_label(stack, ("LARK   /   " + last_arrival + "\n" if not last_arrival.is_empty() else "") + "I read the arrivals aloud, Tomas. Every name. When I finished, someone knocked twice on the hangar wall.", 19, CYAN)
 		epilogue.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_add_label(stack, CampaignHonors.loadout_text(record["loadout"]), 19, WHITE)
@@ -926,6 +929,11 @@ func _draw() -> void:
 		_text(Vector2(110, height - 34), "SIX SECTORS / PLAYER BATTLESHIPS / LOCAL HALL OF FAME", 15, MUTED)
 		return
 	_draw_console()
+	if story_seconds > 0:
+		var span := font.get_string_size(story_caption, HORIZONTAL_ALIGNMENT_LEFT, -1, 21).x
+		var left := (width - span) * 0.5
+		draw_rect(Rect2(left - 12, 144, span + 24, 38), Color(0.015, 0.03, 0.05, 0.94))
+		_text(Vector2(left, 170), story_caption, 21, WHITE)
 	_text(Vector2(width - 260, 170), "%02d  TARGETS DISABLED" % flight.destroyed, 18, CYAN)
 	_text(Vector2(width - 260, 198), "%02d%%  ACCURACY" % int(flight.accuracy()), 18, MUTED)
 	if not flight.training and campaign != null:

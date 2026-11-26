@@ -43,6 +43,26 @@ separate by up to 116 m before rejoining.
 
 ## Orbital encounters
 
+### Vespera boarding prototype (first tour)
+
+On the Vespera-9 ground run, watch for three numbered amber flares near the
+terminal after the fork. Lark's clearance leaves all three lit. When she hands
+the channel to the station attendant, center the ship on the flight lane and
+hold fire until all three groups board. Each boarding extinguishes one flare.
+Missing the lane or firing sends the remaining families to the covered ramp;
+the sortie continues. Read the speaker captions to play with audio muted.
+After defeating the orbital boss, listen for the last-car call; Astra's
+debrief identifies which ramp the families used.
+
+The six lines are in [`boarding.json`](../current_dev/assets/voice/boarding.json).
+To render the bundled WAVs with the established Lark profile and the stock
+attendant, run `.\tools\generate-voice.ps1 -Boarding` from the project root.
+Use `-Overwrite` to replace existing takes. The same pinned Chatterbox-Turbo
+checkpoint used for the opening is required (`COSMIC_TTS_MODEL` can point
+at an approved local copy). No online service is used during gameplay.
+
+### Space encounters
+
 An occasional meteor or tumbling asteroid crosses every dogfight. Cryo-Vex's
 escape belt also has rogue rocks that plow through breakable asteroids; Ignis
 Prime's meteors keep traveling and shatter every belt rock in their path,

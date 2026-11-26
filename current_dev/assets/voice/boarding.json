@@ -1,0 +1,15 @@
+{
+  "voice": "Vespera boarding cast",
+  "cast": {
+    "lark": {"voice": "Chatterbox-Turbo / Lark"},
+    "attendant": {"voice": "Chatterbox-Turbo / stock"}
+  },
+  "cues": [
+    {"id":"clearance","speaker":"lark","text":"Vespera Terminal. Lane clear. You can board now."},
+    {"id":"refusal","speaker":"attendant","text":"Captain, nobody's moving. They heard that voice yesterday."},
+    {"id":"handoff","speaker":"lark","text":"You've got the channel. I'll keep the lane quiet."},
+    {"id":"crossing","speaker":"attendant","text":"It's me, from the ticket window. Back row first. Follow my flare."},
+    {"id":"divert","speaker":"attendant","text":"Stop there. Under the awning, everyone. We'll take the covered ramp."},
+    {"id":"last_car","speaker":"attendant","text":"Last car empty, Captain. You can bring us home."}
+  ]
+}

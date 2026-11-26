@@ -60,9 +60,12 @@ var suppressed: bool = true
 var paused: bool = false
 var pending_recon := ""
 var arrival_reply: Dictionary = {}
+var boarding_lines: Dictionary = {}
 var playback_available: bool = false
 
 func _ready() -> void:
+	var manifest: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://assets/voice/boarding.json"))
+	for line: Dictionary in manifest.cues: boarding_lines[line.id] = line
 	rng.randomize()
 	playback_available = DisplayServer.get_name() != "headless"
 	var error: String = _load_catalog()
@@ -205,6 +208,23 @@ func say_arrival(quarter: int, headlight: bool) -> bool:
 		elif cue.id == answer:
 			arrival_reply = cue
 	return _play_arrival_line(pilot)
+
+func say_boarding(id: String) -> void:
+	if not enabled() or paused: return
+	if policy.speaking and policy.priority >= 80: return # The caption remains available during a critical warning.
+	var recording := "res://assets/boarding/%s.wav" % id
+	if not ResourceLoader.exists(recording):
+		push_warning("No boarding recording for " + id)
+		return
+	arrival_reply.clear()
+	player.stop()
+	player.stream = load(recording)
+	player.bus = bus_name
+	player.play()
+	policy.started("vespera_boarding", 45, 0)
+	last_line = id
+	speaking_changed.emit(true)
+	line_started.emit(id, boarding_lines[id].text, "vespera_boarding")
 
 func _play_arrival_line(cue: Dictionary) -> bool:
 	if cue.is_empty():
