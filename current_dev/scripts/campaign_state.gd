@@ -38,6 +38,7 @@ var ship: String = "rook"
 var credits: int = 0
 var earned: int = 0
 var spent: int = 0
+var purchase_counts: Dictionary = {}
 var primary_level: int = 0
 var shield_level: int = 0
 var heat_sink_level: int = 0
@@ -295,6 +296,8 @@ func purchase(item: String) -> String:
 		return "Not enough credits: this item costs %d." % cost
 	credits -= cost
 	spent += cost
+	if cost > 0:
+		purchase_counts[item] = int(purchase_counts.get(item, 0)) + 1
 	if SHIPS.has(item):
 		ship = item
 		ammo = mini(ammo, int(SHIPS[ship]["ammo"]))
@@ -334,7 +337,7 @@ func purchase(item: String) -> String:
 
 func to_dict() -> Dictionary:
 	return {"schema": SCHEMA, "phase": phase, "sector": sector, "sky_quarter": sky_quarter, "headlight": headlight, "cleared_sectors": cleared_sectors.duplicate(), "replays_unlocked": replays_unlocked, "ship": ship, "credits": credits, "earned": earned, "spent": spent,
-		"primary_level": primary_level, "shield_level": shield_level, "heat_sink_level": heat_sink_level, "power_mode": power_mode, "secondary": secondary, "ammo": ammo,
+		"purchase_counts": purchase_counts.duplicate(), "primary_level": primary_level, "shield_level": shield_level, "heat_sink_level": heat_sink_level, "power_mode": power_mode, "secondary": secondary, "ammo": ammo,
 		"hull": hull, "shields": shields, "sortie_id": sortie_id, "settled_sortie_id": settled_sortie_id,
 		"last_result": last_result, "assisted": assisted, "stats": stats.duplicate(),
 		"combo_kills": combo_kills, "best_streak": best_streak, "combat_score": combat_score, "combo_bonus_credits": combo_bonus_credits,
@@ -359,6 +362,12 @@ func restore(source: Dictionary) -> String:
 	if not data.has("schema") or not _whole(data["schema"]) or int(data["schema"]) < 1 or int(data["schema"]) > SCHEMA:
 		return "Unsupported or missing save version."
 	var source_schema: int = int(data["schema"])
+	var receipts: Variant = data.get("purchase_counts", {})
+	if not receipts is Dictionary:
+		return "Invalid market purchase history."
+	for item in receipts:
+		if not item is String or price(item) < 0 or not _whole(receipts[item]):
+			return "Invalid market receipt."
 	if source_schema == 1:
 		data["heat_sink_level"] = 0
 		data["power_mode"] = "balanced"
@@ -526,6 +535,9 @@ func restore(source: Dictionary) -> String:
 	required_sectors.assign(data["required_sectors"])
 	replays_unlocked = data["replays_unlocked"]
 	ship = saved_ship
+	purchase_counts.clear()
+	for item in receipts:
+		purchase_counts[item] = int(receipts[item])
 	last_result = data["last_result"]
 	power_mode = data["power_mode"]
 	for key in ["credits", "earned", "spent", "primary_level", "shield_level", "heat_sink_level", "hull_armor_level", "ammo", "flares", "sortie_id", "settled_sortie_id", "combo_kills", "best_streak", "combat_score", "combo_bonus_credits", "mineral_credits", "sortie_start_shots", "sortie_start_hits", "accuracy_bonus_credits"]:

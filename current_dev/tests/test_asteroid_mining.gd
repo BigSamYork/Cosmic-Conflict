@@ -6,6 +6,7 @@ func _initialize() -> void:
 	call_deferred("run")
 
 func run() -> void:
+	verify_crossings()
 	for variant in range(AsteroidArt.VARIANTS):
 		var model: Node3D = AsteroidArt.create(variant, Color.WHITE)
 		var hull: MeshInstance3D = model.get_child(0)
@@ -76,6 +77,16 @@ func run() -> void:
 	game.campaign = CampaignState.new()
 	game.is_campaign = true
 	game.flight.configure_campaign(game.campaign)
+	game.mode = game.Mode.FLIGHT
+	var plus := InputEventKey.new()
+	plus.keycode = KEY_KP_ADD
+	plus.pressed = true
+	game._unhandled_input(plus)
+	plus.echo = true
+	game._unhandled_input(plus)
+	check(game.campaign.credits == 1000 and game.campaign.assisted and game.campaign.earned == 0, "Test grant is once per keypress and never counts as earnings")
+	game.mode = game.Mode.PAUSE
+	game.campaign = CampaignState.new()
 	game.camera.global_position = Vector3(0, 0, 8)
 	game.targets.clear()
 	var rocks: Array[Asteroid] = []
@@ -114,6 +125,37 @@ func run() -> void:
 	await process_frame
 	print("ASTEROID_MINING_FAILURES=", failures)
 	quit(failures)
+
+func verify_crossings() -> void:
+	for sector in ["cryo", "ignis", "xylo"]:
+		var world := MissionWorld.new()
+		root.add_child(world)
+		world.event_rng.seed = 71
+		world.build("asteroids", Transform3D.IDENTITY, sector)
+		world.crossing_clock = 0
+		var broken: Array[Asteroid] = []
+		world.rock_shattered.connect(func(rock: Asteroid) -> void: broken.append(rock))
+		for i in range(28):
+			world.advance(0.1, FlightDirector.asteroid_frame(i * 4.8))
+		if sector == "xylo":
+			check(world.crossing == null and broken.is_empty(), "Xylo's egg field is excluded")
+		elif sector == "ignis":
+			check(broken.size() >= 2 and world.crossing == null, "A meteor impacts a belt rock and breaks up")
+		else:
+			check(not broken.is_empty() and world.crossing != null, "The rogue breaks a rock and continues crossing")
+		world.free()
+	var orbit := MissionWorld.new()
+	root.add_child(orbit)
+	orbit.build("orbit")
+	orbit.crossing_clock = 0
+	orbit.advance(0.1, Transform3D.IDENTITY)
+	var first_kind: bool = orbit.crossing.meteor
+	orbit.advance(4.1, Transform3D.IDENTITY)
+	check(orbit.crossing == null, "A dogfight crossing leaves the scene")
+	orbit.crossing_clock = 0
+	orbit.advance(0.1, Transform3D.IDENTITY)
+	check(orbit.crossing.meteor != first_kind, "Both kinds of traffic occur during an orbital sortie")
+	orbit.free()
 
 func check(condition: bool, description: String) -> void:
 	if condition:

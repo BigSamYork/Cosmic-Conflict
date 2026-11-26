@@ -36,7 +36,7 @@ func verify_audio() -> void:
 	AudioServer.add_bus_effect(bus, recording)
 	recording.set_recording_active(true)
 	await create_timer(5).timeout
-	check(music.failure_message.is_empty() and music.players[music.active].stream.resource_path.ends_with("Look Busy.ogg") and music.players[music.active].get_playback_position() > 4, "Astra Market plays Look Busy")
+	check(music.failure_message.is_empty() and music.players[music.active].stream.resource_path.ends_with("Fanfare for Space.ogg") and music.players[music.active].get_playback_position() > 4, "Astra Market plays the opening score")
 	var peak: float = AudioServer.get_bus_peak_volume_left_db(bus, 0)
 	check(peak > -60 and peak < -10, "Native soundtrack signal is restrained rather than silent or clipped (%.2fdB)" % peak)
 	music.request_scene("cryo")

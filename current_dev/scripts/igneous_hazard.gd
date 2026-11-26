@@ -114,7 +114,7 @@ func _floor(x: float,z: float) -> float:
 		point.y = VectorArt.ground_point(lane,distance,true).y
 	return (transform.affine_inverse() * point).y
 
-func _wake_mesh() -> ArrayMesh:
+static func _wake_mesh() -> ArrayMesh:
 	# -Z is the axis from the leading stone back through its trailing sheath.
 	var mesh := SurfaceTool.new()
 	mesh.begin(Mesh.PRIMITIVE_TRIANGLES)

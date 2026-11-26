@@ -7,6 +7,10 @@ var web_layer: bool = false
 var heavy: bool = false
 var cooldown: float = 2.0
 var dogfight: bool = false
+var sector_tactic := false
+var skipped := false
+var initial_armor := 0
+var drive_clock := 0.0
 var expired: bool = false
 var age: float = 0.0
 var spawn_frame: Transform3D
@@ -68,6 +72,9 @@ func _ready() -> void:
 func reset() -> void:
 	super.reset()
 	armor = ceili((10 if has_directional_shield() else 4 if web_layer else 5 if heavy else 2) * health_scale)
+	initial_armor = armor
+	skipped = false
+	drive_clock = 0
 	cooldown = 1.0 + fmod(phase, 2.0)
 	expired = false
 	age = 0.0
@@ -93,8 +100,10 @@ func _animate_rail(time: float) -> void:
 	super._animate_rail(time)
 	# The firing window follows the course even after the bow tracks a passing pilot.
 	approach_axis = global_basis.z
+	# Patrol around the assigned stretch of canyon rather than hovering at its marker.
+	var turn := time * (0.72 if heavy else 1.1) + phase
+	translate_object_local(Vector3(sin(turn) * (3.8 if heavy else 6.5), 1.8 + 1.6 * cos(turn), sin(turn * 0.73) * 16.0))
 	if not heavy:
-		position.x += sin(time * 1.7 + phase) * 2.0
 		if sector == "thalassa":
 			position.y += sin(time * 0.6 + phase) * 2.0
 			rotate_object_local(Vector3.FORWARD, sin(time * 0.6 + phase) * 0.16)
@@ -118,12 +127,17 @@ func advance(delta: float, pilot: Vector3, velocity: Vector3) -> void:
 			collision_layer = 0
 			hide()
 			return
-		global_position = spawn_position + self.velocity * motion_age + spawn_frame.basis * Vector3(sin(motion_age * 0.9 + phase) * 5, sin(motion_age * 0.7 + phase) * 3, 0)
+		var anchored := sector_tactic and sector == "kharon" and heavy and fposmod(motion_age + phase, 8.0) > 4.5
+		var boosting := sector_tactic and sector == "ignis" and not heavy and fposmod(motion_age + phase, 6.0) > 4.3
+		drive_clock += moving_delta * (0.08 if anchored else 2.8 if boosting else 1.0)
+		global_position = spawn_position + self.velocity * drive_clock + spawn_frame.basis * Vector3(sin(motion_age * 0.9 + phase) * 5, sin(motion_age * 0.7 + phase) * 3, 0)
 		if sector == "thalassa":
 			global_position += spawn_frame.basis.y * sin(motion_age * 0.45 + phase) * 5
 		elif sector == "kharon":
 			global_position += spawn_frame.basis.x * sin(motion_age * 0.65 + phase) * 3
-		global_basis = Basis.looking_at(self.velocity.normalized(), Vector3.UP)
+		var bow := global_position.direction_to(pilot) if anchored else self.velocity.normalized()
+		if not bow.is_zero_approx():
+			global_basis = Basis.looking_at(bow, Vector3.RIGHT if absf(bow.y) > 0.99 else Vector3.UP)
 		var bank: float = sin(motion_age * 0.8 + phase) * 0.28
 		if has_directional_shield():
 			var cycle: float = fposmod(age + phase, SHIELD_CYCLE)
@@ -144,7 +158,12 @@ func advance(delta: float, pilot: Vector3, velocity: Vector3) -> void:
 			cooldown += 7.0
 		else:
 			var origin: Vector3 = global_position + (pilot - global_position).normalized() * 5
-			missile_requested.emit(origin, EnemyMissile.aim_direction(origin, pilot, velocity))
+			if sector_tactic and sector == "thalassa" and not heavy:
+				for side in [-1.0, 1.0]:
+					var tip: Vector3 = origin + global_basis.x * side * 6.0
+					missile_requested.emit(tip, EnemyMissile.aim_direction(tip, pilot + global_basis.x * side * 3, velocity))
+			else:
+				missile_requested.emit(origin, EnemyMissile.aim_direction(origin, pilot, velocity))
 			if cloak != null:
 				cloak.reveal(1.4)
 				guided_lockable = true
@@ -178,6 +197,13 @@ func stun() -> void:
 
 func receive_hit(damage: int = 1) -> bool:
 	var killed: bool = super.receive_hit(damage)
+	if not killed and sector_tactic and sector == "vespera" and cloak != null and not skipped:
+		skipped = true
+		var skip := spawn_frame.basis.x * (18.0 if cos(phase) >= 0 else -18.0)
+		spawn_position += skip
+		global_position += skip
+		cloak.reveal(1.4)
+		guided_lockable = true
 	if killed and cloak != null:
 		cloak.restore()
 	return killed

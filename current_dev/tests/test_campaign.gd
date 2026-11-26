@@ -38,6 +38,11 @@ func run() -> void:
 	state.phase = "ground"
 	state.eject()
 	check(state.ship.is_empty() and state.primary_level == 0 and not state.secondary and state.ammo == 0, "Ejection loses ship, fitted upgrades and ammo")
+	check(state.copy().purchase_counts == {"primary": 1, "secondary": 1}, "Receipts survive ejection and save/load without restoring lost equipment")
+	var pre_receipts := state.to_dict()
+	pre_receipts.erase("purchase_counts")
+	var migrated_wallet := CampaignState.new()
+	check(migrated_wallet.restore(pre_receipts).is_empty() and migrated_wallet.purchase_counts.is_empty(), "Existing saves do not acquire fabricated purchase receipts")
 	check(state.credits == credits and state.spent == spent and state.stats["ejections"] == 1, "Ejection retains earned credits without a completion bonus")
 	state.eject()
 	check(state.stats["ejections"] == 1 and state.credits == credits, "Repeated ejection cannot duplicate settlement")

@@ -3,6 +3,22 @@ extends Node3D
 
 signal missile_requested(origin: Vector3, direction: Vector3)
 signal sweep_requested(emitter: ThermalEmitter)
+signal rock_shattered(rock: Asteroid)
+signal encounter_notice(text: String)
+const CrossingRock := preload("res://scripts/crossing_rock.gd")
+const DOGFIGHT_BRIEFS := {
+	"ignis": "SOLAR SLINGSHOT / LEAD THE BOOSTING INTERCEPTORS",
+	"cryo": "FROST RELAY / BREAK A GUNSHIP TO STUN ITS ESCORTS",
+	"vespera": "PHASE SKIP / SCOUTS CAN BLINK AFTER THE FIRST HIT",
+	"xylo": "BROOD NURSE / SEPARATE ESCORTS FROM THEIR HEAVY",
+	"thalassa": "FORKED SALVOS / WATCH BOTH WINGTIPS",
+	"kharon": "SENTRY ANCHOR / FLANK THE BRAKING GUNSHIPS",
+}
+var crossing: CrossingRock
+var event_rng := RandomNumberGenerator.new()
+var crossing_clock := 0.0
+var next_meteor := false
+var nurse_clock := 0.0
 var targets: Array[RangeTarget] = []
 var boss: BossEncounter
 var phase: String = ""
@@ -27,6 +43,8 @@ var drone_launches: int = 0
 func build(next_phase: String, entry: Transform3D = Transform3D.IDENTITY, destination: String = "ignis", arrival: PackedVector3Array = PackedVector3Array()) -> void:
 	phase = next_phase
 	sector = destination
+	crossing_clock = event_rng.randf_range(8.0, 15.0)
+	next_meteor = event_rng.randf() < 0.5
 	if phase.ends_with("_boss"):
 		boss = BossEncounter.new()
 		boss.orbital = phase == "orbit_boss"
@@ -98,6 +116,8 @@ func advance(delta: float, pilot: Transform3D) -> void:
 	if phase == "asteroids":
 		elapsed += delta
 		animate_belt(delta, pilot)
+		if sector in ["cryo", "ignis"]:
+			_advance_crossings(delta, pilot)
 		if pirate_index < 3 and elapsed >= 10.0 + pirate_index * 16.0 and elapsed < 55.0:
 			var pirate := PirateSkirmisher.new()
 			pirate.biological = sector == "xylo"
@@ -120,6 +140,8 @@ func advance(delta: float, pilot: Transform3D) -> void:
 	if phase != "orbit":
 		return
 	elapsed += delta
+	_advance_crossings(delta, pilot)
+	_advance_formation(delta)
 	while pending_webs > 0:
 		pending_webs -= 1
 		_deploy_web()
@@ -141,6 +163,7 @@ func spawn_wave(pilot: Transform3D) -> void:
 		fighter.sector = sector
 		fighter.health_scale = health_scale
 		fighter.dogfight = true
+		fighter.sector_tactic = true
 		fighter.new_design = true
 		fighter.delta_wing = (wave_index + i) % 3 == 2
 		fighter.winged = not fighter.delta_wing and (wave_index + i) % 2 == 1
@@ -162,6 +185,78 @@ func spawn_wave(pilot: Transform3D) -> void:
 			fighter.web_requested.connect(_request_web)
 		targets.append(fighter)
 	wave_index += 1
+
+func _advance_crossings(delta: float, pilot: Transform3D) -> void:
+	if crossing == null:
+		crossing_clock -= delta
+		if crossing_clock > 0 or (phase == "asteroids" and elapsed > 54):
+			return
+		var center := pilot * Vector3(event_rng.randf_range(-6, 6), event_rng.randf_range(-4, 4), -70)
+		if phase == "asteroids":
+			var closest := INF
+			var victim: Asteroid
+			for target in targets:
+				if not target is Asteroid or target.fragment or target.destroyed or target.indestructible:
+					continue
+				var ahead := -pilot.basis.z.dot(target.global_position - pilot.origin)
+				if ahead < 60 or ahead > 150: continue
+				var weight := target.global_position.distance_squared_to(center)
+				if weight < closest:
+					closest = weight
+					victim = target
+			if victim == null: return
+			center = victim.global_position
+		crossing = CrossingRock.new()
+		crossing.meteor = sector == "ignis" if phase == "asteroids" else next_meteor
+		var axis := -pilot.basis.y if event_rng.randf() < 0.5 else pilot.basis.x
+		if crossing.meteor: axis = (pilot.basis.x * 0.45 - pilot.basis.y).normalized()
+		crossing.drift = axis * (58 if crossing.meteor else 45)
+		crossing.routed = true
+		crossing.course_position = center - axis * 66.0
+		crossing.radius = 3.2 if crossing.meteor else 5.0
+		crossing.variant = event_rng.randi_range(0, AsteroidArt.VARIANTS - 1)
+		add_child(crossing)
+		targets.append(crossing)
+		next_meteor = not next_meteor
+		encounter_notice.emit("METEOR INBOUND / WATCH THE FIRE TRAIL" if crossing.meteor else "ROGUE ASTEROID / CROSSING TRAFFIC")
+	var before := crossing.global_position
+	if not crossing.destroyed:
+		crossing.advance_crossing(delta)
+		if phase == "asteroids":
+			for target in targets.duplicate():
+				if not target is Asteroid or target == crossing or target.destroyed or target.fragment or target.indestructible:
+					continue
+				var point := Geometry3D.get_closest_point_to_segment(target.global_position, before, crossing.global_position)
+				if point.distance_to(target.global_position) <= crossing.collision_radius() + target.collision_radius():
+					target.receive_hit(target.armor)
+					rock_shattered.emit(target)
+					if crossing.meteor:
+						crossing.receive_hit(crossing.armor)
+						rock_shattered.emit(crossing)
+						break
+	if crossing.destroyed or crossing.age >= 4.0:
+		targets.erase(crossing)
+		crossing.queue_free()
+		crossing = null
+		crossing_clock = event_rng.randf_range(14, 23)
+
+func _advance_formation(delta: float) -> void:
+	if sector not in ["cryo", "xylo"]: return
+	nurse_clock -= delta
+	for leader in targets:
+		if not leader is EnemyFighter or not leader.heavy: continue
+		var discharge: bool = sector == "cryo" and leader.destroyed
+		var nurse: bool = sector == "xylo" and not leader.destroyed and leader.stun_remaining <= 0 and nurse_clock <= 0
+		if not discharge and not nurse: continue
+		for escort in targets:
+			if not escort is EnemyFighter or escort.heavy or escort.destroyed or leader.global_position.distance_to(escort.global_position) > 155: continue
+			if discharge:
+				escort.stun()
+			elif escort.armor < escort.initial_armor:
+				escort.armor += 1
+				encounter_notice.emit("BROOD NURSE / ESCORT REGENERATED")
+		if discharge: encounter_notice.emit("FROST RELAY BROKEN / NEARBY ESCORTS STUNNED")
+	if nurse_clock <= 0: nurse_clock = 5.0
 
 func _advance_carrier_drones(delta: float, pilot: Transform3D) -> void:
 	for i in range(carrier_drones.size() - 1, -1, -1):

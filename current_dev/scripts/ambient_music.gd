@@ -3,7 +3,7 @@ extends Node
 
 signal fault(message: String)
 const TRACKS := {
-	"title": "Evening Melodrama", "station": "Look Busy",
+	"title": "Evening Melodrama", "station": "Fanfare for Space",
 	"ignis": "Five Armies", "cryo": "Constancy Part Three", "vespera": "Clenched Teeth",
 	"xylo": "Grave Matters", "thalassa": "Mighty and Meek", "kharon": "Americana",
 }
