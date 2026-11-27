@@ -22,6 +22,7 @@ func run() -> void:
 	root.mouse_passthrough = true
 	AudioServer.set_bus_mute(0, true)
 	await measure_profiles()
+	await verify_convergence()
 	await verify_cockpit()
 	await process_frame
 	print("PRIMARY_RENDER_FAILURES=", failures)
@@ -90,6 +91,39 @@ func measure_profiles() -> void:
 				check(image.save_png(capture_dir.path_join("beam-profile-%d-%s.png" % [level, "reduced" if reduced else "normal"])) == OK, "Beam comparison image is saved")
 			effect.queue_free()
 			await process_frame
+	scene.queue_free()
+	await process_frame
+
+func verify_convergence() -> void:
+	var scene := Node3D.new()
+	root.add_child(scene)
+	var camera := Camera3D.new()
+	scene.add_child(camera)
+	camera.make_current()
+	camera.position = Vector3(-270, 130, 1600)
+	camera.rotation = Vector3(0.24, 1.17, -0.31)
+	var beam := TachyonBeam.new()
+	scene.add_child(beam)
+	var origins := PackedVector3Array()
+	var placement := CockpitInstruments.artwork_transform(root.get_visible_rect().size)
+	for muzzle in GunAppearance.muzzle_points(2):
+		origins.append(camera.project_ray_origin(placement * muzzle) + camera.project_ray_normal(placement * muzzle) * 3.5)
+	for reduced in [false, true]:
+		PrimaryArt.set_reduced_effects(reduced)
+		for aim in [Vector2(960, 540), Vector2(1230, 350)]:
+			for distance in [12.0, TachyonBeam.RANGE]:
+				beam.update_path(origins, camera.global_position + camera.project_ray_normal(aim) * distance)
+				await process_frame
+				await RenderingServer.frame_post_draw
+				var image := root.get_texture().get_image()
+				if not capture_dir.is_empty():
+					image.save_png(capture_dir.path_join("convergence-%d-%d-%s.png" % [aim.x, distance, reduced]))
+				for muzzle in GunAppearance.muzzle_points(2):
+					var aligned := true
+					for fraction in [0.1, 0.5, 0.85]:
+						var pixel := Vector2i((placement * muzzle).lerp(aim, fraction))
+						aligned = aligned and image.get_pixelv(pixel).b > 0.85
+					check(aligned, "Tachyon core from %s stays on course to %s at %.0fm (reduced=%s)" % [muzzle, aim, distance, reduced])
 	scene.queue_free()
 	await process_frame
 

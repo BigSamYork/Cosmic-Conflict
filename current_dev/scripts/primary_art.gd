@@ -12,7 +12,7 @@ static func segment(level: int) -> MeshInstance3D:
 		meshes[level] = prototype.mesh
 		prototype.free()
 		var material := ShaderMaterial.new()
-		material.shader = VectorArt.LINE_SHADER
+		material.shader = VectorArt.LINE_SHADER if level == 1 else preload("res://shaders/tachyon_beam.gdshader")
 		materials[level] = material
 		_configure(level)
 	var result := MeshInstance3D.new()
@@ -31,6 +31,7 @@ static func _configure(level: int) -> void:
 	var material: ShaderMaterial = materials[level]
 	material.set_shader_parameter("stroke_width", (3.2 if reduced else 3.4) if level == 1 else (5.0 if reduced else 6.0))
 	material.set_shader_parameter("halo_strength", 0.0 if reduced else 0.9)
-	material.set_shader_parameter("emission_gain", 2.0 if level == 1 else 2.8)
-	material.set_shader_parameter("fade_start", VectorArt.DETAIL_FADE_START)
-	material.set_shader_parameter("fade_end", VectorArt.DETAIL_FADE_END)
+	if level == 1:
+		material.set_shader_parameter("emission_gain", 2.0)
+		material.set_shader_parameter("fade_start", VectorArt.DETAIL_FADE_START)
+		material.set_shader_parameter("fade_end", VectorArt.DETAIL_FADE_END)

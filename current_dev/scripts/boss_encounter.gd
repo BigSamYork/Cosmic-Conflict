@@ -136,7 +136,10 @@ func _ready() -> void:
 			turret.biological = sector == "xylo"
 			turret.position = Vector3(side * (22 + row * 16), 9 + row * 4, 27 - row * 22) if orbital else Vector3(side * (19 if row == 0 else 30), 10 if row == 0 else 8, 14 if row == 0 else -4)
 			turret.maximum_armor = ceili((14 if orbital else 10) * health_scale)
-			turret.interval = (9.0 if orbital else 5.2) if sector == "cryo" else (7.2 if orbital else 5.6)
+			if sector == "cryo":
+				turret.interval = 6.0 if orbital else 3.5
+			elif orbital:
+				turret.interval = 4.8
 			turret.cooldown = 1.0 + turrets.size() * 0.7
 			add_child(turret)
 			turret.missile_requested.connect(func(at: Vector3, direction: Vector3) -> void: missile_requested.emit(at, direction))

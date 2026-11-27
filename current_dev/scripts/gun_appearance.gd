@@ -76,5 +76,6 @@ static func muzzle_points(level: int) -> PackedVector2Array:
 	if level == 1:
 		points.append_array(PackedVector2Array([Vector2(464, 434), Vector2(912, 434)]))
 	elif level == 2:
-		points.append_array(PackedVector2Array([Vector2(493, 431), Vector2(883, 431)]))
+		# Seat the beam between the forked rails, inside the tips of each emitter.
+		points.append_array(PackedVector2Array([Vector2(465, 445), Vector2(911, 445)]))
 	return points

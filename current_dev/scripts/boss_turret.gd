@@ -6,7 +6,7 @@ signal missile_requested(origin: Vector3, direction: Vector3)
 var head: Node3D
 var beacon: Node3D
 var cooldown: float = 1.0
-var interval: float = 5.6
+var interval: float = 3.8
 var launches: int = 0
 var interval_multiplier: float = 1.0
 var lead_fraction := 1.0
