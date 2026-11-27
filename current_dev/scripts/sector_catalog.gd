@@ -26,7 +26,7 @@ const DESCRIPTIONS: Dictionary = {
 const DISTRESS := {
 	"ignis": "Open a launch lane for the night shift making ferry heat shields.",
 	"cryo": "Get the greenhouse ward and its newborns through the blockade.",
-	"vespera": "Reach the families marking the terminal queue with chemical flares.",
+	"vespera": "Clear a quiet boarding lane. Three groups wait under chemical flares at Vespera Terminal.",
 	"xylo": "Bring the clinic patients and their air reeds aboard together.",
 	"thalassa": "Clear the orbital approach so a tug can reach the Aegis-4.",
 	"kharon": "Escort the transports carrying the hardwired jump coordinates."
@@ -43,3 +43,8 @@ const DISPATCH := {
 static func name_for(sector: String) -> String:
 	assert(NAMES.has(sector), "Unknown sector: " + sector)
 	return NAMES[sector]
+
+static func dispatch_for(sector: String, boarding: String) -> String:
+	if sector == "vespera" and not boarding.is_empty():
+		return ("The covered ramp got all three groups aboard." if boarding == "covered" else "All three groups crossed the quiet lane.") + " Only the ramp light is still on."
+	return DISPATCH.get(sector, "")

@@ -470,6 +470,7 @@ func _build_world(training: bool = true) -> void:
 	if not training:
 		world.transform = director.ground_course
 		ground_branch = GroundBranch.new()
+		ground_branch.boarding_cue.connect(_boarding_cue)
 		ground_branch.sector = sector
 		ground_branch.health_scale = campaign.health_multiplier()
 		director.ground_route = ground_branch.route
@@ -1095,6 +1096,13 @@ func _voice_event(event: String) -> bool:
 	if computer_voice == null or automated_session or not automation.is_empty():
 		return false
 	return computer_voice.say(event)
+
+func _boarding_cue(id: String) -> void:
+	var line: Dictionary = computer_voice.boarding_lines[id]
+	hud.story_caption = ("LARK" if line.speaker == "lark" else "STATION ATTENDANT") + "  /  " + line.text
+	hud.story_seconds = maxf(4, line.text.length() / 13.0)
+	if not automated_session and automation.is_empty():
+		computer_voice.say_boarding(id)
 
 func _voice_route(hard: bool) -> bool:
 	if computer_voice == null or automated_session or not automation.is_empty():
@@ -2269,6 +2277,8 @@ func _apply_settings() -> void:
 			music.set_level(int(settings["music_volume"]), bool(settings["mute"]) or automated_session or not automation.is_empty())
 
 func _clear_stage() -> void:
+	hud.story_seconds = 0
+	computer_voice.cancel_group("vespera_boarding")
 	surface_events.reset()
 	_set_canopy_shade(0.0)
 	credit_hoops.clear()
@@ -2846,7 +2856,9 @@ func _finish_phase() -> void:
 		"ground": _enter_phase(true)
 		"ground_boss": _begin_sequence("ground_victory")
 		"orbit": _begin_sequence("blockade_exit")
-		"orbit_boss": _begin_sequence("orbital_victory")
+		"orbit_boss":
+			_begin_sequence("orbital_victory")
+			if campaign.sector == "vespera" and not campaign.vespera_boarding.is_empty(): _boarding_cue("last_car")
 		"asteroids": _begin_sequence("belt_exit")
 
 func _begin_sequence(kind: String) -> void:

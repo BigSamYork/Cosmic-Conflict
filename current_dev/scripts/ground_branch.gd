@@ -9,6 +9,9 @@ var announced: bool = false
 var sector: String = "ignis"
 var health_scale: float = 1.0
 var patrol := SurfacePatrol.new()
+const Boarding := preload("res://scripts/vespera_boarding.gd")
+signal boarding_cue(id: String)
+var boarding: Boarding
 
 func _ready() -> void:
 	add_child(patrol)
@@ -62,7 +65,27 @@ func engages(target: RangeTarget, distance: float) -> bool:
 
 func advance(delta: float, previous: Vector3, pilot: Vector3, campaign: CampaignState, flight: FlightState) -> Array[String]:
 	var messages: Array[String] = []
-	var contract := patrol.advance(delta, previous, pilot, campaign, flight, route)
+	var story := sector == "vespera" and campaign.tour == 1 and not campaign.cleared_sectors.has("vespera")
+	var contract := ""
+	if story and patrol.next_job == 1 and patrol.current < 0:
+		if flight.distance >= Boarding.ENTRY - 510 and flight.hull > 0:
+			if boarding == null:
+				boarding = Boarding.new()
+				add_child(boarding)
+				boarding.cue.connect(boarding_cue.emit)
+			var result := boarding.advance(flight.distance, previous, pilot, route, flight.shots)
+			if not result.is_empty():
+				campaign.vespera_boarding = result
+				patrol.next_job += 1
+				contract = "THREE GROUPS ABOARD / " + ("COVERED RAMP" if result == "covered" else "QUIET LANE")
+				if result == "quiet":
+					campaign.combat_score += SurfacePatrol.REWARDS[SurfacePatrol.Job.CEASEFIRE] * 10
+	else:
+		if story and patrol.job_order.is_empty():
+			# The middle patrol slot is the story crossing regardless of sortie order.
+			var jobs := [SurfacePatrol.Job.SLALOM, SurfacePatrol.Job.CEASEFIRE, SurfacePatrol.Job.COURIER]
+			for i in 3: patrol.job_order.append(jobs[posmod(i - campaign.sortie_id + 1, 3)])
+		contract = patrol.advance(delta, previous, pilot, campaign, flight, route)
 	if not contract.is_empty():
 		messages.append(contract)
 	if not announced and flight.distance >= GroundRoute.FORK - GroundRoute.WARNING_DISTANCE:
@@ -77,6 +100,7 @@ func advance(delta: float, previous: Vector3, pilot: Vector3, campaign: Campaign
 	return messages
 
 func objective(distance: float) -> String:
+	if boarding != null and not boarding.prompt.is_empty(): return boarding.prompt
 	if not route.locked and distance >= GroundRoute.FORK - GroundRoute.WARNING_DISTANCE:
 		return "FORK IN %ds / LEFT OR CENTER: SAFE     RIGHT: HAZARD" % ceili(maxf(0, GroundRoute.FORK - distance) / FlightState.SPEED)
 	if not patrol.prompt.is_empty():

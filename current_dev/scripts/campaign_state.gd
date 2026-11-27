@@ -36,6 +36,7 @@ var tour_damage_complete: bool = true
 var tour_result: Dictionary = {}
 var ship: String = "rook"
 var parked_ships: Array[String] = []
+var vespera_boarding := ""
 var credits: int = 0
 var earned: int = 0
 var spent: int = 0
@@ -192,6 +193,7 @@ func eject() -> void:
 	if ship.is_empty() or not tour_result.is_empty():
 		return
 	stats["ejections"] += 1
+	vespera_boarding = ""
 	ship = ""
 	headlight = false
 	primary_level = 0
@@ -224,6 +226,7 @@ func depart(destination: String) -> String:
 	if not can_visit(destination):
 		return "Clear the remaining available sectors before starting a replay."
 	sector = destination
+	vespera_boarding = ""
 	select_sky(Time.get_time_dict_from_system().second)
 	sortie_id += 1
 	phase = "launch"
@@ -354,7 +357,7 @@ func switch_hull(item: String) -> String:
 
 func to_dict() -> Dictionary:
 	return {"schema": SCHEMA, "phase": phase, "sector": sector, "sky_quarter": sky_quarter, "headlight": headlight, "cleared_sectors": cleared_sectors.duplicate(), "replays_unlocked": replays_unlocked, "ship": ship, "credits": credits, "earned": earned, "spent": spent,
-		"parked_ships": parked_ships.duplicate(), "purchase_counts": purchase_counts.duplicate(), "primary_level": primary_level, "shield_level": shield_level, "heat_sink_level": heat_sink_level, "power_mode": power_mode, "secondary": secondary, "ammo": ammo,
+		"vespera_boarding": vespera_boarding, "parked_ships": parked_ships.duplicate(), "purchase_counts": purchase_counts.duplicate(), "primary_level": primary_level, "shield_level": shield_level, "heat_sink_level": heat_sink_level, "power_mode": power_mode, "secondary": secondary, "ammo": ammo,
 		"hull": hull, "shields": shields, "sortie_id": sortie_id, "settled_sortie_id": settled_sortie_id,
 		"last_result": last_result, "assisted": assisted, "stats": stats.duplicate(),
 		"combo_kills": combo_kills, "best_streak": best_streak, "combat_score": combat_score, "combo_bonus_credits": combo_bonus_credits,
@@ -379,6 +382,9 @@ func restore(source: Dictionary) -> String:
 	if not data.has("schema") or not _whole(data["schema"]) or int(data["schema"]) < 1 or int(data["schema"]) > SCHEMA:
 		return "Unsupported or missing save version."
 	var source_schema: int = int(data["schema"])
+	if data.get("vespera_boarding", "") not in ["", "quiet", "covered"]:
+		return "Invalid Vespera boarding outcome."
+	vespera_boarding = data.get("vespera_boarding", "")
 	var receipts: Variant = data.get("purchase_counts", {})
 	if not receipts is Dictionary:
 		return "Invalid market purchase history."

@@ -60,8 +60,9 @@ def main():
     opening = "cues" in data
     if opening:
         lines = data["cues"]
-        if any(data["cast"][role]["voice"] != name for role, name in (("vale", VALE), ("lark", LARK))):
-            raise ValueError("Opening cast does not match the Turbo profiles")
+        cast = {"lark": LARK, "attendant": "Chatterbox-Turbo / stock"} if args.catalog.stem == "boarding" else {"vale": VALE, "lark": LARK}
+        if any(data["cast"][role]["voice"] != name for role, name in cast.items()):
+            raise ValueError("Dialogue cast does not match the Turbo profiles")
     else:
         if data["voice"] != LARK:
             raise ValueError("This generator requires the Chatterbox-Turbo Lark voice")
@@ -70,7 +71,7 @@ def main():
     for line in lines:
         key = line["id"]
         if (not re.fullmatch(r"[a-z][a-z0-9_-]*", key) or key in ids
-                or not line["text"].strip() or line.get("speaker", "lark") not in ("lark", "vale")):
+                or not line["text"].strip() or line.get("speaker", "lark") not in (cast if opening else ("lark",))):
             raise ValueError(f"Invalid or duplicate voice line: {key}")
         if (args.output / f"{key}.wav").exists() and not args.overwrite:
             raise FileExistsError(f"{key}.wav already exists; use --overwrite")
@@ -84,8 +85,14 @@ def main():
         MODEL, revision=REVISION, allow_patterns=["*.json", "*.txt", "conds.pt",
             "t3_turbo_v1.safetensors", "s3gen_meanflow.safetensors", "ve.safetensors"])
     model = ChatterboxTurboTTS.from_local(weights, device, nano=False)
+    stock_voice = model.conds
     profiles = {}
     for role in sorted({line.get("speaker", "lark") for line in lines}):
+        if role == "attendant":
+            if stock_voice is None:
+                raise ValueError("Stock attendant voice requires the model's conds.pt")
+            profiles[role] = stock_voice
+            continue
         model.prepare_conditionals(str(args.profiles / f"{role}.wav"))
         profiles[role] = model.conds
 
