@@ -31,7 +31,15 @@ func verify_contract(sector: String, orbital: bool) -> void:
 	boss.sector = sector
 	boss.orbital = orbital
 	root.add_child(boss)
-	boss.advance(0.01, PILOT, Vector3.ZERO)
+	var reload := 4.8 if orbital else 3.8
+	if sector == "cryo":
+		reload = 6.0 if orbital else 3.5
+	var launcher: BossTurret = boss.turrets[0]
+	boss.advance(launcher.cooldown, PILOT, Vector3.ZERO)
+	boss.advance(reload - 0.05, PILOT, Vector3.ZERO)
+	check(launcher.launches == 1 and launcher.beacon.visible, "The next %s launch has a visible warning" % sector)
+	boss.advance(0.06, PILOT, Vector3.ZERO)
+	check(launcher.launches == 2, "The %s launcher fires again after %.1fs" % [sector, reload])
 	var armor := boss.core.armor
 	boss.core.receive_hit(1000)
 	check(boss.core.armor == armor and is_equal_approx(boss.health_fraction(), 1), "Unbroken interlocks protect the " + sector + " reactor")

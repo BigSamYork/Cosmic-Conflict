@@ -1222,7 +1222,10 @@ func _trace_tachyon(damaging: bool) -> Vector3:
 			contact["direction"] = direction
 			hit = _strike(contact, flight.weapon_damage, false, false) or hit
 		if not penetrable:
-			end = contact["position"]
+			# An aperture edge can stop the beam. Keep all four muzzles aimed
+			# along the reticle ray and use that contact's depth for the cutoff.
+			var point: Vector3 = contact["position"]
+			end = origin + direction * maxf(0.0, (point - origin).dot(direction))
 			break
 		excluded.append(contact["rid"])
 	if damaging and hit:

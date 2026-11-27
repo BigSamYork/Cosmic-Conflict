@@ -202,6 +202,8 @@ func verify_gameplay() -> void:
 	var center_hit: Dictionary = game.get_world_3d().direct_space_state.intersect_ray(center_ray)
 	fire_tick(game)
 	check(center_hit.get("collider") == rear and rear.armor == 12 and game.flight.hits == 0, "Aperture-edge cover stops the whole beam even when its center ray is clear")
+	var cutoff: Vector3 = game._trace_tachyon(false)
+	check(game.camera.unproject_position(cutoff).distance_to(game.cursor) < 0.1 and absf(cutoff.z + 30.0) < 0.1, "Aperture-edge cover cuts the visible beam at cover depth on the reticle")
 	await prepare(game, 2)
 	var front: EnemyFighter = fighter(game, Vector3(0, 0, -25))
 	rear = fighter(game, Vector3(0, 0, -90))
