@@ -54,7 +54,7 @@ func run() -> void:
 			intro._update_frame(intro.duration - intro.clock - 0.45)
 			check(intro.next_knock == 2 and intro.get_node("Overlay/Caption").text == "[Two metallic pings in reply]", "Vale answers the Aegis-4's signal")
 		intro._process(intro.duration - intro.clock + 0.05)
-	check(seen.keys() == ["aegis", "blockade", "ignis", "cryo", "vespera", "kharon", "departure", "answer"], "All eight sets appear in script order")
+	check(seen.keys() == ["aegis", "blockade", "departure", "answer"], "The short prologue leaves the six colony stories for the missions")
 	await scene_changed
 	check(current_scene.scene_file_path == "res://main.tscn" and current_scene.hud.mode == "title", "Natural completion reaches the briefing")
 	current_scene.hud.opening_requested.emit()

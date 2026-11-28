@@ -38,10 +38,17 @@ func run() -> void:
 	var first: EnemyFighter = director.tracked
 	if first != null:
 		first.destroyed = true
+		before_basis = director.frame.basis
 		director.advance("orbit", 1.0 / 60.0, 0, 0, scene.targets)
 		check(director.tracked != first and is_instance_valid(director.tracked), "Flight computer acquires another live fighter after a kill")
+		check(before_basis.get_rotation_quaternion().angle_to(director.frame.basis.get_rotation_quaternion()) < 0.013, "Target reassignment doesn't snap the pilot's heading")
 	else:
 		check(false, "Flight computer acquires an initial live fighter")
+	director.frame.basis = Basis(Vector3.FORWARD, 0.3)
+	director.contact_turn = Vector2(0.18, 0.15)
+	before_basis = director.frame.basis
+	director.advance("orbit", 1.0 / 60, 0, 0, scene.targets, Vector2(0.5, 0.1))
+	check(before_basis.get_rotation_quaternion().angle_to(director.frame.basis.get_rotation_quaternion()) < 0.08, "Taking manual control and rebounding cannot discard bank or kick the camera in one tick")
 	check(FlightDirector.radar_position(Transform3D.IDENTITY, Vector3(-20, 0, -50)).x < 0 and FlightDirector.radar_position(Transform3D.IDENTITY, Vector3(0, 0, 50)).y > 0, "Radar includes correct left and rear bearings")
 	scene.queue_free()
 	var belt := MissionWorld.new()

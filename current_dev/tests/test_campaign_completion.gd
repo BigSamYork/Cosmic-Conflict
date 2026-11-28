@@ -213,6 +213,12 @@ func verify_gameplay_and_ui() -> void:
 	game.store = CampaignStore.new(path)
 	check(game.store.save_game(game.campaign) == OK, "Integration fixture saves an actual completed campaign")
 	game._show_market()
+	if game.campaign.homecoming_pending:
+		check(game.hud.menu.find_child("CampaignMedal", true, false) == null, "Arrival roll precedes the medal")
+		game._advance_homecoming(9)
+		game._advance_homecoming(1)
+		check(game.homecoming_knocks == 2, "Two knocks answer the final manifest")
+		game._advance_homecoming(3)
 	await layout_check(game, "campaign-debrief")
 	check(game.mode == game.Mode.CAMPAIGN_COMPLETE and game.hud.mode == "campaign_result", "Fourth-planet completion routes to the final debrief instead of ordinary shopping")
 	var statistics: ScrollContainer = game.hud.menu.find_child("CampaignStatistics", true, false)

@@ -61,11 +61,17 @@ var paused: bool = false
 var pending_recon := ""
 var arrival_reply: Dictionary = {}
 var boarding_lines: Dictionary = {}
+var story_speakers := {"lark": "Lark", "attendant": "Station attendant"}
 var playback_available: bool = false
 
 func _ready() -> void:
 	var manifest: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://assets/voice/boarding.json"))
 	for line: Dictionary in manifest.cues: boarding_lines[line.id] = line
+	var rescue_book: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://assets/voice/rescues.json"))
+	for role: String in rescue_book.cast: story_speakers[role] = rescue_book.cast[role].name
+	for line: Dictionary in rescue_book.cues:
+		line.folder = "rescues"
+		boarding_lines[line.id] = line
 	rng.randomize()
 	playback_available = DisplayServer.get_name() != "headless"
 	var error: String = _load_catalog()
@@ -212,7 +218,7 @@ func say_arrival(quarter: int, headlight: bool) -> bool:
 func say_boarding(id: String) -> void:
 	if not enabled() or paused: return
 	if policy.speaking and policy.priority >= 80: return # The caption remains available during a critical warning.
-	var recording := "res://assets/boarding/%s.wav" % id
+	var recording := "res://assets/%s/%s.wav" % [boarding_lines[id].get("folder", "boarding"), id]
 	if not ResourceLoader.exists(recording):
 		push_warning("No boarding recording for " + id)
 		return

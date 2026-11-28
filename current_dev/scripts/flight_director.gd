@@ -30,11 +30,13 @@ var ground_route: GroundRoute
 var rotating: bool = false
 var rotation_start: Quaternion
 var follow_transition_path: bool = true
+var contact_turn := Vector2.ZERO
 
 func begin_phase(phase: String, entry: Transform3D, canyon_distance: float = 0.0) -> void:
 	origin = entry
 	frame = entry
 	tracked = null
+	contact_turn = Vector2.ZERO
 	if phase.begins_with("ground"):
 		frame = ground_course * FlightState.rail_frame(canyon_distance)
 	elif phase == "asteroids":
@@ -66,7 +68,15 @@ func advance(phase: String, delta: float, distance: float, elapsed: float, targe
 				var heading := -frame.basis.z
 				var yaw := atan2(-heading.x, -heading.z) - stick.x * delta * authority * 1.25
 				var pitch := clampf(asin(clampf(heading.y, -1, 1)) - stick.y * delta * authority, -1.16, 1.16)
-				frame.basis = Basis(Vector3.UP, yaw) * Basis(Vector3.RIGHT, pitch)
+				var manual := Basis(Vector3.UP, yaw) * Basis(Vector3.RIGHT, pitch)
+				# Auto-pursuit can have some bank. Don't erase it in one frame at the stick threshold.
+				var from := frame.basis.get_rotation_quaternion()
+				var to := manual.get_rotation_quaternion()
+				frame.basis = Basis(from.slerp(to, minf(1, 2.0 * delta / maxf(from.angle_to(to), 0.0001))))
+			if not contact_turn.is_zero_approx():
+				var impulse := contact_turn * (1.0 - exp(-8.0 * delta))
+				frame.basis = frame.basis * Basis(Vector3.UP, impulse.x) * Basis(Vector3.RIGHT, impulse.y)
+				contact_turn -= impulse
 			frame.origin -= frame.basis.z * DOGFIGHT_SPEED * delta
 		"orbit_boss":
 			frame = origin * Transform3D(Basis.IDENTITY, Vector3(0, 0, -elapsed * FlightState.SPEED))

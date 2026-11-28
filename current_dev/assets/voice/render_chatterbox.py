@@ -60,7 +60,7 @@ def main():
     opening = "cues" in data
     if opening:
         lines = data["cues"]
-        cast = {"lark": LARK, "attendant": "Chatterbox-Turbo / stock"} if args.catalog.stem == "boarding" else {"vale": VALE, "lark": LARK}
+        cast = {role: (LARK if role == "lark" else VALE if role == "vale" else "Chatterbox-Turbo / stock") for role in data["cast"]}
         if any(data["cast"][role]["voice"] != name for role, name in cast.items()):
             raise ValueError("Dialogue cast does not match the Turbo profiles")
     else:
@@ -88,7 +88,7 @@ def main():
     stock_voice = model.conds
     profiles = {}
     for role in sorted({line.get("speaker", "lark") for line in lines}):
-        if role == "attendant":
+        if role not in ("lark", "vale"):
             if stock_voice is None:
                 raise ValueError("Stock attendant voice requires the model's conds.pt")
             profiles[role] = stock_voice

@@ -33,7 +33,8 @@ var radio_bus := ""
 
 func _ready() -> void:
 	book = JSON.parse_string(FileAccess.get_file_as_string(SCRIPT_PATH))
-	cues = book.cues
+	# Meet the colonies in the chosen order, not in a roll call before launch.
+	cues = book.cues.filter(func(line: Dictionary) -> bool: return line.shot not in stage.FEEDS)
 	var config := ConfigFile.new()
 	if FileAccess.file_exists("user://settings.cfg"):
 		config.load("user://settings.cfg")
@@ -224,7 +225,7 @@ func _finish() -> void:
 func _exit_tree() -> void:
 	ComputerVoice.release_radio_bus(radio_bus)
 
-func _bulkhead_knock() -> AudioStreamWAV:
+static func _bulkhead_knock() -> AudioStreamWAV:
 	# Three decaying resonances give the ferry and the reply the same metal voice.
 	var pcm := PackedByteArray()
 	var rate := 22050
