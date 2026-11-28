@@ -79,10 +79,15 @@ debrief identifies which ramp the families used.
 
 The six lines are in [`boarding.json`](../current_dev/assets/voice/boarding.json).
 The other rescue and homecoming lines are in [`rescues.json`](../current_dev/assets/voice/rescues.json).
-Windows, Android and macOS package builds run `tools/build-story-audio.py`
-before importing resources. It uses pinned Chatterbox-Turbo, the Vale/Lark
-profiles and stock colony speakers; incomplete or mismatched recordings block
-export. Set `COSMIC_TTS_MODEL` for an offline model or `COSMIC_TTS_PYTHON`
+GitHub Actions prepares missing WAVs once with pinned Chatterbox-Turbo and
+shares the same files with Windows, Android and macOS. It reuses checked-in
+recordings and cached takes. Platform packaging verifies the WAVs without
+rendering them; missing or mismatched audio blocks export. To keep a reviewed
+take even after a CI cache expires, commit the WAV and its receipt entry.
+The build's voice artifact contains the raw WAVs; release installers contain
+Godot's imported audio, not the original recordings.
+Local package builds use the same incremental checks before importing
+resources. Set `COSMIC_TTS_MODEL` for an offline model or `COSMIC_TTS_PYTHON`
 for a preconfigured interpreter. Test-only runs can use captions without weights.
 To render the bundled WAVs with the established Lark profile and the stock
 attendant, run `.\tools\generate-voice.ps1 -Boarding` from the project root.
