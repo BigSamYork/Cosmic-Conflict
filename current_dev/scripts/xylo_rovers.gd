@@ -11,6 +11,7 @@ func _ready() -> void:
 		var travel: float = 350 + i * 450
 		var side: float = -1 if i % 2 == 0 or (travel > GroundRoute.FORK and travel < GroundRoute.REJOIN) else 1
 		var model: Node3D = XyloArt.rover()
+		model.set_meta("xylo_rover", true)
 		model.position = XyloArt.floor_point(side * 21, travel)
 		add_child(model)
 		FleetArt.add_pilot_hull(model)
@@ -21,6 +22,8 @@ func _ready() -> void:
 func advance(delta: float) -> void:
 	ages += delta
 	for i in range(vehicles.size()):
+		if not vehicles[i].visible:
+			continue
 		drivetrains[i].advance(delta)
 		vehicles[i].position = locations[i] + Vector3(0, 0, sin(ages * 0.18 + i) * 2)
 		vehicles[i].rotation.y = sin(ages * 0.1 + i) * 0.1

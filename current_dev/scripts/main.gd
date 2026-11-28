@@ -138,6 +138,7 @@ var laser_gates: Array[CityLaserGate] = []
 var city_traffic: CityTraffic
 var xylo_fields: Array[XyloField] = []
 var xylo_rovers: XyloRovers
+var burrow_serpent: BurrowSerpent
 var sky_icy_mix: float = 0.0
 var sky_city_mix: float = 0.0
 var sky_swamp_mix: float = 0.0
@@ -595,6 +596,9 @@ func _build_world(training: bool = true) -> void:
 					laser_gates.append(gate)
 					targets.append_array(gate.emitters)
 		elif sector == "xylo":
+			burrow_serpent = BurrowSerpent.new()
+			burrow_serpent.position = XyloArt.floor_point(XyloArt.SERPENT_BANK, XyloArt.SERPENT_TRAVEL)
+			world.add_child(burrow_serpent)
 			xylo_rovers = XyloRovers.new()
 			world.add_child(xylo_rovers)
 			for i in range(14):
@@ -911,6 +915,8 @@ func _physics_process(delta: float) -> void:
 			turret.advance(delta, camera.position, (camera.position - previous) / delta)
 	for tower in towers:
 		tower.advance(delta)
+	if burrow_serpent != null and campaign.phase == "ground":
+		burrow_serpent.advance(self, delta, to_global(previous), camera.global_position)
 	if boss != null:
 		var core_was_exposed := boss.core.unlocked
 		boss.advance(delta, camera.position, (camera.position - previous) / delta)
@@ -1300,6 +1306,17 @@ func _record_weapon_hit() -> void:
 func _strike(result: Dictionary, damage: int, secondary_hit: bool = false, record_hit: bool = true) -> bool:
 	var collider: Object = result["collider"]
 	var at: Vector3 = result["position"]
+	if collider is BurrowEye:
+		if collider.destroyed or collider.collision_layer == 0:
+			return false
+		if record_hit:
+			_record_weapon_hit()
+		var before: int = collider.armor
+		var blinded: bool = collider.receive_hit(before if one_hit_kill else damage)
+		_confirm_impact(result, before, blinded)
+		if blinded:
+			hud.show_message("BOTH EYES DARK / PULL UP" if burrow_serpent.state == BurrowSerpent.State.FALLING else "ONE EYE DARK / SECOND BEAM ACTIVE")
+		return true
 	if collider is Piledriver:
 		if collider.destroyed: return false
 		if record_hit: _record_weapon_hit()
@@ -2223,7 +2240,10 @@ func _update_contacts() -> void:
 			tint = VesperaArt.SIGNAL.darkened(0.25)
 			stealth_seen = stealth_seen or distance < 160
 		var label: String = "SHIMMER" if not target.guided_lockable and target is EnemyFighter and distance < 160 else ("EMITTER" if distance < 160 else "") if target is GateEmitter else "RADAR / JAM TRACKING" if target is RadarDish else "WEB NODE" if target is WebNode else ""
-		if target is PirateSkirmisher:
+		if target is BurrowEye:
+			tint = Color("#ff5953")
+			label = "EYE" if distance < 110.0 else ""
+		elif target is PirateSkirmisher:
 			label = ("GUARDIAN" if target.biological else "PIRATE") + (" / RETURNING FIRE" if target.engaged else " / OPTIONAL")
 		elif target is FallingIce:
 			tint = VectorArt.AMBER
@@ -2436,6 +2456,7 @@ func _clear_stage() -> void:
 	city_traffic = null
 	xylo_fields.clear()
 	xylo_rovers = null
+	burrow_serpent = null
 	voice_stealth_seen = false
 	voice_nyx_cloaked = false
 	targets.clear()
@@ -2566,10 +2587,16 @@ func _add_ground_cover(chunk: Node3D) -> void:
 			chunk.remove_child(surface)
 			surface.free()
 			continue
-		for placement in transforms:
+		for index in transforms.size():
+			var placement := transforms[index]
 			var collider := CollisionShape3D.new()
 			collider.shape = shape
 			collider.transform = placement
+			if surface.name == &"UnbrokenTurf":
+				collider.name = "UnbrokenTurfCollider"
+			elif surface is MultiMeshInstance3D and is_campaign and campaign.sector == "xylo" and absf(-placement.origin.z - XyloArt.SERPENT_TRAVEL) < 230.0:
+				collider.set_meta("serpent_scenery", surface)
+				collider.set_meta("placement_index", index)
 			solid.add_child(collider)
 	chunk.add_child(body)
 	if trunks.get_child_count() > 0:
