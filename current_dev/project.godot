@@ -34,6 +34,14 @@ common/physics_ticks_per_second=60
 
 [shader_globals]
 
+ground_time={
+"type": "float",
+"value": 0.0
+}
+ground_motion={
+"type": "float",
+"value": 1.0
+}
 sector_ambient={
 "type": "vec3",
 "value": Vector3(1, 1, 1)

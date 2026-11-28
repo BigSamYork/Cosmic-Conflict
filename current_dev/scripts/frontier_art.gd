@@ -18,10 +18,17 @@ static func _static_init() -> void:
 static func is_frontier(sector: String) -> bool:
 	return sector in ["thalassa", "kharon"]
 
-static func floor_point(x: float, travel: float, sector: String = "thalassa") -> Vector3:
+static func floor_point(x: float, travel: float, sector: String = "thalassa", branching: bool = false) -> Vector3:
 	var rise: float = 0
-	if sector == "kharon":
-		rise = maxf(0, absf(x) - 16) * 0.22 * (0.65 + 0.35 * sin(travel * 0.018 + x * 0.07))
+	if sector == "kharon" and (not branching or absf(x - GroundRoute.lateral_offset(travel)) >= 15.0):
+		# Crescent dunes rise from the margins of the dry transport channel.
+		# The curved crest has a long stoss slope and a shorter, steeper slip face.
+		var shoulder := maxf(0, absf(x) - 16)
+		var arc := 1.48 * sin(travel * 0.024 + x * 0.011) + 0.51 * sin(travel * 0.049 - x * 0.021)
+		var phase := x * 0.093 + travel * 0.024 + arc
+		var ridge := 0.5 + 0.5 * sin(phase + 0.53 * sin(phase - 0.4))
+		var dune_height := minf(9.0, shoulder * 0.20) * smoothstep(0.0, 25.0, shoulder)
+		rise = shoulder * (0.098 + 0.032 * sin(travel * 0.013 - x * 0.008)) + dune_height * ridge
 	return Vector3(FlightState.rail_point(travel).x + x, -1 + rise, -travel)
 
 static func horizon(sector: String) -> Node3D:
@@ -72,10 +79,7 @@ static func terrain_chunk(start: float, sector: String, branching: bool) -> Node
 			var x: float = (column - 16) * 10
 			var points := PackedVector3Array()
 			for corner in [Vector2(0, 0), Vector2(10, 0), Vector2(10, 8), Vector2(0, 8)]:
-				var p: Vector3 = floor_point(x + corner.x, travel + corner.y, sector)
-				if branching and absf(x + corner.x - GroundRoute.lateral_offset(travel + corner.y)) < 15:
-					p.y = -1
-				points.append(p)
+				points.append(floor_point(x + corner.x, travel + corner.y, sector, branching))
 			terrain.surface(points, PackedInt32Array([0, 1, 2, 0, 2, 3]), Color.WHITE)
 	for side in [-1.0, 1.0]:
 		for i in range(3):

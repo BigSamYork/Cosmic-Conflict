@@ -40,18 +40,49 @@ static func tower(sector: String) -> Node3D:
 static func placement(at: Vector3, size: Vector3, heading: float = 0.0) -> Transform3D:
 	return Transform3D(Basis(Vector3.UP, heading).scaled_local(size), at)
 
+static func _height_sample(x: float, travel: float, sector: String, branching: bool) -> Vector3:
+	if sector == "kharon":
+		return FrontierArt.floor_point(x, travel, sector, branching)
+	return VectorArt.ground_point(x, travel, branching)
+
+static func _ground_normals(vertices: PackedVector3Array, sector: String, branching: bool) -> PackedVector3Array:
+	var normals := PackedVector3Array()
+	normals.resize(vertices.size())
+	if sector not in ["ignis", "cryo", "kharon"]:
+		normals.fill(Vector3.UP)
+		return normals
+	# Sample the same height field beyond both ends of each chunk. Shared
+	# vertices get the same lighting even when their neighbours stream out.
+	var corners: Dictionary[Vector3, Vector3] = {}
+	var step_x := 10.0 if sector == "kharon" else 9.0
+	for i in vertices.size():
+		var p := vertices[i]
+		if not corners.has(p):
+			var travel := -p.z
+			var x := p.x - FlightState.rail_point(travel).x
+			var across := _height_sample(x + step_x, travel, sector, branching) - _height_sample(x - step_x, travel, sector, branching)
+			var forward := _height_sample(x, travel + 8.0, sector, branching) - _height_sample(x, travel - 8.0, sector, branching)
+			corners[p] = across.cross(forward).normalized()
+		normals[i] = corners[p]
+	return normals
+
 # The flight surface follows the course mesh exactly. Repeated Blender scenery
 # shares one GPU instance batch per chunk, including on cached return trips.
 static func finish_chunk(model: Node3D, floor_mesh: GeometryBatch, props: Array[Transform3D], sector: String, start: float, branching: bool) -> Node3D:
 	if not floor_mesh.vertices.is_empty() and not materials.has(sector):
 		var material := ShaderMaterial.new()
 		material.shader = SURFACE
-		material.set_shader_parameter("swatch", load("res://assets/ground/%s_surface.png" % sector))
-		material.set_shader_parameter("deposits_map", preload("res://assets/ground/sea_detail.png"))
+		if sector not in ["ignis", "cryo"]:
+			material.set_shader_parameter("swatch", load("res://assets/ground/%s_surface.png" % sector))
+		var deposits := preload("res://assets/ground/ignis_basalt.png") if sector == "ignis" else preload("res://assets/ground/sea_detail.png")
+		material.set_shader_parameter("deposits_map", deposits)
 		material.set_shader_parameter("surface_id", SectorCatalog.AVAILABLE.find(sector))
+		if sector == "cryo":
+			material.set_shader_parameter("cryo_snow_map", preload("res://assets/ground/cryo_snow.png"))
 		materials[sector] = material
 	if not floor_mesh.vertices.is_empty():
-		var floor_surface := VectorArt.solid(floor_mesh.vertices, floor_mesh.indices, Color.WHITE, floor_mesh.face_colors)
+		var normals := _ground_normals(floor_mesh.vertices, sector, branching)
+		var floor_surface := VectorArt.solid(floor_mesh.vertices, floor_mesh.indices, Color.WHITE, floor_mesh.face_colors, normals)
 		floor_surface.material_override = materials[sector]
 		model.add_child(floor_surface)
 	var familiar: Array[Transform3D] = []

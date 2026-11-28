@@ -4,7 +4,7 @@ import bpy
 import numpy as np
 
 
-def bake_tiles(output):
+def bake_tiles(output, sectors=None):
     size = 1024
     y, x = np.mgrid[0:size, 0:size].astype(np.float32) / size
     rng = np.random.default_rng(39719)
@@ -46,6 +46,8 @@ def bake_tiles(output):
         ("kharon", (114, 79, 56), (211, 170, 103)),
         ("thalassa", (40, 59, 67), (121, 145, 142)),
     ]:
+        if sectors is not None and sector not in sectors:
+            continue
         if sector == "ignis":
             h = 0.51 + 0.24 * broad + 0.16 * lamina + 0.30 * micro - 0.37 * cracks
         elif sector == "cryo":
@@ -57,17 +59,37 @@ def bake_tiles(output):
                 - 0.53 * cracks
                 + 0.14 * np.exp(-vein * 16)
             )
+        elif sector == "vespera":
+            # Resurfaced bitumen has torn edges and fewer exposed stones.
+            # Warp the patch contours so they never follow the noise lattice.
+            s = np.rint((x + 0.072 * broad + 0.018 * grain) * size).astype(int) % size
+            t = np.rint((y - 0.058 * broad + 0.021 * grain) * size).astype(int) % size
+            patch_field = 0.64 * broad[t, s] + 0.27 * grain[t, s] + 0.09 * grit
+            repair = np.clip((patch_field - 0.09) * 8.0, 0, 1)
+            chips = np.maximum(flecks - 0.22, 0) + 0.54 * np.maximum(grit - 0.33, 0)
+            asphalt = 0.52 + 0.095 * grain + 0.16 * grit + 0.54 * chips
+            bitumen = 0.29 + 0.085 * broad[t, s] + 0.06 * grit
+            h = asphalt + (bitumen - asphalt) * repair
         elif sector == "xylo":
-            h = (
-                0.46
-                + 0.24 * broad
-                + 0.40 * micro
-                + 0.27 * np.exp(-vein * 10)
-                - 0.16 * cracks
-            )
+            # Warped hummocks collect moss; small rounded pinholes break up
+            # the exposed peat. Both displaced coordinates wrap at tile edges.
+            s = np.rint(size * (x + 0.068 * broad + 0.015 * grain)).astype(int) % size
+            t = np.rint(size * (y + 0.052 * broad - 0.012 * grain)).astype(int) % size
+            hummocks = 0.57 * broad[t, s] + 0.31 * grain[t, s] + 0.12 * grit[t, s]
+            moss = np.clip(0.50 + 0.91 * hummocks, 0, 1)
+            pores = np.maximum(-0.52 - grit[t, s], 0)
+            h = 0.24 + 0.42 * moss + 0.36 * micro - 0.21 * pores
         elif sector == "kharon":
-            ripple = np.sin(2 * np.pi * (y * 24 + x * 4 + broad * 0.4 + grain * 0.045))
-            h = 0.48 + 0.19 * broad + 0.17 * ripple + 0.22 * micro
+            # Coarse iron sand collects in small hollows between softer wind deposits.
+            # The flight shader supplies the ripples in a single wind direction.
+            s = np.rint(size * (x + 0.061 * broad + 0.016 * grain)).astype(int) % size
+            t = np.rint(size * (y + 0.045 * grain - 0.053 * broad)).astype(int) % size
+            drift = 0.55 * broad[t, s] + 0.27 * grain[t, s] + 0.18 * grit
+            hollows = np.clip((-drift - 0.08) * 2.1, 0, 1)
+            dark_grains = np.maximum(-flecks - 0.34, 0)
+            quartz = np.maximum(flecks - 0.48, 0)
+            h = (0.56 + 0.17 * drift - 0.10 * hollows + 0.08 * grit
+                 - (0.12 + 0.31 * hollows) * dark_grains + 0.18 * quartz)
         else:
             u = (x * 4 + (np.floor(y * 4) % 2) * 0.5) % 1
             v = (y * 4) % 1
@@ -80,10 +102,7 @@ def bake_tiles(output):
                 - 0.48 * np.exp(-seam * 96)
                 - 0.42 * np.exp(-(bolt**2) * 1500)
             )
-            if sector == "thalassa":
-                h += 0.11 * np.maximum(0, np.cos(2 * np.pi * (x + y) * 48)) ** 8
-            else:
-                h -= 0.13 * np.exp(-np.abs(v - 0.23) * 92) * (u > 0.23) * (u < 0.78)
+            h += 0.11 * np.maximum(0, np.cos(2 * np.pi * (x + y) * 48)) ** 8
         shade = np.clip(
             (np.roll(h, 1, axis=1) - np.roll(h, -1, axis=1)) * 1.3
             + (np.roll(h, 1, axis=0) - np.roll(h, -1, axis=0)) * 0.85,

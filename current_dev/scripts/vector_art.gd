@@ -31,6 +31,7 @@ static func cached_model(key: String) -> Node3D:
 			instance.mesh = item["mesh"]
 		instance.material_override = item["material"]
 		instance.extra_cull_margin = item["margin"]
+		instance.visibility_range_end = item["range_end"]
 		instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		result.add_child(instance)
 	return result
@@ -39,7 +40,8 @@ static func remember_model(key: String, model: Node3D) -> Node3D:
 	var surfaces: Array[Dictionary] = []
 	for child in model.get_children():
 		var mesh: Resource = child.multimesh if child is MultiMeshInstance3D else child.mesh
-		surfaces.append({"mesh": mesh, "material": child.material_override, "margin": child.extra_cull_margin})
+		surfaces.append({"mesh": mesh, "material": child.material_override, "margin": child.extra_cull_margin,
+			"range_end": child.visibility_range_end})
 	model_cache[key] = surfaces
 	return model
 
@@ -93,11 +95,13 @@ static func lines(points: PackedVector3Array, color: Color, segment_colors: Pack
 	instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	return instance
 
-static func solid(vertices: PackedVector3Array, triangles: PackedInt32Array, tint: Color, vertex_colors: PackedColorArray = PackedColorArray()) -> MeshInstance3D:
+static func solid(vertices: PackedVector3Array, triangles: PackedInt32Array, tint: Color, vertex_colors: PackedColorArray = PackedColorArray(), normals: PackedVector3Array = PackedVector3Array()) -> MeshInstance3D:
 	var arrays: Array = []
 	arrays.resize(Mesh.ARRAY_MAX)
 	arrays[Mesh.ARRAY_VERTEX] = vertices
 	arrays[Mesh.ARRAY_INDEX] = triangles
+	if not normals.is_empty():
+		arrays[Mesh.ARRAY_NORMAL] = normals
 	if not vertex_colors.is_empty():
 		arrays[Mesh.ARRAY_COLOR] = vertex_colors
 	var mesh := ArrayMesh.new()
@@ -194,7 +198,7 @@ static func ground_horizon(icy: bool = false) -> Node3D:
 				var z: float = (row - 20 + corner.y) * 1000
 				var y: float = -22 - absf(sin(x * 0.002) * cos(z * 0.0015)) * 12
 				points.append(Vector3(x, y, z))
-			batch.surface(points, PackedInt32Array([0, 1, 2, 0, 2, 3]), Color("#152e44") if icy else Color("#21151c") if (row + column) % 3 == 0 else Color("#1b1520"))
+			batch.surface(points, PackedInt32Array([0, 1, 2, 0, 2, 3]), Color("#152e44") if icy else Color("#1d151e"))
 	return remember_model(key, batch.build())
 
 static func turret_base() -> Node3D:
@@ -216,7 +220,6 @@ static func terrain_chunk(start: float, branching: bool = false, icy: bool = fal
 	var cached: Node3D = cached_model(key)
 	if cached != null:
 		return cached
-	var batch := GeometryBatch.new()
 	var terrain := GeometryBatch.new()
 	var scenery: Array[Transform3D] = []
 	var points := PackedVector3Array()
@@ -236,24 +239,6 @@ static func terrain_chunk(start: float, branching: bool = false, icy: bool = fal
 			var d: int = c + 1
 			triangles.append_array(PackedInt32Array([a, c, b, b, c, d]))
 	terrain.surface(points, triangles, Color.WHITE)
-	for row in range(ROWS - 1):
-		for side in [-1.0, 1.0]:
-			var travel: float = start + float(row) * 8.0
-			var next_travel: float = travel + 8.0
-			var a: Vector3 = ground_point(side * 3.0, travel) + Vector3.UP * 0.2
-			var b: Vector3 = ground_point(side * 3.0, next_travel) + Vector3.UP * 0.2
-			batch.line(a, b, AMBER)
-			batch.line(a, ground_point(side * (3.2 + sin(travel * 0.12) * 0.3), next_travel) + Vector3.UP * 0.2, Color("#91432e"))
-	for section in range(8):
-		var travel: float = start + section * 16.0 + 2.0
-		for side in [-1.0, 1.0]:
-			var panel := PackedVector3Array()
-			for corner in [Vector2(4.2, 0), Vector2(10.8, 0), Vector2(10.8, 10), Vector2(4.2, 10)]:
-				panel.append(ground_point(side * corner.x, travel + corner.y) + Vector3.UP * 0.07)
-			batch.surface(panel, PackedInt32Array([0, 1, 2, 0, 2, 3]), Color("#172027"))
-			batch.outline(panel, Color("#40545d"))
-			for groove in range(3):
-				batch.line(ground_point(side * 5.0, travel + 2 + groove * 2) + Vector3.UP * 0.1, ground_point(side * 9.8, travel + 2 + groove * 2) + Vector3.UP * 0.1, Color("#5c5d50"))
 	for i in range(6):
 		var travel: float = start + 12.0 + i * 19.0
 		var side: float = -1.0 if i % 2 == 0 else 1.0
@@ -264,7 +249,7 @@ static func terrain_chunk(start: float, branching: bool = false, icy: bool = fal
 		var size := Vector3(1.0, 0.72 + (i % 3) * 0.36, 1.0)
 		scenery.append(GroundArt.placement(center, size, travel * 0.47))
 	var station: Vector3 = ground_point(-28.0 if branching or int(start / CHUNK_LENGTH) % 2 == 0 else 28.0, start + 64.0)
-	var chunk := GroundArt.finish_chunk(batch.build(), terrain, scenery, "ignis", start, branching)
+	var chunk := GroundArt.finish_chunk(Node3D.new(), terrain, scenery, "ignis", start, branching)
 	GroundArt.add_landmarks(chunk, "canyon_substation", [GroundArt.placement(station, Vector3.ONE)])
 	return remember_model(key, chunk) if start < TERRAIN_CACHE_CHUNKS * CHUNK_LENGTH else chunk
 
@@ -274,29 +259,24 @@ static func _ice_chunk(start: float, branching: bool) -> Node3D:
 	var cached: Node3D = cached_model(key)
 	if cached != null:
 		return cached
-	var batch := GeometryBatch.new()
 	var terrain := GeometryBatch.new()
 	var scenery: Array[Transform3D] = []
-	for row in range(16):
+	var points := PackedVector3Array()
+	var triangles := PackedInt32Array()
+	var columns := 30 if branching else 25
+	for row in range(17):
 		var travel: float = start + row * 8.0
-		for column in range(29 if branching else 24):
+		for column in range(columns):
 			var x: float = (column - 12) * 9.0
-			var a: Vector3 = ground_point(x, travel, branching)
-			var b: Vector3 = ground_point(x + 9, travel, branching)
-			var c: Vector3 = ground_point(x + 9, travel + 8, branching)
-			var d: Vector3 = ground_point(x, travel + 8, branching)
-			terrain.surface(PackedVector3Array([a, b, c, d]), PackedInt32Array([0, 1, 2, 0, 2, 3]), Color.WHITE)
-		for route in range(2 if branching else 1):
-			var offset: float = GroundRoute.lateral_offset(travel) if route == 1 else 0.0
-			var next_offset: float = GroundRoute.lateral_offset(travel + 8) if route == 1 else 0.0
-			var a: Vector3 = ground_point(offset - 3.2, travel, branching) + Vector3.UP * 0.08
-			var b: Vector3 = ground_point(offset + 3.2, travel, branching) + Vector3.UP * 0.08
-			var c: Vector3 = ground_point(next_offset + 3.2, travel + 8, branching) + Vector3.UP * 0.08
-			var d: Vector3 = ground_point(next_offset - 3.2, travel + 8, branching) + Vector3.UP * 0.08
-			terrain.surface(PackedVector3Array([a, b, c, d]), PackedInt32Array([0, 1, 2, 0, 2, 3]), Color("#6ecae1"))
-			batch.line(a, d, Color("#c0e8ed"))
-			batch.line(b, c, Color("#c0e8ed"))
-			batch.line(a.lerp(b, 0.3), d.lerp(c, 0.55), Color("#73b6ce"))
+			points.append(ground_point(x, travel, branching))
+	for row in range(16):
+		for column in range(columns - 1):
+			var a := row * columns + column
+			var b := a + 1
+			var d := a + columns
+			var c := d + 1
+			triangles.append_array(PackedInt32Array([a, b, c, a, c, d]))
+	terrain.surface(points, triangles, Color.WHITE)
 	for i in range(8):
 		var travel: float = start + 8 + i * 15
 		var x: float = (-1 if i % 2 == 0 else 1) * (25 + (i % 3) * 18)
@@ -305,5 +285,5 @@ static func _ice_chunk(start: float, branching: bool) -> Node3D:
 		var at: Vector3 = ground_point(x, travel, branching)
 		var height := (18.0 + i % 4 * 7) / 22.0
 		scenery.append(GroundArt.placement(at, Vector3(1, height, 1), travel * 0.23))
-	var chunk := GroundArt.finish_chunk(batch.build(), terrain, scenery, "cryo", start, branching)
+	var chunk := GroundArt.finish_chunk(Node3D.new(), terrain, scenery, "cryo", start, branching)
 	return remember_model(key, chunk) if start < TERRAIN_CACHE_CHUNKS * CHUNK_LENGTH else chunk

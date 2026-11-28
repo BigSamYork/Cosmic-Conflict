@@ -38,6 +38,8 @@ func run() -> void:
 		game.surface_weather.advance(3.2)
 		check(game.surface_weather.visible and game.surface_weather.climate == sector, sector + " has its own cockpit weather")
 		verify_population(game, sector)
+		if sector in ["ignis", "cryo", "kharon"]:
+			verify_smooth_ground(game, sector)
 		await snapshot("surface-" + sector + ".png")
 	game.settings["reduced_effects"] = true
 	game._apply_settings()
@@ -64,6 +66,7 @@ func run() -> void:
 	weather.configure("cryo", false, false)
 	var space := await snapshot("")
 	check(different(bare, space) == 0, "Particles clear immediately on the transition to space")
+	await verify_ground_motion(scene, camera)
 	await verify_water_reflection(scene, camera)
 	scene.free()
 	print("SURFACE_WEATHER_RENDER_FAILURES=", failures)
@@ -89,6 +92,82 @@ func verify_population(game: Node3D, sector: String) -> void:
 				if buildings.has(deck) and node.collision_layer == 1:
 					buildings[deck] = true
 	check(not buildings.values().has(false) and not plants.values().has(false), sector + " streams all three new buildings and all three plants")
+
+func verify_smooth_ground(game: Node3D, sector: String) -> void:
+	var seam: float = -float(game.ground_chunks[1].get_meta("start"))
+	var first: Dictionary[int, Vector3] = {}
+	var matches := 0
+	for i in 2:
+		for surface in game.ground_chunks[i].get_children():
+			if not surface is MeshInstance3D or surface.material_override != GroundArt.materials[sector]:
+				continue
+			var arrays: Array = surface.mesh.surface_get_arrays(0)
+			var positions: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+			var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
+			for j in positions.size():
+				if is_equal_approx(positions[j].z, seam):
+					var x := roundi(positions[j].x * 100)
+					if i == 0:
+						first[x] = normals[j]
+					elif first.has(x) and first[x].dot(normals[j]) > 0.999:
+						matches += 1
+						first.erase(x)
+	check(matches > 20 and first.is_empty(), sector + " lighting joins across streamed terrain chunks")
+
+func verify_ground_motion(scene: Node3D, camera: Camera3D) -> void:
+	# Isolate the actual flight materials from camera travel, sky and airborne weather.
+	camera.position = Vector3(0, 9, 0)
+	camera.look_at(Vector3(3, 0, -19))
+	var floor_tile := VectorArt.solid(PackedVector3Array([
+		Vector3(-70, 0, 15), Vector3(70, 0, 15), Vector3(70, 0, -90), Vector3(-70, 0, -90)
+	]), PackedInt32Array([0, 1, 2, 0, 2, 3]), Color.WHITE, PackedColorArray(),
+		PackedVector3Array([Vector3.UP, Vector3.UP, Vector3.UP, Vector3.UP]))
+	scene.add_child(floor_tile)
+	for sector: String in ["ignis", "cryo", "vespera", "xylo", "kharon"]:
+		floor_tile.material_override = GroundArt.materials[sector]
+		for reduced in [false, true]:
+			RenderingServer.global_shader_parameter_set("ground_motion", 0.0 if reduced else 1.0)
+			RenderingServer.global_shader_parameter_set("ground_time", 3.25)
+			var first := await snapshot("")
+			RenderingServer.global_shader_parameter_set("ground_time", 5.75)
+			var second := await snapshot("")
+			var changed := different(first, second)
+			check(changed == 0 if reduced else changed > 100,
+				"%s terrain motion with reduced effects %s (%d changed channel samples)" % [sector, reduced, changed])
+		if sector in ["ignis", "vespera"]:
+			# Molten seams and reflected city lamps have their own light at midnight.
+			RenderingServer.global_shader_parameter_set("sector_ambient", Vector3.ZERO)
+			var dark := await snapshot("")
+			var unlit := StandardMaterial3D.new()
+			unlit.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+			unlit.cull_mode = BaseMaterial3D.CULL_DISABLED
+			unlit.albedo_color = Color.BLACK
+			floor_tile.material_override = unlit
+			check(different(await snapshot(""), dark) > 100, sector + " has visible light sources in darkness")
+			RenderingServer.global_shader_parameter_set("sector_ambient", Vector3.ONE)
+	floor_tile.free()
+	# A return visit uses the cached MultiMesh. Check the blades themselves
+	# against a fixed background so peat ripples cannot satisfy this assertion.
+	var chunk := XyloArt.terrain_chunk(0.0)
+	var sedge_motion := 0
+	for child in chunk.get_children():
+		if child is MultiMeshInstance3D and child.multimesh.has_meta("decorative_ground_cover"):
+			chunk.remove_child(child)
+			scene.add_child(child)
+			var tuft: Vector3 = child.multimesh.get_instance_transform(0).origin + Vector3.UP
+			camera.position = tuft + Vector3(1, 1, 5)
+			camera.look_at(tuft)
+			RenderingServer.global_shader_parameter_set("ground_motion", 1.0)
+			RenderingServer.global_shader_parameter_set("ground_time", 0.5)
+			var still := await snapshot("")
+			RenderingServer.global_shader_parameter_set("ground_time", 2.0)
+			sedge_motion = different(still, await snapshot(""))
+			child.free()
+			break
+	chunk.free()
+	check(sedge_motion > 100, "Cached Xylo sedges bend in the wind")
+	RenderingServer.global_shader_parameter_set("ground_motion", 1.0)
+	RenderingServer.global_shader_parameter_set("ground_time", 0.0)
 
 func verify_water_reflection(scene: Node3D, camera: Camera3D) -> void:
 	camera.position = Vector3(0, 4, 0)

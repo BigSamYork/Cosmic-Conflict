@@ -118,7 +118,6 @@ func _planet(sector: String, at: Vector3, span: float) -> void:
 	var planet := LaunchApproach._planet_model(sector)
 	planet.position = at
 	planet.scale = Vector3.ONE * span
-	planet.get_child(1).hide()
 	set_pieces.add_child(planet)
 
 func _fit_colony_transport() -> void:
