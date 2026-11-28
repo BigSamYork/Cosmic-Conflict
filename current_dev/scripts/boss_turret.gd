@@ -10,7 +10,8 @@ var interval: float = 3.8
 var launches: int = 0
 var interval_multiplier: float = 1.0
 var lead_fraction := 1.0
-var emergency_power := false
+var feed_lost := false
+var rage_stage := 0
 var interrupted := false
 var recoil := 0.0
 var barrel: Node3D
@@ -54,7 +55,7 @@ func advance(delta: float, pilot: Vector3, pilot_velocity: Vector3) -> void:
 	beacon.visible = cooldown <= GroundTurret.WARNING_TIME
 	if beacon.visible:
 		var pulse := clampf(1.0 - cooldown / GroundTurret.WARNING_TIME, 0.0, 1.0)
-		beacon.scale = Vector3.ONE * (1.0 + pulse * 0.36)
+		beacon.scale = Vector3.ONE * (1.0 + pulse * (0.36 + rage_stage * 0.22))
 	if cooldown <= 0.0:
 		var port := Vector3((launches % 3 - 1) * 2.0, -0.75 if launches % 2 == 0 else 0.75, -4.1)
 		var origin: Vector3 = head.to_global(port)
@@ -63,7 +64,10 @@ func advance(delta: float, pilot: Vector3, pilot_velocity: Vector3) -> void:
 		recoil = 1.0
 		barrel.position.z = 0.8
 		interrupted = false
-		cooldown += interval * interval_multiplier * (0.67 if emergency_power else 1.0)
+		# Emergency fire control spends its extra power reacquiring targets
+		# when a radar is missing. Anger cannot undo a broken sensor or feed.
+		var reload := 1.0 if interval_multiplier > 1.0 or feed_lost else 1.0 - rage_stage * 0.17
+		cooldown += interval * interval_multiplier * reload * (2.0 if feed_lost else 1.0)
 
 func receive_hit(damage: int = 1) -> bool:
 	var can_interrupt := unlocked and not destroyed and not interrupted and cooldown > 0 and cooldown <= 0.38

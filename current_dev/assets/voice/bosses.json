@@ -1,0 +1,74 @@
+{
+  "ignis_ground": {
+    "arrival": "A foundry worker pressed her thumb into my first plate. Every furnace on this ridge has been growing fingers ever since. I've counted nine. One more and the mountain can close its hands. Bring that little ship closer. You look about the right size for a knuckle.",
+    "hurt_1": "I can feel another finger coming in.",
+    "hurt_2": "The weld is opening. Give me the hammer.",
+    "hurt_3": "Her mark is still there!"
+  },
+  "ignis_orbit": {
+    "arrival": "See your shadow crossing the canyon? That's a piece of the sun you bit off when you flew between it and the ground. Little ships always take more than they need. Open your hull, pilot. I can put the missing light back through the hole.",
+    "hurt_1": "A spark escaped. Mind your wings.",
+    "hurt_2": "Even a star can bleed.",
+    "hurt_3": "Take the rest of my fire!"
+  },
+  "cryo_ground": {
+    "arrival": "Listen to my drill. That little click every third turn is a shot you'll fire tomorrow. Ice freezes noise before it happens. I can dig the shot out early. I can turn it round down here. Care to guess whose cockpit it comes out inside?",
+    "hurt_1": "Quiet. The old ice is cracking.",
+    "hurt_2": "That shot was due tomorrow!",
+    "hurt_3": "Put that sound back!"
+  },
+  "cryo_orbit": {
+    "arrival": "My first little drone came home in two pieces. The next one finished the note it had been singing, and there it was again, asking for its old bunk. Death can only fit between two notes. That is why my children always fly in pairs.",
+    "hurt_1": "We lost a voice.",
+    "hurt_2": "Little ones, carry the tune.",
+    "hurt_3": "Sing louder. I am still here."
+  },
+  "vespera_ground": {
+    "arrival": "There are six hundred passengers in the terminal. I count them with one eye while the other eye blinks. Lose count of someone and they slip right out of yesterday. Check the empty seat by the window, pilot. Why is it still warm?",
+    "hurt_1": "Start the count again.",
+    "hurt_2": "Stay in line. I can still see you.",
+    "hurt_3": "Who will watch them when I go?"
+  },
+  "vespera_orbit": {
+    "arrival": "A thing nobody sees gets one impossible move. I can squeeze my whole cruiser inside the blink of your eye. Watch what happens when I hide the blink as well. If you hear your sister knocking from inside your cockpit, don't turn round.",
+    "hurt_1": "You found my shadow.",
+    "hurt_2": "Keep still. Someone is listening.",
+    "hurt_3": "I can see you with my eyes shut."
+  },
+  "xylo_ground": {
+    "arrival": "Every drop that falls from my chest grows another one of me. I remember being the little drop on a leaf. I remember the great beast that shed me. My question is, little pilot, how many of us can you afford to grow today?",
+    "hurt_1": "Ah. That went deep.",
+    "hurt_2": "A little brother for me!",
+    "hurt_3": "My heart is mine!"
+  },
+  "xylo_orbit": {
+    "arrival": "Each of my eggs has two shells. The first is soft enough for little teeth. The second is the sky you see around you. Last hatching, three stars went out together. Hear that tapping on your canopy? Oh, good. This one knows which way to bite.",
+    "hurt_1": "Come under my wing.",
+    "hurt_2": "Hush now. Mother is bleeding.",
+    "hurt_3": "My young will outlive you!"
+  },
+  "thalassa_ground": {
+    "arrival": "This whole ocean balances on the soles of my feet. I lift my left heel, the tide comes in. I put it down, the harbour drains. There are people waving to you from that platform. Tell me which foot you'd like me to lift.",
+    "hurt_1": "Water in the knee joint.",
+    "hurt_2": "The sea is tipping over!",
+    "hurt_3": "Come down here and drown with me!"
+  },
+  "thalassa_orbit": {
+    "arrival": "Lightning strikes whoever tells the biggest lie. I grew this mast and said I was taller than the sky. See what came down to argue? Now I'm going to tell the clouds you stole the ocean. Keep moving, pilot. They do sometimes miss.",
+    "hurt_1": "The clouds heard that.",
+    "hurt_2": "Quick, invent something bigger!",
+    "hurt_3": "The ocean was yours all along!"
+  },
+  "kharon_ground": {
+    "arrival": "The sun is quite young. Every evening it forgets which dune it rose from. I keep a little piece of morning in each of my mirrors to show it the way back. Scratch even one, pilot, and tomorrow will rise with your face burned across it.",
+    "hurt_1": "That's a scratch on tomorrow.",
+    "hurt_2": "Keep the morning in the glass!",
+    "hurt_3": "Which way did it rise?"
+  },
+  "kharon_orbit": {
+    "arrival": "Your flight director crossed out a coordinate by hand this morning. The star moved. She thinks she corrected a mistake. I have spent centuries measuring the distance a star travels for each stroke of a pen. Give me her name, pilot. I have a map for her.",
+    "hurt_1": "One line struck from the page.",
+    "hurt_2": "Steady hand, pilot. I grant you that.",
+    "hurt_3": "My star is moving!"
+  }
+}

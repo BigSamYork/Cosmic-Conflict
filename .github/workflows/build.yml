@@ -63,6 +63,7 @@ jobs:
       - name: Install CPU voice renderer
         if: steps.plan.outputs.missing != '0' && steps.probe.outputs.render != '0'
         run: |
+          command -v ffmpeg >/dev/null || { sudo apt-get update && sudo apt-get install -y ffmpeg; }
           python -m pip install torch==2.6.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cpu
           python -m pip install -r tools/chatterbox-requirements.txt
 

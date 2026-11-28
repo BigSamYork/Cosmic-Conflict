@@ -4,8 +4,11 @@ extends Node
 signal speaking_changed(active: bool)
 signal line_started(id: String, text: String, event: String)
 signal fault(message: String)
+signal boss_caption_changed(speaker: String, caption: String)
 
 const CATALOG: String = VoiceCatalog.DEFAULT_PATH
+const BossDialogue := preload("res://scripts/boss_dialogue.gd")
+const BOSS_DUCK_DB := -16.0
 const RULES: Dictionary = {
 	"recon_ignis_ground": Vector2i(90, 0),
 	"recon_ignis_orbit": Vector2i(90, 0),
@@ -46,6 +49,10 @@ const RULES: Dictionary = {
 var policy := VoicePolicy.new()
 var rng := RandomNumberGenerator.new()
 var player: AudioStreamPlayer
+var boss_player: AudioStreamPlayer
+var boss_bus_name := ""
+var boss_duck_db := 0.0
+var mix_speaking := false
 var lines: Array[Dictionary] = []
 var streams: Dictionary = {}
 var recording_paths: Dictionary = {}
@@ -63,6 +70,15 @@ var arrival_reply: Dictionary = {}
 var boarding_lines: Dictionary = {}
 var story_speakers := {"lark": "Lark", "attendant": "Station attendant"}
 var playback_available: bool = false
+var boss_sector := ""
+var boss_orbital := false
+var boss_intro_pending := false
+var boss_reactions: Array[int] = []
+var boss_injury_seen := 0
+var next_reaction := 0.0
+var boss_cue: Dictionary = {}
+var caption_chunks := PackedStringArray()
+var caption_index := -1
 
 func _init() -> void:
 	var manifest: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://assets/voice/boarding.json"))
@@ -85,6 +101,18 @@ func _ready() -> void:
 	player.bus = bus_name
 	add_child(player)
 	player.finished.connect(_finished)
+	boss_player = AudioStreamPlayer.new()
+	# The boss recordings already carry their individual radio treatments.
+	var boss_bus := AudioServer.bus_count
+	AudioServer.add_bus()
+	boss_bus_name = "BossRadio-%d" % get_instance_id()
+	AudioServer.set_bus_name(boss_bus, boss_bus_name)
+	var placement := AudioEffectPanner.new()
+	placement.pan = 0.16
+	AudioServer.add_bus_effect(boss_bus, placement)
+	boss_player.bus = boss_bus_name
+	add_child(boss_player)
+	boss_player.finished.connect(_boss_finished)
 	set_level(volume_percent, suppressed)
 
 static func create_radio_bus(label: String) -> String:
@@ -134,6 +162,110 @@ func _process(delta: float) -> void:
 			var briefing := pending_recon
 			pending_recon = ""
 			say(briefing)
+		if not boss_cue.is_empty():
+			var target_db := BOSS_DUCK_DB if policy.speaking else 0.0
+			boss_duck_db = move_toward(boss_duck_db, target_db, delta * (260.0 if policy.speaking else 36.0))
+			boss_player.volume_db = player.volume_db + boss_duck_db
+			_update_boss_caption()
+		elif not policy.speaking and pending_recon.is_empty() and not boss_sector.is_empty() and enabled():
+			if boss_intro_pending:
+				boss_intro_pending = false
+				_play_boss_line("arrival")
+			elif not boss_reactions.is_empty() and policy.clock >= next_reaction:
+				_play_boss_line("hurt_%d" % boss_reactions.pop_front())
+				next_reaction = policy.clock + 4.5
+
+func start_boss_radio(sector: String, orbital: bool) -> void:
+	if boss_sector == sector and boss_orbital == orbital:
+		return
+	end_boss_radio()
+	boss_sector = sector
+	boss_orbital = orbital
+	boss_intro_pending = enabled()
+
+func boss_hurt(level: int) -> void:
+	if boss_sector.is_empty() or level <= boss_injury_seen:
+		return
+	boss_injury_seen = level
+	if not enabled():
+		return
+	# Keep the first pain reaction and the latest phase response. A quick
+	# sequence of hits should never leave a backlog of obsolete threats.
+	if not boss_reactions.is_empty() and boss_reactions.back() > 1:
+		boss_reactions.pop_back()
+	boss_reactions.append(level)
+
+func _play_boss_line(event: String) -> void:
+	var cue: Dictionary = BossDialogue.cue(boss_sector, boss_orbital, event)
+	if cue.is_empty():
+		return
+	var stream: AudioStream = load(cue.audio)
+	if stream == null:
+		return
+	boss_cue = cue
+	boss_cue["event"] = event
+	boss_duck_db = 0.0
+	boss_player.volume_db = player.volume_db
+	boss_player.stream = stream
+	boss_player.play()
+	last_line = cue.id
+	caption_chunks.clear()
+	var caption := ""
+	for word: String in String(cue.text).split(" ", false):
+		if caption.length() + word.length() >= 68:
+			caption_chunks.append(caption)
+			caption = ""
+		caption += (" " if not caption.is_empty() else "") + word
+		if word.ends_with(".") or word.ends_with("?") or word.ends_with("!") or (caption.length() >= 35 and word.ends_with(",")):
+			caption_chunks.append(caption)
+			caption = ""
+	if not caption.is_empty():
+		caption_chunks.append(caption)
+	caption_index = -1
+	_update_boss_caption()
+	_update_mix_activity()
+	line_started.emit(cue.id, cue.text, "boss_radio")
+
+func _update_boss_caption() -> void:
+	var character := float(String(boss_cue.text).length()) * boss_player.get_playback_position() / maxf(0.01, boss_player.stream.get_length())
+	var index := 0
+	while index < caption_chunks.size() - 1 and character >= caption_chunks[index].length() + 1:
+		character -= caption_chunks[index].length() + 1
+		index += 1
+	if index != caption_index:
+		caption_index = index
+		boss_caption_changed.emit(boss_cue.speaker, caption_chunks[index])
+
+func _update_mix_activity() -> void:
+	var speaking := policy.speaking or not boss_cue.is_empty()
+	if speaking != mix_speaking:
+		mix_speaking = speaking
+		speaking_changed.emit(speaking)
+
+func _boss_finished() -> void:
+	boss_cue = {}
+	boss_caption_changed.emit("", "")
+	_update_mix_activity()
+
+func end_boss_radio(keep_identity := false) -> void:
+	var briefing := "recon_" + boss_sector + ("_orbit" if boss_orbital else "_ground")
+	if pending_recon == briefing:
+		pending_recon = ""
+	if not boss_cue.is_empty():
+		boss_player.stop()
+		boss_player.stream = null
+		_boss_finished()
+	if policy.speaking and policy.event == briefing:
+		player.stop()
+		player.stream = null
+		policy.finished()
+		_update_mix_activity()
+	if not keep_identity:
+		boss_sector = ""
+		boss_injury_seen = 0
+	boss_intro_pending = false
+	boss_reactions.clear()
+	next_reaction = 0
 
 func set_level(percent: int, suppress: bool) -> void:
 	assert(percent >= 0 and percent <= 100)
@@ -141,8 +273,9 @@ func set_level(percent: int, suppress: bool) -> void:
 	suppressed = suppress
 	if player != null:
 		player.volume_db = linear_to_db(maxf(0.001, percent / 100.0)) - 6.0
+		boss_player.volume_db = player.volume_db + boss_duck_db
 	if not enabled():
-		stop_speech()
+		stop_speech(false, true)
 
 func enabled() -> bool:
 	return playback_available and not suppressed and volume_percent > 0 and failure_message.is_empty()
@@ -151,6 +284,7 @@ func pause_speech(value: bool) -> void:
 	paused = value
 	if player != null:
 		player.stream_paused = value
+		boss_player.stream_paused = value
 
 func say(event: String) -> bool:
 	if not RULES.has(event):
@@ -162,6 +296,10 @@ func say(event: String) -> bool:
 		return false
 	var rule: Vector2i = RULES[event]
 	var silence: float = 4.0 if event.begins_with("route_") else 6.0
+	if not boss_cue.is_empty():
+		if rule.x < 55:
+			return false
+		silence = 0.0
 	if not policy.can_start(event, rule.x, silence):
 		if event.begins_with("recon_") and policy.speaking:
 			pending_recon = event
@@ -185,7 +323,7 @@ func say(event: String) -> bool:
 	policy.started(event, rule.x, rule.y)
 	line_next_allowed[id] = policy.clock + selected["cooldown_seconds"]
 	last_line = id
-	speaking_changed.emit(true)
+	_update_mix_activity()
 	line_started.emit(id, selected["text"], event)
 	return true
 
@@ -200,7 +338,7 @@ func panic_at_breach() -> void:
 	player.play()
 	policy.started(EVENT, 98, 8.0)
 	last_line = EVENT
-	speaking_changed.emit(true)
+	_update_mix_activity()
 	line_started.emit(EVENT, "Aah! Get it off me! Get it off!", EVENT)
 
 func say_arrival(quarter: int, headlight: bool) -> bool:
@@ -231,7 +369,7 @@ func say_boarding(id: String) -> void:
 	player.play()
 	policy.started("vespera_boarding", 45, 0)
 	last_line = id
-	speaking_changed.emit(true)
+	_update_mix_activity()
 	line_started.emit(id, boarding_lines[id].text, "vespera_boarding")
 
 func _play_arrival_line(cue: Dictionary) -> bool:
@@ -242,7 +380,7 @@ func _play_arrival_line(cue: Dictionary) -> bool:
 	player.play()
 	policy.started("sector_arrival", 40, 0)
 	last_line = cue.id
-	speaking_changed.emit(true)
+	_update_mix_activity()
 	line_started.emit(cue.id, cue.text, "sector_arrival")
 	return true
 
@@ -265,9 +403,13 @@ func say_route(hard: bool) -> bool:
 
 func cancel_group(group: String) -> void:
 	if policy.speaking and VoicePolicy.group_for(policy.event) == group:
-		stop_speech()
+		arrival_reply.clear()
+		player.stop()
+		policy.finished()
+		_update_mix_activity()
 
-func stop_speech(reset: bool = false) -> void:
+func stop_speech(reset: bool = false, keep_boss_identity := false) -> void:
+	end_boss_radio(keep_boss_identity)
 	arrival_reply.clear()
 	pending_recon = ""
 	if player != null:
@@ -278,8 +420,7 @@ func stop_speech(reset: bool = false) -> void:
 		policy.reset()
 	elif was_speaking:
 		policy.finished()
-	if was_speaking:
-		speaking_changed.emit(false)
+	_update_mix_activity()
 
 func _finished() -> void:
 	if not arrival_reply.is_empty() and enabled():
@@ -288,7 +429,7 @@ func _finished() -> void:
 		_play_arrival_line(reply)
 		return
 	policy.finished()
-	speaking_changed.emit(false)
+	_update_mix_activity()
 
 func _fail(message: String) -> void:
 	failure_message = message
@@ -298,6 +439,7 @@ func _fail(message: String) -> void:
 
 func _exit_tree() -> void:
 	stop_speech()
+	release_radio_bus(boss_bus_name)
 	release_radio_bus(bus_name)
 
 static func release_radio_bus(label: String) -> void:

@@ -19,7 +19,8 @@ def encode(source, output, filters, options):
 def prepare():
     destination = ASSETS / "music" / "licensed"
     destination.mkdir(exist_ok=True)
-    for name in ("Fanfare for Space", "Look Busy", "Five Armies", "Constancy Part Three",
+    for name in ("Come Play with Me", "Final Count", "Failing Defense", "Fanfare for Space",
+                 "Look Busy", "Five Armies", "Constancy Part Three",
                  "Clenched Teeth", "Grave Matters", "Mighty and Meek", "Americana", "Evening Melodrama"):
         source = ROOT / "Music" / f"Kevin MacLeod - {name}.mp3"
         meter = subprocess.run(

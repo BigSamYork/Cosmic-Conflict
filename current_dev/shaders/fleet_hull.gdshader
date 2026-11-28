@@ -12,6 +12,8 @@ uniform float pulse_strength : hint_range(0.0, 1.0) = 1.0;
 instance uniform bool parked = false;
 instance uniform bool weathered = false;
 instance uniform bool living_shell = false;
+instance uniform bool cardiac_sealed = false;
+instance uniform vec4 hull_detail_transform = vec4(0.0, 0.0, 0.0, 1.0);
 instance uniform vec4 nav_tint : source_color = vec4(0.0);
 
 float surface_grain(vec3 p) {
@@ -26,7 +28,7 @@ float surface_grain(vec3 p) {
 
 void vertex() {
     hull_normal = normalize(MODEL_NORMAL_MATRIX * NORMAL);
-    local_position = VERTEX;
+    local_position = VERTEX * hull_detail_transform.w + hull_detail_transform.xyz;
     if (living_shell) {
         float breath = sin(TIME * 1.65 + VERTEX.y * 2.0 + float(INSTANCE_ID));
         VERTEX.xz *= 1.0 + 0.018 * breath * pulse_strength;
@@ -40,6 +42,12 @@ void fragment() {
     float facing = max(dot(n, eye), 0.0);
     float rim = pow(1.0 - facing, 3.0);
     float finish = UV.x;
+    // The open wound and its inner ribs are part of the same collision mesh as
+    // the carapace. The intact hull panels cover them until the interlock fails.
+    if (finish > 0.535 && finish < 0.625) {
+        if (cardiac_sealed) { discard; }
+        finish = 0.14;
+    }
     float glass = 1.0 - smoothstep(0.01, 0.03, abs(finish - 0.44));
     float metal = smoothstep(0.19, 0.29, finish);
     float shine = pow(max(dot(n, normalize(eye + key)), 0.0), mix(19.0, 67.0, metal));

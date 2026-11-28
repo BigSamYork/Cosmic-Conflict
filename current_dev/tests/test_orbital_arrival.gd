@@ -72,6 +72,7 @@ func verify_turn(sector: String, fps: int) -> void:
 	var shots: int = game.campaign.stats["shots"]
 	var weapons: Array[int] = [0]
 	preview.missile_requested.connect(func(_at: Vector3, _direction: Vector3) -> void: weapons[0] += 1)
+	prepared.missile_requested.connect(func(_at: Vector3, _direction: Vector3) -> void: weapons[0] += 1)
 	preview.sweep_requested.connect(func(_emitter: ThermalEmitter) -> void: weapons[0] += 1)
 	var paused: bool = false
 	var visible_frames: int = 0

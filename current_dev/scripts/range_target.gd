@@ -25,6 +25,7 @@ func mark_impact(at: Vector3, shot_axis: Vector3, organic: bool, previous_armor:
 			var material := ShaderMaterial.new()
 			material.shader = SCAR_SHADER
 			material.set_shader_parameter("organic", organic)
+			material.set_shader_parameter("orbital", get_parent() is BossEncounter and get_parent().orbital)
 			var strikes := PackedVector4Array()
 			var axes := PackedVector3Array()
 			strikes.resize(3)

@@ -14,6 +14,7 @@ from mathutils import Vector
 sys.path.insert(0, str(Path.cwd() / "tools/fleet"))
 from build_fleet import ROOT, Skin, bake, flight_material
 from build_ground import OUTPUT, lathe, pipe, plate
+from cardiac_socket import carve_chest
 
 
 def chitin(name):
@@ -57,8 +58,8 @@ def scute(s, at, size, angle=0, finish="paint"):
     pipe(s, [point(i / 12, 0) for i in range(2, 12)], size[0] * 0.028, "steel", 7)
 
 
-def goliath():
-    s = chitin("bio_titan")
+def goliath(sealed=False):
+    s = chitin("bio_titan_sealed" if sealed else "bio_titan")
     # Three overlapping body masses keep the shoulder, waist and head readable at flight distance.
     s.pod((0, 3, 5), (10.1, 9.7, 8.1), "frame", 20, 40)
     s.pod((0, 4, 12.6), (10, 8.1, 12), "paint", 20, 42)
@@ -158,7 +159,7 @@ def goliath():
             "copper",
             18,
         )
-    return s
+    return carve_chest(s, (2.8, -1.6, 14), 4.6, sealed=sealed)
 
 
 def titan_leg():
@@ -641,6 +642,10 @@ def main(standalone=False):
         copy.scale = scale
 
     place(goliath(), (-42, 0, 10))
+    sealed = place(goliath(sealed=True), (-39.2, -1.6, 24))
+    sealed.scale = (4.6,) * 3
+    sealed.hide_viewport = True
+    sealed.hide_render = True
     leg = place(titan_leg(), (-34.5, 3, 8))
     copy_at(leg, (-49.5, 3, 8), (-1, 1, 1))
     place(tempest(), (42, 0, 10))

@@ -22,11 +22,16 @@ func run() -> void:
 		await scene_changed
 	var intro = current_scene
 	check(intro.scene_file_path == "res://opening.tscn", "Player boot opens the prologue")
-	check(intro.drone.stream.loop_mode == AudioStreamWAV.LOOP_FORWARD and intro.score.stream.resource_path.ends_with("/Fanfare for Space.ogg"), "A pulsing synth bed leads into the launch fanfare")
+	check(intro.score.stream.resource_path.ends_with("/Come Play with Me.ogg"), "The prologue uses the supplied Kevin MacLeod recording")
+	var score_length: float = intro.score.stream.get_length()
+	var cutscene_length := 0.0
 	intro.set_process(false)
 	var seen := {}
 	var voices_heard := {}
 	for cue: Dictionary in intro.cues:
+		cutscene_length += intro.duration
+		if native and intro.sound_on and intro.music_gain > 0:
+			check(intro.score.playing, "The score plays through " + cue.shot)
 		check(intro.stage.shot == cue.shot and intro.dialogue.stream.get_length() > 1, "Recorded cue and live set for " + cue.id)
 		intro._update_frame(intro.lead + 0.1)
 		if cue.id == "knock":
@@ -55,11 +60,14 @@ func run() -> void:
 			check(intro.next_knock == 2 and intro.get_node("Overlay/Caption").text == "[Two metallic pings in reply]", "Vale answers the Aegis-4's signal")
 		intro._process(intro.duration - intro.clock + 0.05)
 	check(seen.keys() == ["aegis", "blockade", "departure", "answer"], "The short prologue leaves the six colony stories for the missions")
+	check(score_length >= cutscene_length, "The recording covers the final reply without looping")
 	await scene_changed
 	check(current_scene.scene_file_path == "res://main.tscn" and current_scene.hud.mode == "title", "Natural completion reaches the briefing")
 	current_scene.hud.opening_requested.emit()
 	await scene_changed
 	check(current_scene.index == 0, "Replay starts aboard the Aegis-4")
+	if native and current_scene.sound_on and current_scene.music_gain > 0:
+		check(current_scene.score.playing and current_scene.score.get_playback_position() < 1, "Replay restarts the opening music")
 	var esc := InputEventKey.new()
 	esc.keycode = KEY_ESCAPE
 	esc.pressed = true

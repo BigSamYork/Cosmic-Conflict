@@ -18,6 +18,7 @@ var caption_page := -1
 var feed_views: Array[SubViewport] = []
 var feed_tick := 0.0
 var music_gain := 0.0
+var dialogue_duck := 1.0
 var knocks := PackedFloat32Array()
 var next_knock := 0
 var exiting := false
@@ -29,7 +30,6 @@ var radio_bus := ""
 @onready var dialogue: AudioStreamPlayer = $Dialogue
 @onready var hull: AudioStreamPlayer = $Hull
 @onready var score: AudioStreamPlayer = $Score
-@onready var drone: AudioStreamPlayer = $Drone
 
 func _ready() -> void:
 	book = JSON.parse_string(FileAccess.get_file_as_string(SCRIPT_PATH))
@@ -50,11 +50,10 @@ func _ready() -> void:
 	dialogue.volume_db = linear_to_db(maxf(0.001, voice_level / 100.0)) - 3.0
 	hull.stream = SynthAudio.cue_stream("bulkhead_knock")
 	hull.volume_db = -12
-	music_gain = AmbientMusic.MIX_GAIN * music_level / 100.0
-	drone.stream = _pulse_drone()
+	music_gain = 0.28 * music_level / 100.0
 	if sound_on and music_gain > 0:
-		drone.volume_db = linear_to_db(music_gain)
-		drone.play()
+		score.volume_db = -80
+		score.play()
 	$Overlay/Title.text = book.title
 	$Overlay/Skip.pressed.connect(_skip)
 	if OS.has_feature("android"):
@@ -75,12 +74,6 @@ func _next_cue() -> void:
 		_show_telemetry(cue.shot)
 		if cue.shot == "departure":
 			stage.mount_holo_table(feed_views)
-			if sound_on and music_gain > 0:
-				score.volume_db = -60
-				score.play()
-				var mix := create_tween().set_parallel()
-				mix.tween_property(score, "volume_db", linear_to_db(music_gain) - 3.0, 1.4)
-				mix.tween_property(drone, "volume_db", -60.0, 1.4)
 	var actor: Dictionary = book.cast[cue.speaker]
 	$Overlay/Speaker.text = String(cue.get("source", actor.name)).to_upper()
 	$Overlay/Speaker.modulate = BLUE if cue.speaker == "lark" else AMBER
@@ -149,6 +142,12 @@ func _update_frame(delta: float) -> void:
 	if last_in_shot:
 		dark = maxf(dark, smoothstep(duration - (0.37 if index == cues.size() - 1 else 0.1), duration, clock))
 	$Overlay/Fade.color.a = dark
+	if score.playing:
+		dialogue_duck = move_toward(dialogue_duck, 0.58 if dialogue.playing else 1.0, delta * (2.8 if dialogue.playing else 0.65))
+		var envelope := smoothstep(0, 0.45, clock) if index == 0 else 1.0
+		if index == cues.size() - 1:
+			envelope *= 1.0 - smoothstep(duration - 1.35, duration, clock)
+		score.volume_db = linear_to_db(maxf(0.0001, music_gain * envelope * dialogue_duck))
 
 func _paginate(line: String, speech_length: float) -> void:
 	caption_pages.clear()
@@ -224,25 +223,7 @@ func _finish() -> void:
 	dialogue.stop()
 	hull.stop()
 	score.stop()
-	drone.stop()
 	get_tree().change_scene_to_file("res://main.tscn")
 
 func _exit_tree() -> void:
 	ComputerVoice.release_radio_bus(radio_bus)
-
-func _pulse_drone() -> AudioStreamWAV:
-	# Integer cycles close the loop cleanly under the three-ping distress signal.
-	var clip := AudioStreamWAV.new()
-	clip.format = AudioStreamWAV.FORMAT_16_BITS
-	clip.mix_rate = 22050
-	clip.loop_mode = AudioStreamWAV.LOOP_FORWARD
-	clip.loop_end = clip.mix_rate * 2
-	var pcm := PackedByteArray()
-	pcm.resize(clip.loop_end * 2)
-	for frame in clip.loop_end:
-		var t := float(frame) / clip.mix_rate
-		var beat := 0.42 + 0.58 * pow((1.0 - cos(TAU * t)) * 0.5, 2)
-		var note := sin(TAU * 55 * t) * 0.48 + sin(TAU * 82.5 * t) * 0.23 + sin(TAU * 110 * t) * 0.12
-		pcm.encode_s16(frame * 2, roundi(note * beat * 30000))
-	clip.data = pcm
-	return clip

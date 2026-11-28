@@ -22,6 +22,7 @@ var phase_title: String = ""
 var objective: String = ""
 var incoming_count: int = 0
 var boss_fraction: float = -1.0
+var boss_warning := ""
 var show_target_ranges := false
 var radar_contacts: Array[Dictionary] = []
 var scope_range := 360.0
@@ -93,6 +94,8 @@ func _combiner() -> void:
 	_text(Vector2(40, 92), "%02d:%02d" % [seconds / 60, seconds % 60], 29)
 	if autopilot:
 		_text(Vector2(146, 88), "AUTOPILOT / TIME TO ARRIVAL", 14, CYAN)
+	elif not boss_warning.is_empty():
+		_text(Vector2(146, 88), boss_warning, 14, VectorArt.HOSTILE)
 	elif flight.roll_remaining > 0:
 		_text(Vector2(146, 88), "BARREL ROLL / DEFLECTING", 16, CYAN)
 	elif intercept_seconds < 2.5:

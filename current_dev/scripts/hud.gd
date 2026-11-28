@@ -50,6 +50,8 @@ var menu: PanelContainer
 var message: String = ""
 var message_until: float = 0.0
 var story_caption := ""
+var radio_speaker := ""
+var radio_caption := ""
 var story_seconds := 0.0
 var fps: float = 60.0
 var settings: Dictionary = {}
@@ -60,6 +62,7 @@ var can_resume: bool = false
 var phase_title: String = "01 // CANYON APPROACH"
 var objective: String = "DISABLE TURRETS / SHOOT OR EVADE MISSILES"
 var boss_fraction: float = -1.0
+var boss_warning := ""
 var instrument_viewport: SubViewport
 var instrument_canvas: CockpitInstruments
 var instrument_panels: Node2D
@@ -147,6 +150,7 @@ func _process(_delta: float) -> void:
 			instrument_canvas.autopilot = autopilot
 			instrument_canvas.transit_seconds = transit_seconds
 			instrument_canvas.boss_fraction = boss_fraction
+			instrument_canvas.boss_warning = boss_warning
 			instrument_canvas.show_target_ranges = show_target_ranges
 			instrument_canvas.radar_contacts = radar_contacts
 			instrument_canvas.scope_range = sensors.range_m
@@ -947,15 +951,30 @@ func _draw() -> void:
 		var left := (width - span) * 0.5
 		draw_rect(Rect2(left - 12, 144, span + 24, 38), Color(0.015, 0.03, 0.05, 0.94))
 		_text(Vector2(left, 170), story_caption, 21, WHITE)
+	elif not radio_caption.is_empty():
+		var caption_width := font.get_string_size(radio_caption, HORIZONTAL_ALIGNMENT_LEFT, -1, 20).x
+		var speaker_width := font.get_string_size(radio_speaker.to_upper(), HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x
+		var span := minf(width * 0.58, maxf(caption_width, speaker_width) + 2)
+		var left := (width - span) * 0.5
+		var top := roundf(height * 0.27)
+		var lines := font.get_multiline_string_size(radio_caption, HORIZONTAL_ALIGNMENT_CENTER, span, 20)
+		draw_rect(Rect2(left - 16, top, span + 32, lines.y + 34), Color("#091019"))
+		draw_string(font, Vector2(left, top + 19), radio_speaker.to_upper(), HORIZONTAL_ALIGNMENT_CENTER, span, 15, AMBER)
+		draw_multiline_string(font, Vector2(left, top + 43), radio_caption, HORIZONTAL_ALIGNMENT_CENTER, span, 20, -1, WHITE)
 	_text(Vector2(width - 260, 170), "%02d  TARGETS DISABLED" % flight.destroyed, 18, CYAN)
 	_text(Vector2(width - 260, 198), "%02d%%  ACCURACY" % int(flight.accuracy()), 18, MUTED)
 	if not flight.training and campaign != null:
 		_text(Vector2(width - 310, 226), "%d CR / STREAK %dX" % [campaign.credits, campaign.combo_multiplier()], 17, AMBER)
 		_text(Vector2(width - 310, 250), "SCORE %d%s" % [campaign.combat_score, " / ASSISTED" if campaign.assisted else ""], 14, MUTED)
+	var focused_module := ""
+	var module_tint := WHITE
 	for contact in contacts:
 		var screen: Vector2 = contact["screen"]
 		var distance: float = contact["distance"]
 		var tint: Color = contact["color"]
+		if contact.has("focused_module"):
+			focused_module = contact.focused_module
+			module_tint = tint
 		var label: String = contact.get("label", "")
 		if not label.is_empty():
 			_text(screen + Vector2(-60, -30), label, 13, tint)
@@ -994,6 +1013,11 @@ func _draw() -> void:
 	for direction in [Vector2.LEFT, Vector2.RIGHT, Vector2.UP, Vector2.DOWN]:
 		draw_line(cursor + direction * 17, cursor + direction * 27, reticle_color, 2, true)
 	draw_circle(cursor, 1.8, WHITE)
+	if not focused_module.is_empty():
+		var label_size := font.get_string_size(focused_module, HORIZONTAL_ALIGNMENT_LEFT, -1, 15)
+		var at := Vector2(clampf(cursor.x - label_size.x * 0.5, 6, width - label_size.x - 6), clampf(cursor.y + 47, 25, height - 10))
+		draw_string_outline(font, at, focused_module, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, 4, Color("#10191f"))
+		_text(at, focused_module, 15, module_tint)
 	if flight.hit_flash > 0.0:
 		for side in [-1, 1]:
 			draw_line(cursor + Vector2(side * 7, -7), cursor + Vector2(side * 3, -3), AMBER, 2)

@@ -3,7 +3,6 @@ render_mode unshaded, cull_disabled, depth_draw_never;
 
 instance uniform float age = 0.0;
 instance uniform float radius = 1.0;
-instance uniform bool organic = false;
 varying flat vec4 seed;
 varying flat float life;
 
@@ -41,14 +40,12 @@ void fragment() {
 	float coverage = 1.0 - smoothstep(0.23, 1.0, d);
 	vec3 c;
 	if (seed.x < 0.25) {
-		vec3 rim = organic ? vec3(0.70,0.024,0.09) : vec3(1.7,0.16,0.024);
-		c = mix(rim, organic ? vec3(1.7,0.6,0.18) : vec3(4.8,2.3,0.54), clamp((1.0-d) * (1.25-life),0.0,1.0));
+		c = mix(vec3(1.7,0.16,0.024), vec3(4.8,2.3,0.54), clamp((1.0-d) * (1.25-life),0.0,1.0));
 	} else if (seed.x < 0.65) {
-		vec3 ash = organic ? vec3(0.15,0.016,0.033) : vec3(0.078,0.075,0.091);
-		c = mix(ash, vec3(0.52,0.26,0.12), (0.4 + 0.16 * detail) * (1.0-life));
+		c = mix(vec3(0.078,0.075,0.091), vec3(0.52,0.26,0.12), (0.4 + 0.16 * detail) * (1.0-life));
 		coverage *= 0.78;
 	} else {
-		c = organic ? vec3(1.4,0.17,0.21) : vec3(4.5,1.6,0.18);
+		c = vec3(4.5,1.6,0.18);
 		coverage = exp(-dot(q,q)*3.4);
 	}
 	ALBEDO = c;
