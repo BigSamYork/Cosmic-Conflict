@@ -246,14 +246,44 @@ func _test_game_sequences() -> void:
 	game._physics_process(1.0 / 30.0)
 	var rotation_after: Quaternion = first_rock.appearance.basis.orthonormalized().get_rotation_quaternion()
 	check(rotation_before.angle_to(rotation_after) < 0.03 and game.flight.impacts == 0, "First active belt frame preserves asteroid orientation and safe entry")
+	game.campaign.phase = "ground"
+	await game._load_phase()
+	game.god_mode = true
+	game.flight.distance = FlightState.SPEED * 90.0
+	game._physics_process(1.0 / 60.0)
+	var approach_battery: GroundTurret
+	for turret: GroundTurret in game.turrets:
+		if turret.travel == 4070: approach_battery = turret
+	check(approach_battery != null, "Next roadside battery is already present before boss entry")
+	if approach_battery != null:
+		approach_battery.receive_hit(1)
+		approach_battery.cooldown = 0.4
+		var remaining_armor := approach_battery.armor
+		var launches := approach_battery.launches
+		game._finish_phase()
+		check(game.turrets.has(approach_battery) and game.targets.has(approach_battery) and approach_battery.armor == remaining_armor and approach_battery.cooldown == 0.4, "Boss handoff preserves the same target, damage and firing clock")
+		for _i in range(30): game._physics_process(1.0 / 60)
+		check(approach_battery.launches == launches + 1, "The carried battery fires on its existing countdown during pursuit")
+		for _i in range(170): game._physics_process(1.0 / 60)
+		check(approach_battery.launches == launches + 2, "Roadside fire repeats at its normal 2.8-second interval")
+		game.flight.distance += 4400
+		game._physics_process(1.0 / 60.0)
+		var regular: bool = game.turrets.size() >= 4 and game.turrets.size() < 9
+		for i in range(1, game.turrets.size()):
+			var last: GroundTurret = game.turrets[i - 1]
+			var next: GroundTurret = game.turrets[i]
+			regular = regular and next.travel - last.travel == 220 and next.lane.x == -last.lane.x and game.targets.has(next)
+		check(regular and not game.targets.has(approach_battery), "Long pursuits keep alternating 220m gaps and retire passed batteries")
 	game.campaign.phase = "ground_boss"
 	await game._load_phase()
+	check(game.turrets.size() > 0 and game.turrets[0].travel == 3850 and game.targets.has(game.turrets[0]), "A resumed boss checkpoint starts on the same road battery grid")
 	game._finish_phase()
 	var ground_handoff := DestructionEffect.DURATION + FlightDirector.ASCENT_DURATION
 	check(game.hud.transit_seconds == ceili(ground_handoff), "Ground victory counts the full breakup and ascent")
 	for tick in range(100):
 		game._physics_process(ground_handoff / 100.0)
 	check(game.mode == game.Mode.FLIGHT and game.campaign.phase == "orbit" and game.flight.elapsed == 0, "Ground victory hands off to fresh orbital gameplay after the climb")
+	check(game.turrets.is_empty(), "Roadside batteries do not follow the pilot into orbit")
 	DirAccess.remove_absolute(save_path)
 	game.queue_free()
 	await process_frame

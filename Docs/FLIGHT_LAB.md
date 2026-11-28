@@ -663,6 +663,9 @@ Developer assistance remains marked for the entire operation, including later to
   pass them. The ship pulls up above the belt, levels toward Astra Station, and
   automatically docks. The station is already present during the climb; the
   field is not replaced by a separate station scene.
+- **Roadside turrets during pursuit:** On all six planets, ground turrets continue
+  alternating sides every 220 meters during the boss fight, with the same warning
+  and firing cadence as on approach. They stop appearing when the pull-up begins.
 - **Visible boss missile batteries:** the ground boss has four tracking turrets,
   and the orbital boss has six. Their launch ports face the pilot and warning
   lights precede missiles. Destroy a turret to remove it and stop its fire.
