@@ -64,7 +64,7 @@ var boarding_lines: Dictionary = {}
 var story_speakers := {"lark": "Lark", "attendant": "Station attendant"}
 var playback_available: bool = false
 
-func _ready() -> void:
+func _init() -> void:
 	var manifest: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://assets/voice/boarding.json"))
 	for line: Dictionary in manifest.cues: boarding_lines[line.id] = line
 	var rescue_book: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://assets/voice/rescues.json"))
@@ -72,6 +72,8 @@ func _ready() -> void:
 	for line: Dictionary in rescue_book.cues:
 		line.folder = "rescues"
 		boarding_lines[line.id] = line
+
+func _ready() -> void:
 	rng.randomize()
 	playback_available = DisplayServer.get_name() != "headless"
 	var error: String = _load_catalog()
