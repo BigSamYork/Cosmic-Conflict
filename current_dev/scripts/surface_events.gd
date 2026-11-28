@@ -47,6 +47,8 @@ func advance(game, delta: float, previous: Vector3, pilot: Vector3) -> void:
 	if delta <= 0:
 		return
 	if effect == null:
+		if game.campaign.sector == "xylo" and game.flight.distance < XyloArt.SERPENT_TRAVEL + 60.0 and game.flight.distance + game.flight.speed * CLAW.LAND_AT >= XyloArt.SERPENT_TRAVEL - BurrowSerpent.APPROACH:
+			return # Keep the pilot free to aim during the serpent encounter.
 		delay -= delta
 		if delay > 0:
 			return

@@ -9,7 +9,7 @@ static var spray_material := ShaderMaterial.new()
 var age := 0.0
 
 static func surface_for(target: Node3D) -> Surface:
-	if target is EggShip or ((target is BossPart or target is PirateSkirmisher or target is EnemyMissile or target is RadarDish) and target.biological):
+	if target is BurrowEye or target is EggShip or ((target is BossPart or target is PirateSkirmisher or target is EnemyMissile or target is RadarDish) and target.biological):
 		return Surface.FLESH
 	if (target is EnemyFighter or target is GroundTurret or target is DestructibleTower) and target.sector == "xylo":
 		return Surface.FLESH

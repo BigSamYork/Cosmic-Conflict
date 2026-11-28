@@ -5,6 +5,8 @@ const LEAF := Color("#88bf45")
 const ACID := Color("#d0df45")
 const SHELL := Color("#83b86b")
 const DARK := Color("#173220")
+const SERPENT_TRAVEL := 824.0
+const SERPENT_BANK := 15.0
 static var sedge_mesh: ArrayMesh
 static var sedge_material := ShaderMaterial.new()
 
@@ -101,6 +103,7 @@ static func terrain_chunk(start: float, branching: bool = false) -> Node3D:
 	if cached != null:
 		return cached
 	var terrain := GeometryBatch.new()
+	var turf := GeometryBatch.new()
 	var scenery: Array[Transform3D] = []
 	for row in range(8):
 		var travel: float = start + row * 16
@@ -110,7 +113,11 @@ static func terrain_chunk(start: float, branching: bool = false) -> Node3D:
 			var b: Vector3 = floor_point(x + 10, travel)
 			var c: Vector3 = floor_point(x + 10, travel + 16)
 			var d: Vector3 = floor_point(x, travel + 16)
-			terrain.surface(PackedVector3Array([a, b, c, d]), PackedInt32Array([0, 1, 2, 0, 2, 3]), Color.WHITE)
+			var corners := PackedVector3Array([a, b, c, d])
+			if travel + 8.0 == SERPENT_TRAVEL and x + 5.0 == SERPENT_BANK:
+				_burrow_cell(terrain, turf, corners)
+			else:
+				terrain.surface(corners, PackedInt32Array([0, 1, 2, 0, 2, 3]), Color.WHITE)
 	for i in range(6):
 		var travel: float = start + 12 + i * 19
 		var side: float = -1 if i % 2 == 0 else 1
@@ -119,8 +126,32 @@ static func terrain_chunk(start: float, branching: bool = false) -> Node3D:
 			var height := 50 + posmod(int(start / 128) * 7 + i * 13, 35)
 			scenery.append(GroundArt.placement(floor_point(x, travel), Vector3(1, height / 48.0, 1), travel * 0.17))
 	var chunk := GroundArt.finish_chunk(Node3D.new(), terrain, scenery, "xylo", start, branching)
+	if not turf.vertices.is_empty():
+		var normals := PackedVector3Array()
+		normals.resize(turf.vertices.size())
+		normals.fill(Vector3.UP)
+		var cap := VectorArt.solid(turf.vertices, turf.indices, Color.WHITE, turf.face_colors, normals)
+		cap.name = "UnbrokenTurf"
+		cap.material_override = GroundArt.materials["xylo"]
+		chunk.add_child(cap)
 	_add_sedge_banks(chunk, start, branching)
 	return VectorArt.remember_model(key, chunk) if start < VectorArt.TERRAIN_CACHE_CHUNKS * VectorArt.CHUNK_LENGTH else chunk
+
+static func _burrow_cell(terrain: GeometryBatch, cap: GeometryBatch, corners: PackedVector3Array) -> void:
+	var center := floor_point(SERPENT_BANK, SERPENT_TRAVEL)
+	var outer := PackedVector3Array()
+	var inner := PackedVector3Array()
+	for edge in 4:
+		for step in 8:
+			var p := corners[edge].lerp(corners[(edge + 1) % 4], step / 8.0)
+			var dir := center.direction_to(p)
+			var angle := atan2(dir.z, dir.x)
+			outer.append(p)
+			inner.append(center + dir * (4.45 + 0.24 * sin(angle * 3.0) + 0.15 * cos(angle * 7.0)))
+	for i in outer.size():
+		var j := (i + 1) % outer.size()
+		terrain.surface(PackedVector3Array([outer[i], outer[j], inner[j], inner[i]]), PackedInt32Array([0,1,2,0,2,3]), Color.WHITE)
+		cap.surface(PackedVector3Array([center, inner[i], inner[j]]), PackedInt32Array([0,1,2]), Color.WHITE)
 
 static func _add_sedge_banks(chunk: Node3D, start: float, branching: bool) -> void:
 	if sedge_mesh == null:
