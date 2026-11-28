@@ -22,7 +22,6 @@ var credit_hoops := preload("res://scripts/credit_hoops.gd").new()
 const RescueConvoy := preload("res://scripts/rescue_convoy.gd")
 var rescue_convoy: RescueConvoy
 var orbit_story_beat := 0
-var knock_clip: AudioStreamWAV
 var homecoming_clock := -1.0
 var homecoming_knocks := 0
 const Piledriver := preload("res://scripts/kharon_piledriver.gd")
@@ -256,7 +255,7 @@ func _ready() -> void:
 			command.pressed = true
 			_unhandled_input(command))
 	hud.flight = flight
-	hud.credits_text = "Cosmic Conflict v%s\nCockpit artwork supplied by the project owner.\nVoices of Lark and Captain Tomas Vale rendered with Chatterbox-Turbo by Resemble AI.\n\n" % ProjectSettings.get_setting("application/config/version") + FileAccess.get_file_as_string("res://assets/music/credits.txt") + "\n\n" + Engine.get_license_text() + "\n\n" + JSON.stringify(Engine.get_copyright_info(), "\t") + "\n\n" + JSON.stringify(Engine.get_license_info(), "\t")
+	hud.credits_text = "Cosmic Conflict v%s\nCockpit artwork supplied by the project owner.\nVoices of Lark and Captain Tomas Vale rendered with Chatterbox-Turbo by Resemble AI.\nGenerated sound effects rendered with MOSS-SoundEffect v2.0 by OpenMOSS.\n\n" % ProjectSettings.get_setting("application/config/version") + FileAccess.get_file_as_string("res://assets/music/credits.txt") + "\n\n" + Engine.get_license_text() + "\n\n" + JSON.stringify(Engine.get_copyright_info(), "\t") + "\n\n" + JSON.stringify(Engine.get_license_info(), "\t")
 	hud.launch_requested.connect(start_flight)
 	hud.resume_requested.connect(resume_flight)
 	hud.title_requested.connect(show_title)
@@ -478,6 +477,7 @@ func _build_world(training: bool = true) -> void:
 		world.transform = director.ground_course
 		ground_branch = GroundBranch.new()
 		ground_branch.boarding_cue.connect(_boarding_cue)
+		ground_branch.sound_requested.connect(sound.play_cue)
 		ground_branch.hull_knock.connect(_play_story_knock)
 		ground_branch.battery_missile.connect(_launch_missile)
 		ground_branch.sector = sector
@@ -538,7 +538,10 @@ func _build_world(training: bool = true) -> void:
 				var ice: FallingIce = RuinFall.new() if sector == "kharon" else FallingIce.new()
 				ice.travel = 560 + i * 390
 				ice.lane.x = -8.0 if i % 2 == 0 else 8.0
-				ice.landed.connect(func(chunk: FallingIce) -> void: _spawn_breakup(chunk, true))
+				ice.landed.connect(func(chunk: FallingIce) -> void:
+					_spawn_breakup(chunk, true)
+					if camera.global_position.distance_squared_to(chunk.global_position) < 160.0 * 160.0:
+						sound.play_cue("ruin_landing" if chunk is RuinFall else "ice_landing"))
 				var support := ice.support_model()
 				world.add_child(support)
 				FleetArt.add_pilot_hull(support)
@@ -726,6 +729,7 @@ func pause_flight() -> void:
 	sound.pause_sounds(true)
 	computer_voice.pause_speech(true)
 	hud.show_menu("pause", settings)
+	SynthAudio.play_ui(get_tree(), "pause_open")
 
 func resume_flight() -> void:
 	if mode != Mode.PAUSE:
@@ -736,6 +740,7 @@ func resume_flight() -> void:
 	sound.pause_sounds(false)
 	computer_voice.pause_speech(false)
 	hud.show_menu("flight", settings)
+	SynthAudio.play_ui(get_tree(), "pause_resume")
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_OUT and not automated_session and automation.is_empty():
@@ -780,6 +785,7 @@ func _unhandled_input(event: InputEvent) -> void:
 				campaign.power_mode = power
 				hud.show_message("REACTOR POWER / " + power.to_upper())
 				if changed:
+					sound.play_cue("avionics_switch")
 					computer_voice.cancel_group("reactor")
 					_voice_event("reactor_" + power)
 				return
@@ -803,19 +809,26 @@ func _unhandled_input(event: InputEvent) -> void:
 		deploy_countermeasures()
 	elif event.is_action_pressed("barrel_roll") and mode == Mode.FLIGHT:
 		var error := flight.request_barrel_roll()
+		sound.play_cue("barrel_roll" if error.is_empty() else "systems_denied")
 		hud.show_message(error if not error.is_empty() else "BARREL ROLL / EVASION ACTIVE")
 	elif event.is_action_pressed("boss_intel") and mode == Mode.FLIGHT and boss != null and not boss.defeated():
+		sound.play_cue("radar_ping")
 		hud.show_message(boss.objective())
 		_voice_event("recon_" + boss.sector + ("_orbit" if boss.orbital else "_ground"))
 	elif event.is_action_pressed("radar_range") and mode == Mode.FLIGHT:
 		hud.sensors.cycle_range()
+		sound.play_cue("radar_ping")
 	elif event.is_action_pressed("heat_governor") and mode == Mode.FLIGHT:
 		flight.heat_governor = not flight.heat_governor
+		sound.play_cue("avionics_switch")
 		hud.show_message("THERMAL GOVERNOR / AUTOMATIC BURSTS" if flight.heat_governor else "THERMAL GOVERNOR / MANUAL FIRE")
 	elif event.is_action_pressed("shield_surge") and mode == Mode.FLIGHT:
+		var shields_before := flight.shields
 		hud.show_message(flight.request_shield_surge())
+		sound.play_cue("shield_surge" if flight.shields > shields_before else "systems_denied")
 	elif event.is_action_pressed("evade") and mode == Mode.FLIGHT:
 		var error: String = flight.request_evasion()
+		sound.play_cue("evade_shift" if error.is_empty() else "systems_denied")
 		hud.show_message(error if not error.is_empty() else "EVASIVE SHIFT / PROJECTILE DEFLECTION ACTIVE")
 	elif event is InputEventMouseMotion and mode == Mode.FLIGHT and automation.is_empty():
 		cursor = event.position.clamp(Vector2.ZERO, get_viewport().get_visible_rect().size)
@@ -848,22 +861,28 @@ func _physics_process(delta: float) -> void:
 	var volleys: int = flight.advance(delta, held and fire_armed)
 	_advance_rotors(delta, held and fire_armed and flight.overheat_remaining <= 0.0)
 	if previous_vent > 0 and flight.overheat_remaining == 0:
+		sound.play_cue("vent_ready")
 		_voice_event("cooling")
 	if previous_recharge > 0 and flight.recharge_delay == 0 and flight.shields > previous_shields:
+		sound.play_cue("shield_regen")
 		_voice_event("shields_regen")
 	var shots: int = volleys * flight.primary_samples()
 	if flight.overheat_events > previous_overheats:
 		hud.show_message("PRIMARY OVERHEATED / TWO-SECOND VENT CYCLE")
-		sound.play_sound(sound.hit)
+		sound.play_cue("vent_overheat")
 	if is_campaign:
 		campaign.stats["shots"] += shots
 		if ground_branch != null and campaign.phase == "ground":
 			if ground_branch.route.advance(flight.distance, flight.offset.x):
 				hud.show_message("HAZARD ROUTE SELECTED / SUPPLIES AHEAD" if ground_branch.route.selected else "SAFE ROUTE SELECTED")
+				sound.play_cue("patrol_gate")
 				_voice_route(ground_branch.route.selected)
 		if mission_world != null:
 			mission_world.advance(delta, director.frame)
+		var had_lock := is_instance_valid(director.tracked) and not director.tracked.destroyed and not director.tracked.expired
 		director.advance(campaign.phase, delta, flight.distance, flight.elapsed, targets, flight.aim, flight.precision_hold)
+		if not had_lock and is_instance_valid(director.tracked):
+			sound.play_cue("radar_ping")
 		if campaign.first_rescue():
 			_advance_rescue_flight(delta)
 	if not is_campaign or campaign.phase.begins_with("ground"):
@@ -896,9 +915,13 @@ func _physics_process(delta: float) -> void:
 	for tower in towers:
 		tower.advance(delta)
 	if boss != null:
+		var core_was_exposed := boss.core.unlocked
 		boss.advance(delta, camera.position, (camera.position - previous) / delta)
+		if boss.core.unlocked and not core_was_exposed and not boss.defeated():
+			sound.play_cue("boss_breach")
 		var cloaked: bool = boss.cloak != null and boss.cloak.active() and boss.parts[0].unlocked and not boss.defeated()
 		if cloaked and not voice_nyx_cloaked:
+			sound.play_cue("cloak_engage")
 			_voice_event("nyx_cloak")
 		voice_nyx_cloaked = cloaked
 	_check_obstacles(previous, camera.position, canyon_contact)
@@ -906,7 +929,7 @@ func _physics_process(delta: float) -> void:
 		var collected := credit_hoops.advance(delta, to_global(previous), camera.global_position, campaign, flight)
 		if collected > 0:
 			hud.show_message("CREDIT HOOP / +%d CR" % collected)
-			sound.play_sound(sound.hit)
+			sound.play_cue("credit_%d" % collected)
 	_advance_missiles(delta, previous, camera.position)
 	if is_campaign and flight.hull <= 0.0:
 		flight.shots -= shots
@@ -939,7 +962,8 @@ func _physics_process(delta: float) -> void:
 			_solid_contact(ice.global_position.direction_to(camera.position), "FALLING RUIN" if ice is RuinFall else "FALLING ICE", FallingIce.DAMAGE)
 	for gate in laser_gates:
 		if gate.advance(delta, previous, camera.position, flight.collision_radius):
-			_apply_pilot_damage("CITY LASER GATE", CityLaserGate.DAMAGE)
+			if _apply_pilot_damage("CITY LASER GATE", CityLaserGate.DAMAGE):
+				sound.play_cue("tripwire_contact")
 	if city_traffic != null:
 		city_traffic.advance(delta, flight.distance)
 	if xylo_rovers != null:
@@ -948,9 +972,11 @@ func _physics_process(delta: float) -> void:
 		if field.advance(delta, previous, camera.position):
 			if field.kind == XyloField.Kind.ACID:
 				if _apply_pilot_damage("CORROSIVE GEYSER", XyloField.ACID_DAMAGE):
+					sound.play_cue("acid_contact")
 					_voice_event("xylo_acid")
 			elif flight.apply_spores():
 				hud.show_message("SPORE STATIC / RADAR ONLY / FLIGHT CONTROLS UNAFFECTED")
+				sound.play_cue("spore_static")
 				_voice_event("xylo_spores")
 	if ground_branch != null and is_campaign and campaign.phase == "ground":
 		for message in ground_branch.advance(delta, to_global(previous), camera.global_position, campaign, flight):
@@ -958,7 +984,7 @@ func _physics_process(delta: float) -> void:
 		hud.objective = ground_branch.objective(flight.distance)
 	if mission_world != null and mission_world.advance_webs(delta, previous, camera.position, flight.collision_radius):
 		if _apply_pilot_damage("LASER TRIPWIRE", LaserWeb.DAMAGE):
-			sound.play_sound(sound.impact)
+			sound.play_cue("tripwire_contact")
 	_update_tachyon(held and fire_armed and flight.hull > 0 and flight.overheat_remaining <= 0)
 	hud.cursor = cursor
 	_update_contacts()
@@ -978,6 +1004,7 @@ func _physics_process(delta: float) -> void:
 		_set_pointer(false)
 		sound.pause_sounds(true)
 		hud.show_menu("complete", settings)
+		SynthAudio.play_ui(get_tree(), "ground_victory")
 	physics_cost_ms = float(Time.get_ticks_usec() - physics_start) / 1000.0
 
 func _update_camera(apply_grip: bool = true) -> void:
@@ -1065,10 +1092,8 @@ func _solid_contact(normal: Vector3, reason: String, damage: float = 18.0, separ
 	if is_campaign and campaign.phase == "orbit":
 		director.contact_turn = Vector2(-flight.contact_direction.x * 0.18, flight.contact_direction.y * 0.15)
 	_update_camera()
-	if _apply_pilot_damage(reason, damage, true):
-		sound.play_sound(sound.impact)
-		if not automation.is_empty():
-			print("AUTOMATION_IMPACT phase=%s distance=%.2f offset=%s" % [campaign.phase if is_campaign else "training", flight.distance, flight.offset])
+	if _apply_pilot_damage(reason, damage, true) and not automation.is_empty():
+		print("AUTOMATION_IMPACT phase=%s distance=%.2f offset=%s" % [campaign.phase if is_campaign else "training", flight.distance, flight.offset])
 
 func _apply_pilot_damage(reason: String, damage: float = 18.0, direct_hull: bool = false) -> bool:
 	if god_mode:
@@ -1077,6 +1102,13 @@ func _apply_pilot_damage(reason: String, damage: float = 18.0, direct_hull: bool
 	var previous_shields: float = flight.shields
 	var previous_multiplier: int = campaign.combo_multiplier() if is_campaign else 1
 	var damaged: bool = flight.impact(reason, damage, direct_hull)
+	if damaged:
+		if previous_shields > 0 and flight.shields <= 0:
+			sound.play_cue("shield_empty")
+		elif flight.hull < previous_hull or direct_hull:
+			sound.play_cue("hull_impact")
+		else:
+			sound.play_cue("shield_hit")
 	if damaged and flight.fractured_panes(flight.hull) > flight.fractured_panes(previous_hull):
 		sound.play_glass_break()
 	if not automation.is_empty():
@@ -1085,9 +1117,11 @@ func _apply_pilot_damage(reason: String, damage: float = 18.0, direct_hull: bool
 		campaign.hull_damage += previous_hull - flight.hull
 		campaign.break_combo()
 		if previous_multiplier > 1:
+			sound.play_cue("streak_lost")
 			hud.show_message("HULL DAMAGE / COMBAT STREAK RESET")
 	if damaged and is_campaign and flight.hull > 0:
 		if flight.hull <= flight.max_hull * 0.25 and previous_hull > flight.max_hull * 0.25:
+			sound.play_cue("hull_critical")
 			_voice_event("hull_critical")
 		elif previous_shields > 0 and flight.shields <= 0:
 			_voice_event("shields_empty")
@@ -1108,8 +1142,7 @@ func _boarding_cue(id: String) -> void:
 		computer_voice.say_boarding(id)
 
 func _play_story_knock() -> void:
-	if knock_clip == null: knock_clip = preload("res://scripts/opening.gd")._bulkhead_knock()
-	sound.play_sound(knock_clip)
+	sound.play_cue("bulkhead_knock")
 
 func _advance_rescue_flight(delta: float) -> void:
 	if is_instance_valid(rescue_convoy):
@@ -1133,6 +1166,7 @@ func _voice_route(hard: bool) -> bool:
 
 func _apply_frost() -> void:
 	if flight.apply_frost():
+		sound.play_cue("frost_contact")
 		if not automation.is_empty():
 			automation_frost_events += 1
 		hud.show_message("FROST / STEERING DAMPED FOR 2s / SHIFT REMAINS AVAILABLE" if flight.frost_slowdown else "FROST IMPACT / STEERING UNCHANGED")
@@ -1146,7 +1180,7 @@ func fire_primary() -> void:
 		weapon_lamp.light_energy = 2.5 if settings["reduced_effects"] else 5.0
 	if flight.primary_level == 2:
 		_trace_tachyon(true)
-		sound.play_sound(sound.pulse)
+		sound.play_cue("gun_tachyon")
 		return
 	var origin: Vector3 = camera.project_ray_origin(cursor)
 	var direction: Vector3 = camera.project_ray_normal(cursor)
@@ -1167,7 +1201,7 @@ func fire_primary() -> void:
 			bolt.impacted.connect(func(hit: Dictionary) -> void: _strike(hit, 1))
 			add_child(bolt)
 			plasma_bolts.append(bolt)
-		sound.play_sound(sound.pulse)
+		sound.play_cue("gun_quad")
 		return
 	var strokes := PackedVector3Array()
 	for muzzle in origins:
@@ -1176,7 +1210,7 @@ func fire_primary() -> void:
 	var beam := VectorArt.lines(strokes, Color("#ffc284"))
 	add_child(beam)
 	beams.append({"node": beam, "remaining": 0.07})
-	sound.play_sound(sound.pulse)
+	sound.play_cue("gun_pulse")
 
 func _primary_origins() -> PackedVector3Array:
 	var origins := PackedVector3Array()
@@ -1299,23 +1333,28 @@ func _strike(result: Dictionary, damage: int, secondary_hit: bool = false, recor
 		_spawn_breakup(collider, killed)
 		_confirm_impact(result, previous_armor, killed)
 		if killed:
+			sound.play_cue("tracking_jam")
 			hud.show_message("SIDE GATE EMITTER DISABLED / CENTER LANE REMAINS CLEAR")
 		return true
 	if collider is RangeTarget and not collider.destroyed:
 		if (collider is EnemyFighter or collider is PirateSkirmisher) and collider.expired:
 			return false
 		if collider is BossPart and not collider.unlocked:
+			sound.play_cue("shield_block")
 			hud.show_message(boss.objective() if boss != null else "TARGET SHIELDED")
 			return false
 		if collider is Asteroid and collider.indestructible:
+			sound.play_contact(ImpactSpray.Surface.STONE)
 			hud.show_message("IRON-CORE ASTEROID / EVADE, CANNOT BE DESTROYED")
 			return false
 		if collider is EnemyFighter and collider.has_directional_shield():
 			if secondary_hit:
 				collider.stun()
 				stunned_gunships += 1
+				sound.play_cue("tracking_jam")
 				hud.show_message("GUNSHIP STUNNED / SHIELD DISABLED")
 			elif collider.shield_blocks(camera.global_position):
+				sound.play_cue("shield_block")
 				collider.flash_shield()
 				blocked_primary_hits += 1
 				hud.show_message("DIRECTIONAL SHIELD / FLANK, WAIT FOR BANK, OR USE SECONDARY")
@@ -1325,14 +1364,21 @@ func _strike(result: Dictionary, damage: int, secondary_hit: bool = false, recor
 		var applied_damage: int = maxi(damage, collider.armor) if one_hit_kill and is_campaign else damage
 		if collider is EggShip and collider.protected_brood and is_campaign and campaign.rescue_method != "detour":
 			campaign.rescue_method = "detour"
+			sound.play_cue("hazard_alert")
 			hud.objective = "FOLLOW THE CLINIC BOAT / OUTSIDE PASSAGE"
 			_boarding_cue("xylo_detour")
 		var previous_armor: int = collider.armor
+		var had_skipped: bool = collider is EnemyFighter and collider.skipped
+		var was_interrupted: bool = collider is BossTurret and collider.interrupted
 		var killed: bool
 		if collider is DestructibleTower:
 			killed = collider.receive_hit_at(applied_damage, at, result.get("direction", camera.global_position.direction_to(at)))
 		else:
 			killed = collider.receive_hit(applied_damage)
+		if collider is EnemyFighter and collider.skipped and not had_skipped:
+			sound.play_cue("cloak_engage")
+		elif collider is BossTurret and collider.interrupted and not was_interrupted:
+			sound.play_cue("tracking_jam")
 		_confirm_impact(result, previous_armor, killed)
 		if not collider is DestructibleTower and (killed or ImpactSpray.surface_for(collider) != ImpactSpray.Surface.FLESH):
 			_spawn_breakup(collider, killed)
@@ -1358,6 +1404,7 @@ func _strike(result: Dictionary, damage: int, secondary_hit: bool = false, recor
 						_spawn_mineral(collider.global_position, true)
 				elif collider is WebNode:
 					campaign.stats["webs"] += 1
+					sound.play_cue("tracking_jam")
 					hud.show_message("LASER WEB DISARMED")
 				elif collider is RadarDish:
 					campaign.stats["radars"] += 1
@@ -1366,6 +1413,7 @@ func _strike(result: Dictionary, damage: int, secondary_hit: bool = false, recor
 						if not turret.destroyed and turret.travel >= collider.travel and turret.travel <= collider.travel + RadarDish.JAM_RANGE:
 							turret.jam_tracking(RadarDish.JAM_DURATION)
 							jammed += 1
+					sound.play_cue("tracking_jam")
 					hud.show_message("RADAR DESTROYED / %d DOWNSTREAM TURRETS JAMMED FOR 12s" % jammed)
 				elif collider is PirateSkirmisher:
 					campaign.stats["guardians" if collider.biological else "pirates"] += 1
@@ -1377,6 +1425,7 @@ func _strike(result: Dictionary, damage: int, secondary_hit: bool = false, recor
 						_award_combat_kill(120)
 						var bounty: int = boss.recon_bounty()
 						if bounty > 0:
+							sound.play_cue("patrol_survey")
 							hud.show_message("INTACT TRACKING DATA RECOVERED")
 						campaign.stats["bosses"] += 1
 						_start_boss_destruction()
@@ -1470,6 +1519,7 @@ func _award_combat_kill(base_credits: int) -> void:
 	campaign.record_combat_kill(base_credits)
 	if campaign.combo_multiplier() > previous_multiplier:
 		hud.show_message("COMBAT STREAK %dX / PROTECT YOUR HULL" % campaign.combo_multiplier())
+		sound.play_cue("streak_gain")
 		_voice_event("streak_ten" if campaign.combo_multiplier() == 4 else "streak_gain")
 
 func _resolve_asteroid(rock: Asteroid, from_blast: bool) -> void:
@@ -1487,6 +1537,7 @@ func _resolve_asteroid(rock: Asteroid, from_blast: bool) -> void:
 		blast.detonated.connect(_detonate_volatile)
 		add_child(blast)
 		volatile_blasts.append(blast)
+		sound.play_cue("volatile_ignite")
 		hud.show_message("VOLATILE CORE IGNITED / CLEAR THE BLAST ZONE")
 
 func _spawn_mineral(at: Vector3, biological: bool = false) -> void:
@@ -1506,8 +1557,7 @@ func _detonate_volatile(blast: VolatileBlast) -> void:
 	if not blast.pilot_checked:
 		blast.pilot_checked = true
 		if camera.global_position.distance_to(blast.global_position) <= VolatileBlast.PILOT_RADIUS:
-			if _apply_pilot_damage("VOLATILE BLAST", VolatileBlast.DAMAGE):
-				sound.play_sound(sound.impact)
+			_apply_pilot_damage("VOLATILE BLAST", VolatileBlast.DAMAGE)
 	for target in targets.duplicate():
 		if not target is Asteroid or target.destroyed or target.indestructible:
 			continue
@@ -1532,8 +1582,8 @@ func _advance_salvage(delta: float, previous_pilot: Vector3, pilot: Vector3) -> 
 		if pickup.advance(delta, previous_pilot, pilot, is_campaign and campaign.tractor):
 			if is_campaign:
 				campaign.collect_mineral()
-				hud.show_message("MINERAL CORE RECOVERED")
-				sound.play_sound(sound.pulse)
+				hud.show_message("NUTRIENT CARGO RECOVERED" if pickup.biological else "MINERAL CORE RECOVERED")
+				sound.play_cue("salvage_nutrient" if pickup.biological else "salvage_mineral")
 		if not pickup.active:
 			pickup.queue_free()
 			mineral_pickups.remove_at(i)
@@ -1557,24 +1607,31 @@ func _start_thermal_sweep(emitter: ThermalEmitter) -> void:
 	sweep.aim = Basis.looking_at((camera.global_position - emitter.global_position).normalized(), Vector3.UP)
 	add_child(sweep)
 	thermal_sweeps.append(sweep)
+	sound.play_cue("thermal_charge")
 	hud.show_message("THERMAL SWEEP CHARGING / DODGE VERTICALLY OR DESTROY THE PROJECTOR")
 
 func _advance_thermal_hazards(delta: float, previous_pilot: Vector3, pilot: Vector3) -> void:
 	var extra_heat: float = 0.0
 	for vent in heat_vents:
+		var was_erupting := vent.erupting(vent.age)
 		extra_heat += vent.advance(delta, previous_pilot, pilot)
+		if not was_erupting and vent.erupting(vent.age) and vent.global_position.distance_squared_to(pilot) < 100.0 * 100.0:
+			sound.play_cue("vent_eruption")
 	for i in range(thermal_sweeps.size() - 1, -1, -1):
 		var sweep: ThermalSweep = thermal_sweeps[i]
+		var was_charging := sweep.age < ThermalSweep.WARNING
 		if sweep.advance(delta, previous_pilot, pilot, flight.collision_radius):
 			extra_heat += ThermalSweep.HEAT
 			if _apply_pilot_damage("THERMAL SWEEP", ThermalSweep.DAMAGE):
-				sound.play_sound(sound.impact)
+				sound.play_cue("thermal_contact")
+		if was_charging and sweep.beam.visible and not sweep.complete():
+			sound.play_cue("thermal_discharge")
 		if sweep.complete():
 			sweep.queue_free()
 			thermal_sweeps.remove_at(i)
 	if extra_heat > 0.0 and flight.add_external_heat(extra_heat):
 		hud.show_message("EXTERNAL HEAT OVERLOAD / TWO-SECOND VENT CYCLE")
-		sound.play_sound(sound.hit)
+		sound.play_cue("vent_overheat")
 
 func _spawn_breakup(source: Node3D, destroyed: bool) -> void:
 	if source is Asteroid:
@@ -1694,7 +1751,7 @@ func _start_boss_destruction() -> void:
 			sound.play_destruction(ImpactSpray.surface_for(boss.core)))
 	add_child(effect)
 	explosions.append(effect)
-	sound.play_sound(sound.impact)
+	sound.play_cue("boss_collapse")
 
 func _advance_storm(delta: float, previous: Vector3) -> void:
 	var glow := 0.0
@@ -1775,7 +1832,7 @@ func _storm_blast(at: Vector3, radius: float, target: Node3D = null) -> void:
 	if target != null:
 		sound.play_destruction(ImpactSpray.surface_for(target))
 	else:
-		sound.play_sound(sound.impact)
+		sound.play_thunder()
 
 func _tower_fractured(tower: DestructibleTower) -> void:
 	var effect := BreakupEffect.new()
@@ -1789,7 +1846,7 @@ func _tower_fractured(tower: DestructibleTower) -> void:
 	blast.size = 4.0
 	add_child(blast)
 	explosions.append(blast)
-	sound.play_sound(sound.impact)
+	sound.play_cue("tower_fracture")
 
 func _advance_explosions(delta: float) -> void:
 	combat_lights.advance(delta)
@@ -1801,11 +1858,13 @@ func _advance_explosions(delta: float) -> void:
 
 func fire_secondary() -> void:
 	if not is_campaign or not campaign.owns_secondary(campaign.selected_secondary):
+		sound.play_cue("systems_denied")
 		hud.show_message("NO SECONDARY STATION / FIT ONE AT ASTRA MARKET")
 		return
 	var weapon: String = campaign.selected_secondary
 	var cost: int = CampaignState.SECONDARIES[weapon]["ammo"]
 	if not infinite_ammo and flight.ammo < cost:
+		sound.play_cue("systems_denied")
 		hud.show_message("INSUFFICIENT ORDNANCE / %s NEEDS %d" % [CampaignState.SECONDARIES[weapon]["name"].to_upper(), cost])
 		if flight.ammo == 0:
 			_voice_event("ordnance_empty")
@@ -1816,10 +1875,12 @@ func fire_secondary() -> void:
 	if weapon == "swarm":
 		locks = _swarm_targets()
 	if weapon == "swarm" and locks.is_empty():
+		sound.play_cue("systems_denied")
 		hud.show_message("NO CLEAR SWARM LOCK / FACE AN ENEMY")
 		return
 	var projectiles: int = 3 if weapon == "swarm" else 0 if weapon == "emp" else 1
 	if torpedoes.size() + projectiles > MAX_PLAYER_ORDNANCE:
+		sound.play_cue("systems_denied")
 		hud.show_message("SECONDARY CHANNEL BUSY / WAIT FOR ACTIVE ROUNDS")
 		return
 	if not infinite_ammo:
@@ -1841,12 +1902,14 @@ func fire_secondary() -> void:
 				torpedo.homing_target = locks[i % locks.size()]
 				torpedo.direction = (torpedo.homing_target.aim_point() - torpedo.position).normalized()
 			var damage: int = 3 if weapon == "swarm" else 8
-			torpedo.impacted.connect(func(result: Dictionary) -> void: _strike(result, damage, true))
+			torpedo.impacted.connect(func(result: Dictionary) -> void:
+				_strike(result, damage, true)
+				sound.play_cue("torpedo_burst"))
 			add_child(torpedo)
 			torpedoes.append(torpedo)
 		if weapon == "swarm":
 			hud.show_message("SWARM AWAY / %d TARGET LOCKS / -2 ORDNANCE" % mini(3, locks.size()))
-	sound.play_sound(sound.impact)
+	sound.play_cue("secondary_" + weapon)
 	_voice_event("ordnance_" + weapon)
 
 func _secondary_visible(at: Vector3, radius: float, permitted_body: CollisionObject3D = null) -> bool:
@@ -1941,15 +2004,19 @@ func _advance_emp_pulses(delta: float) -> void:
 
 func deploy_countermeasures() -> void:
 	if mode != Mode.FLIGHT or not is_campaign:
+		sound.play_cue("systems_denied")
 		hud.show_message("COUNTERMEASURES REQUIRE ACTIVE MISSION FLIGHT")
 		return
 	if not campaign.countermeasures:
+		sound.play_cue("systems_denied")
 		hud.show_message("NO COUNTERMEASURE POD / FIT ONE AT ASTRA MARKET")
 		return
 	if campaign.flares <= 0:
+		sound.play_cue("systems_denied")
 		hud.show_message("FLARE POD EMPTY / RELOAD AT ASTRA MARKET")
 		return
 	if flight.countermeasure_cooldown > 0:
+		sound.play_cue("systems_denied")
 		hud.show_message("COUNTERMEASURES RECHARGING / %.1fs" % flight.countermeasure_cooldown)
 		_voice_event("flare_cooldown")
 		return
@@ -1961,6 +2028,7 @@ func deploy_countermeasures() -> void:
 	threats.sort_custom(func(a: EnemyMissile, b: EnemyMissile) -> bool:
 		return camera.global_position.distance_squared_to(a.global_position) < camera.global_position.distance_squared_to(b.global_position))
 	if threats.is_empty():
+		sound.play_cue("systems_denied")
 		hud.show_message("NO NEARBY MISSILE LOCKS / FLARE CHARGE HELD")
 		return
 	var diverted: int = 0
@@ -1976,7 +2044,7 @@ func deploy_countermeasures() -> void:
 	cloud.global_transform = camera.global_transform
 	cloud.carrier_velocity = -camera.global_basis.z * flight.speed
 	flare_clouds.append(cloud)
-	sound.play_sound(sound.hit)
+	sound.play_cue("flare_deploy")
 	hud.show_message("CHAFF / FLARES DEPLOYED / %d MISSILES DIVERTED / %d CHARGES LEFT" % [diverted, campaign.flares])
 	if diverted > 0:
 		_voice_event("flare_deployed")
@@ -2020,6 +2088,7 @@ func _clear_beams() -> void:
 
 func _fire_enemy_laser(fighter: EnemyFighter) -> void:
 	if mode != Mode.FLIGHT or campaign.phase != "orbit": return
+	sound.play_cue("enemy_laser")
 	var direction := -fighter.global_basis.z
 	var origin := fighter.global_position + direction * 6
 	var end := origin + direction * EnemyFighter.LASER_RANGE
@@ -2029,8 +2098,7 @@ func _fire_enemy_laser(fighter: EnemyFighter) -> void:
 	var closest := Geometry3D.get_closest_point_to_segment(camera.global_position, origin, end)
 	if camera.global_position.distance_to(closest) <= flight.collision_radius and flight.roll_remaining <= 0:
 		end = closest
-		if _apply_pilot_damage("INTERCEPTOR LASER", 6):
-			sound.play_sound(sound.impact)
+		_apply_pilot_damage("INTERCEPTOR LASER", 6)
 	var beam := VectorArt.lines(PackedVector3Array([origin, end]), VectorArt.HOSTILE)
 	add_child(beam)
 	beams.append({"node": beam, "remaining": 0.14})
@@ -2047,18 +2115,20 @@ func _launch_missile(origin: Vector3, direction: Vector3) -> void:
 	add_child(missile)
 	missiles.append(missile)
 	flight.missiles_launched += 1
+	if camera.global_position.distance_squared_to(origin) < 180.0 * 180.0:
+		sound.play_cue("enemy_bioshot" if missile.biological else "enemy_missile")
 	_spawn_burst(origin)
 
 func _missile_impact(missile: EnemyMissile = null) -> void:
 	if flight.deflect_projectile():
 		if is_instance_valid(missile):
 			_spawn_burst(missile.global_position)
+		sound.play_cue("missile_deflect")
 		hud.show_message("INCOMING MISSILE DEFLECTED")
 	elif _apply_pilot_damage("MISSILE IMPACT", 18.0 if flight.training else EnemyMissile.DAMAGE):
 		flight.missile_hits += 1
 		if is_instance_valid(missile) and missile.frost:
 			_apply_frost()
-		sound.play_sound(sound.impact)
 
 func _advance_missiles(delta: float, previous_pilot: Vector3, pilot: Vector3, dangerous: bool = true) -> void:
 	for i in range(missiles.size() - 1, -1, -1):
@@ -2074,12 +2144,17 @@ func _clear_missiles() -> void:
 	hud.incoming.clear()
 
 func _update_contacts() -> void:
+	var previous_tractor: bool = hud.tractor_active
+	var previous_hazard_alert := _has_hazard_warning()
 	var previous_vent_warning: bool = hud.vent_warning
 	var previous_gate_warning: bool = hud.gate_warning
 	var stealth_seen: bool = false
 	hud.contacts.clear()
 	hud.incoming.clear()
+	var previous_collision := hud.sensors.collision_seconds
 	hud.scan_flight_deck(camera, targets, missiles, mineral_pickups, ground_branch.supplies if ground_branch != null else [], director.tracked if is_instance_valid(director.tracked) else null)
+	if is_inf(previous_collision) and is_finite(hud.sensors.collision_seconds):
+		sound.play_cue("hazard_alert")
 	hud.salvage_contacts.clear()
 	hud.blast_warning = false
 	hud.tractor_active = false
@@ -2181,9 +2256,13 @@ func _update_contacts() -> void:
 		hud.tractor_active = hud.tractor_active or pickup.being_pulled
 		if pickup.active and not camera.is_position_behind(pickup.global_position) and camera.position.distance_to(pickup.global_position) < 200:
 			hud.salvage_contacts.append(camera.unproject_position(pickup.global_position))
+	if hud.tractor_active and not previous_tractor:
+		sound.play_cue("tractor_lock")
 	for blast in volatile_blasts:
 		if not blast.fired and camera.global_position.distance_to(blast.global_position) < VolatileBlast.PILOT_RADIUS + 35.0:
 			hud.blast_warning = true
+	if _has_hazard_warning() and not previous_hazard_alert:
+		sound.play_cue("hazard_alert")
 	for missile in missiles:
 		if missile.active and not missile.diverted:
 			if camera.is_position_behind(missile.position):
@@ -2192,6 +2271,9 @@ func _update_contacts() -> void:
 				hud.incoming.append(Vector2(viewport.x * (0.96 if local.x >= 0 else 0.04), viewport.y * 0.7))
 			else:
 				hud.incoming.append(camera.unproject_position(missile.position))
+
+func _has_hazard_warning() -> bool:
+	return hud.frost_warning or hud.vent_warning or hud.gate_warning or hud.lightning_warning or hud.acid_warning or hud.web_warning or hud.blast_warning
 
 func _process(delta: float) -> void:
 	if mode == Mode.CAMPAIGN_COMPLETE and homecoming_clock >= 0:
@@ -2202,6 +2284,10 @@ func _process(delta: float) -> void:
 	last_frame_usec = now
 	if hud == null:
 		return
+	if mode == Mode.FLIGHT or (mode == Mode.TRANSITION and not sequence.is_empty()):
+		sound.update_engine("engine_surface" if surface_flight else "engine_space", flight.speed)
+	elif mode not in [Mode.PAUSE, Mode.DEBUG, Mode.NAMED_GAMES, Mode.COMPLETE]:
+		sound.update_engine("", 0)
 	if music != null and automation != "--music-test":
 		var audio_mode := named_games_origin if mode == Mode.NAMED_GAMES else mode
 		var scene: String = "title"
@@ -2703,6 +2789,7 @@ func _load_named_game(label: String) -> void:
 func _save_campaign(next: CampaignState, retry: Callable) -> bool:
 	if store.save_game(next) != OK:
 		mode = Mode.SAVE_ERROR
+		SynthAudio.play_ui(get_tree(), "ui_denied")
 		_set_pointer(false)
 		push_error(store.message)
 		hud.show_notice("CHECKPOINT COULD NOT BE SAVED", store.message + "\nThe previous checkpoint remains in place.", [
@@ -2831,9 +2918,11 @@ func _enter_phase(continuous: bool) -> void:
 		world = scene
 		mission_world = scene
 		scene.encounter_notice.connect(hud.show_message)
+		scene.sound_requested.connect(sound.play_cue)
 		scene.laser_requested.connect(_fire_enemy_laser)
 		scene.rock_shattered.connect(func(rock: Asteroid) -> void:
 			_spawn_breakup(rock, true)
+			sound.play_destruction(ImpactSpray.Surface.STONE)
 			if not rock.fragment: _spawn_rock_fragments(rock))
 		targets = scene.targets
 		boss = scene.boss
@@ -2878,6 +2967,7 @@ func _enter_phase(continuous: bool) -> void:
 			rescue_convoy = RescueConvoy.new()
 			world.add_child(rescue_convoy)
 			rescue_convoy.configure(campaign.sector)
+			sound.play_cue("radar_ping")
 			rescue_convoy.advance(0, director.frame, false)
 		if campaign.sector == "ignis" and campaign.phase == "orbit":
 			_boarding_cue("ignis_orbit")
@@ -2941,6 +3031,7 @@ func _begin_sequence(kind: String) -> void:
 	hud.phase_title = kind.replace("_", " ").to_upper()
 	hud.objective = "FLIGHT COMPUTER / AUTOMATIC TRANSIT"
 	sequence_log.append(kind)
+	sound.play_cue(kind)
 	print("FLIGHT_SEQUENCE ", kind)
 	var end: Transform3D = director.frame
 	match kind:
@@ -2954,7 +3045,6 @@ func _begin_sequence(kind: String) -> void:
 		"hyperspace":
 			director.begin_transition(launch_approach.descent_frame, duration, 180, 180, false)
 			hud.objective = "HYPERSPACE / " + SectorCatalog.name_for(campaign.sector).to_upper() + " INBOUND"
-			sound.play_sound(sound.warp)
 		"planet_descent":
 			end = director.ground_course * FlightState.rail_frame(0)
 			director.begin_transition(end, duration, 180, FlightState.SPEED)
@@ -3266,6 +3356,9 @@ func _complete_docking() -> void:
 	flight.speed = 0.0
 	print("DOCKING_COMPLETE local_position=", station.to_local(camera.global_position))
 	_show_market()
+	sound.play_cue("docking_latch")
+	if not campaign.tour_result.is_empty():
+		SynthAudio.play_ui(get_tree(), "tour_complete")
 	if mode == Mode.MARKET: _voice_event("docking")
 
 func _eject() -> void:
@@ -3288,7 +3381,7 @@ func _eject() -> void:
 	sound.stop_all()
 	_clear_beams()
 	surface_weather.hide()
-	sound.play_sound(sound.impact)
+	sound.play_cue("ejection")
 	_voice_event("ejection")
 	hud.hide()
 	$CockpitArtworkLayer.hide()
@@ -3349,6 +3442,8 @@ func _show_market(error: String = "") -> void:
 		_show_campaign_result()
 	else:
 		hud.show_market(campaign, error)
+		if not error.is_empty():
+			SynthAudio.play_ui(get_tree(), "ui_denied")
 
 func _show_campaign_result() -> void:
 	mode = Mode.CAMPAIGN_COMPLETE
@@ -3450,6 +3545,7 @@ func _market_purchase(item: String) -> void:
 		return
 	if _save_campaign(next, func() -> void: _market_purchase(item)):
 		_show_market()
+		SynthAudio.play_ui(get_tree(), "market_purchase")
 		if item == "emergency":
 			_voice_event("rescue_purchased")
 		elif item == "primary":

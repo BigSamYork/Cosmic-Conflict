@@ -429,14 +429,16 @@ func show_named_games(names: PackedStringArray, can_save: bool, status: String, 
 		entry.placeholder_text = "Save name (1-40 letters, numbers, spaces, - or _)"
 		entry.max_length = 40
 		stack.add_child(entry)
-		entry.text_submitted.connect(save)
+		entry.text_submitted.connect(func(text: String) -> void:
+			SynthAudio.play_ui(get_tree(), "ui_click")
+			save.call(text))
 		_add_button(stack, "SAVE AS", func() -> void: save.call(entry.text))
 	if not status.is_empty():
 		_add_label(stack, status, 18, AMBER)
 	if names.is_empty():
 		_add_label(stack, "No named games yet.", 19, MUTED)
 	else:
-		var slots := OptionButton.new()
+		var slots := _option_button()
 		for label in names:
 			slots.add_item(label)
 		stack.add_child(slots)
@@ -587,7 +589,7 @@ func _add_secondary_selector(stack: VBoxContainer, state: CampaignState) -> void
 	row.add_theme_constant_override("separation", 12)
 	stack.add_child(row)
 	_add_label(row, "SPACE / WEAPON STATION", 16, CYAN)
-	var selector := OptionButton.new()
+	var selector := _option_button()
 	selector.custom_minimum_size.x = 280
 	row.add_child(selector)
 	var weapons: Array = CampaignState.SECONDARIES.keys()
@@ -720,12 +722,14 @@ func _add_settings(stack: VBoxContainer) -> void:
 		check.text = item[1]
 		check.button_pressed = bool(settings.get(item[0], false))
 		var key: String = item[0]
-		check.toggled.connect(func(value: bool) -> void: setting_changed.emit(key, value))
+		check.toggled.connect(func(value: bool) -> void:
+			setting_changed.emit(key, value)
+			SynthAudio.play_ui(get_tree(), "ui_adjust"))
 		row.add_child(check)
 	var response_row := HBoxContainer.new()
 	stack.add_child(response_row)
 	_add_label(response_row, "Flight response  ", 18, MUTED)
-	var options := OptionButton.new()
+	var options := _option_button()
 	for option in ["Soft", "Balanced", "Responsive"]:
 		options.add_item(option)
 	options.selected = int(settings.get("response", 1))
@@ -742,7 +746,9 @@ func _add_settings(stack: VBoxContainer) -> void:
 		volume.custom_minimum_size = Vector2(180, 28)
 		volume.value = int(settings.get(entry[0], entry[2]))
 		var key: String = entry[0]
-		volume.value_changed.connect(func(value: float) -> void: setting_changed.emit(key, int(value)))
+		volume.value_changed.connect(func(value: float) -> void:
+			setting_changed.emit(key, int(value))
+			SynthAudio.play_ui(get_tree(), "ui_adjust"))
 		volume_row.add_child(volume)
 
 func _add_label(parent: Node, text: String, font_size: int, color: Color) -> Label:
@@ -758,9 +764,16 @@ func _add_button(parent: Node, text: String, action: Callable) -> Button:
 	button.text = text
 	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	button.custom_minimum_size.y = 44
+	button.pressed.connect(func() -> void: SynthAudio.play_ui(get_tree(), "ui_click"))
 	button.pressed.connect(action)
 	parent.add_child(button)
 	return button
+
+func _option_button() -> OptionButton:
+	var options := OptionButton.new()
+	options.pressed.connect(func() -> void: SynthAudio.play_ui(get_tree(), "ui_click"))
+	options.item_selected.connect(func(_index: int) -> void: SynthAudio.play_ui(get_tree(), "ui_adjust"))
+	return options
 
 func _make_theme() -> Theme:
 	var result := Theme.new()

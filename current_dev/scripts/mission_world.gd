@@ -5,6 +5,7 @@ signal missile_requested(origin: Vector3, direction: Vector3)
 signal sweep_requested(emitter: ThermalEmitter)
 signal rock_shattered(rock: Asteroid)
 signal encounter_notice(text: String)
+signal sound_requested(id: String)
 signal laser_requested(fighter: EnemyFighter)
 const CrossingRock := preload("res://scripts/crossing_rock.gd")
 const DOGFIGHT_BRIEFS := {
@@ -131,6 +132,7 @@ func advance(delta: float, pilot: Transform3D) -> void:
 			pirates.append(pirate)
 			targets.append(pirate)
 			pirate_index += 1
+			sound_requested.emit("radar_ping")
 		for i in range(pirates.size() - 1, -1, -1):
 			var pirate: PirateSkirmisher = pirates[i]
 			if pirate.destroyed or pirate.expired:
@@ -220,6 +222,7 @@ func _advance_crossings(delta: float, pilot: Transform3D) -> void:
 		add_child(crossing)
 		targets.append(crossing)
 		next_meteor = not next_meteor
+		sound_requested.emit("rock_flyby")
 		encounter_notice.emit("METEOR INBOUND / WATCH THE FIRE TRAIL" if crossing.meteor else "ROGUE ASTEROID / CROSSING TRAFFIC")
 	var before := crossing.global_position
 	if not crossing.destroyed:
@@ -254,8 +257,11 @@ func _advance_formation(delta: float) -> void:
 				escort.stun()
 			elif escort.armor < escort.initial_armor:
 				escort.armor += 1
+				sound_requested.emit("shield_regen")
 				encounter_notice.emit("BROOD NURSE / ESCORT REGENERATED")
-		if discharge: encounter_notice.emit("FROST RELAY BROKEN / NEARBY ESCORTS STUNNED")
+		if discharge:
+			sound_requested.emit("tracking_jam")
+			encounter_notice.emit("FROST RELAY BROKEN / NEARBY ESCORTS STUNNED")
 	if nurse_clock <= 0: nurse_clock = 5.0
 
 func _advance_carrier_drones(delta: float, pilot: Transform3D) -> void:
@@ -289,6 +295,7 @@ func _advance_carrier_drones(delta: float, pilot: Transform3D) -> void:
 		targets.append(drone)
 		carrier_drones.append(drone)
 		drone_launches += 1
+	sound_requested.emit("drone_launch")
 
 func animate_belt(delta: float, pilot: Transform3D) -> void:
 	visual_time += delta
@@ -307,6 +314,7 @@ func _deploy_web() -> void:
 	add_child(web)
 	web.global_transform = pilot_frame * Transform3D(Basis(Vector3.FORWARD, (-0.25 if web_index % 2 == 0 else 0.25)), Vector3(0, 0, -72))
 	web_index += 1
+	sound_requested.emit("web_cast")
 	webs.append(web)
 	targets.append_array(web.nodes)
 

@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -52,7 +53,7 @@ class BuildVoiceTests(unittest.TestCase):
     def copy_fixture(self):
         self.checkout.mkdir()
         (self.checkout / "tools").mkdir()
-        for name in ("chatterbox-requirements.txt", SCRIPT.name):
+        for name in ("chatterbox-requirements.txt", SCRIPT.name, "build-story-audio.py"):
             shutil.copy(ROOT / "tools" / name, self.checkout / "tools")
         assets = self.checkout / ASSETS
         voice = assets / "voice"
@@ -62,7 +63,7 @@ class BuildVoiceTests(unittest.TestCase):
         (voice / "render_chatterbox.py").write_text(FAKE_RENDERER, encoding="utf-8")
         lark = "Chatterbox-Turbo / Lark"
         vale = "Chatterbox-Turbo / Captain Tomas Vale"
-        for catalog in ("lines", "opening", "arrival", "boarding"):
+        for catalog in ("lines", "opening", "arrival", "boarding", "rescues"):
             folder = voice if catalog == "lines" else assets / catalog
             folder.mkdir(exist_ok=True)
             lines = [{"id": key, "speaker": "lark", "text": "This was previously rendered."}
@@ -76,9 +77,14 @@ class BuildVoiceTests(unittest.TestCase):
                 if catalog == "boarding":
                     cast = {"lark": {"voice": lark}, "attendant": {"voice": "Chatterbox-Turbo / stock"}}
                     name = "Vespera boarding cast"
+                if catalog == "rescues":
+                    cast["nurse"] = {"voice": "Chatterbox-Turbo / stock"}
+                    name = "Two Knocks Home cast"
                 data = {"voice": name, "cast": cast, "cues": lines}
             (voice / f"{catalog}.json").write_text(json.dumps(data), encoding="utf-8")
             proof = {"model": "ResembleAI/chatterbox-turbo", "voice": name,
+                     "revision": "749d1c1a46eb10492095d68fbcf55691ccf137cd",
+                     "catalog_sha256": hashlib.sha256((voice / f"{catalog}.json").read_bytes()).hexdigest(),
                      "rate": 24000, "channels": 1, "clips": []}
             for line in lines:
                 wav = folder / (line["id"] + ".wav")
@@ -111,15 +117,16 @@ class BuildVoiceTests(unittest.TestCase):
         self.run_cli("verify")
 
     def test_missing_lines_only_and_cache_across_clean_checkouts(self):
-        destinations = {"lines": "voice", "arrival": "arrival", "opening": "opening", "boarding": "boarding"}
+        destinations = {"lines": "voice", "arrival": "arrival", "opening": "opening",
+                        "boarding": "boarding", "rescues": "rescues"}
         original = {p.relative_to(self.checkout): hashlib.sha256(p.read_bytes()).hexdigest()
                     for p in (self.checkout / ASSETS).glob("*/*.wav")}
         for catalog in destinations:
             self.update(catalog, lambda lines: lines.append(
                 {"id": "ci_delta", "text": "The test line is ready.", "speaker": "lark"}))
-        self.assertIn("missing=4", self.run_cli("plan").stdout)
-        self.assertIn("render=4", self.run_cli("probe").stdout)
-        self.assertEqual(self.run_cli("prepare").stdout.count("TEST_RENDER ci_delta"), 4)
+        self.assertIn("missing=5", self.run_cli("plan").stdout)
+        self.assertIn("render=5", self.run_cli("probe").stdout)
+        self.assertEqual(self.run_cli("prepare").stdout.count("TEST_RENDER ci_delta"), 5)
         self.run_cli("verify")
         for folder in destinations.values():
             self.assertTrue((self.overlay / ASSETS / folder / "ci_delta.wav").is_file())
@@ -135,6 +142,66 @@ class BuildVoiceTests(unittest.TestCase):
         self.assertIn("render=0", self.run_cli("probe").stdout)
         self.assertNotIn("TEST_RENDER", self.run_cli("prepare").stdout)
         self.run_cli("verify")
+
+    def windows_checkout(self):
+        for source in (self.checkout / ASSETS / "voice").glob("*.json"):
+            source.write_bytes(source.read_bytes().replace(b"\r\n", b"\n").replace(b"\n", b"\r\n"))
+
+    def run_package_audio(self, *, verify_only=True):
+        return subprocess.run([sys.executable, str(self.checkout / "tools/build-story-audio.py")],
+                              env={**os.environ, "COSMIC_VERIFY_VOICES_ONLY": "1" if verify_only else "0",
+                                   "COSMIC_TTS_PYTHON": sys.executable},
+                              capture_output=True, text=True)
+
+    def test_bootstrap_missing_rescue_bank_once_and_share_across_checkouts(self):
+        path = ASSETS / "rescues"
+        boarding = {p.name: p.read_bytes() for p in (self.checkout / ASSETS / "boarding").glob("*.wav")}
+        self.update("rescues", lambda lines: lines[0].update(speaker="nurse"))
+        shutil.rmtree(self.checkout / path)
+        self.assertIn("missing=2", self.run_cli("plan").stdout)
+        failed = self.run_package_audio()
+        self.assertNotEqual(failed.returncode, 0)
+        self.assertFalse((self.checkout / path).exists())  # No render fallback on a packager.
+        self.assertEqual(self.run_cli("prepare").stdout.count("TEST_RENDER"), 2)
+        self.assertEqual({p.name for p in (self.overlay / path).iterdir()},
+                         {"clearance.wav", "last_car.wav", "generated-rescues.json"})
+        self.assertFalse((self.overlay / ASSETS / "boarding").exists())
+        self.assertEqual(boarding, {p.name: p.read_bytes() for p in
+                                    (self.checkout / ASSETS / "boarding").glob("*.wav")})
+
+        # Simulate an independent Windows package checkout receiving the one Linux overlay.
+        shutil.rmtree(self.checkout)
+        self.copy_fixture()
+        self.update("rescues", lambda lines: lines[0].update(speaker="nurse"))
+        shutil.rmtree(self.checkout / path)
+        self.windows_checkout()
+        shutil.copytree(self.overlay, self.checkout, dirs_exist_ok=True)
+        result = self.run_package_audio()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertNotIn("TEST_RENDER", result.stdout)
+        self.assertEqual(boarding, {p.name: p.read_bytes() for p in
+                                    (self.checkout / ASSETS / "boarding").glob("*.wav")})
+        self.assertEqual((self.overlay / path / "clearance.wav").read_bytes(),
+                         (self.checkout / path / "clearance.wav").read_bytes())
+
+    def test_line_endings_do_not_trigger_local_regeneration(self):
+        self.update("boarding", lambda lines: lines.append(
+            {"id": "new_line", "text": "Only one new line.", "speaker": "attendant"}))
+        path = self.checkout / ASSETS / "voice/boarding.json"
+        path.write_bytes(path.read_bytes() + b"\n")
+        self.windows_checkout()
+        before = self.run_cli("plan").stdout
+        self.assertIn("missing=1", before)
+        result = self.run_package_audio(verify_only=False)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout.count("TEST_RENDER new_line"), 1)
+        self.assertEqual(result.stdout.count("TEST_RENDER"), 1)
+        receipt = self.checkout / ASSETS / "boarding/generated-boarding.json"
+        self.assertEqual(json.loads(receipt.read_bytes())["catalog_sha256"],
+                         hashlib.sha256(path.read_bytes().replace(b"\r\n", b"\n")).hexdigest())
+        result = self.run_package_audio(verify_only=False)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertNotIn("TEST_RENDER", result.stdout)
 
     def test_changed_text_or_missing_reviewed_audio_fails(self):
         original = (self.checkout / ASSETS / "voice/boarding.json").read_bytes()

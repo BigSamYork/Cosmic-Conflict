@@ -1,0 +1,306 @@
+{
+  "credit_100": {
+    "prompt": "A single bright metallic credit token ping sweeps past a spaceship cockpit, crisp airy tail.",
+    "duration": 0.42
+  },
+  "credit_200": {
+    "prompt": "Two quick silver coin pings ascending, with a light passing swish.",
+    "duration": 0.52
+  },
+  "credit_350": {
+    "prompt": "Three bright crystalline coin clinks stepping upward, short Doppler shimmer.",
+    "duration": 0.65
+  },
+  "credit_500": {
+    "prompt": "A handful of gold tokens clinks in a quick ascending sparkle, soft rushing air.",
+    "duration": 0.72
+  },
+  "credit_1000": {
+    "prompt": "An exceptional arcade jackpot, rapid cascade of high glassy token chimes ending on one ringing bell.",
+    "duration": 1.1
+  },
+  "salvage_mineral": {
+    "prompt": "A gemstone clinks into a magnetic metal cargo cradle, followed by a delicate crystalline ring.",
+    "duration": 0.58
+  },
+  "salvage_nutrient": {
+    "prompt": "A soft gelatinous alien nutrient pod plops into a suction canister and the seal clicks.",
+    "duration": 0.6
+  },
+  "supply_shield": {
+    "prompt": "A soft rising electric ripple gathers into one clear resonant shield recharge ping.",
+    "duration": 0.72
+  },
+  "supply_ordnance": {
+    "prompt": "Two chunky metal ammunition cartridges slide into a breech with a double mechanical clack.",
+    "duration": 0.56
+  },
+  "supply_flare": {
+    "prompt": "A small countermeasure canister slides into a spring cassette with a sharp light snap.",
+    "duration": 0.48
+  },
+  "supply_full": {
+    "prompt": "A restrained low double hollow knock from a full cargo bay indicator.",
+    "duration": 0.32
+  },
+  "patrol_gate": {
+    "prompt": "A fast airy ring passing overhead with a brief bright electronic timing tick.",
+    "duration": 0.38
+  },
+  "patrol_rescue": {
+    "prompt": "A pneumatic rescue pod hatch closes, then one warm safety beacon chirp.",
+    "duration": 0.8
+  },
+  "patrol_freight": {
+    "prompt": "A heavy freight grapple catches a crate, chunky ratchet and mechanical lock.",
+    "duration": 0.64
+  },
+  "patrol_survey": {
+    "prompt": "A short high scanning sweep resolves into a glassy data confirmation trill.",
+    "duration": 0.6
+  },
+  "patrol_repair": {
+    "prompt": "A compact repair tool buzzes against a hull plate and clicks tight.",
+    "duration": 0.78
+  },
+  "patrol_coolant": {
+    "prompt": "A pressure valve opens with a brisk hiss of coolant flowing through a pipe and shuts.",
+    "duration": 0.8
+  },
+  "patrol_restart": {
+    "prompt": "The sound of a starter motor turning over. A brief electrical crackle, a low rising motor whir, then the engine catches.",
+    "duration": 0.9
+  },
+  "patrol_complete": {
+    "prompt": "Three clean cockpit confirmation tones climb and settle into a gentle resonant chord.",
+    "duration": 0.75
+  },
+  "patrol_failed": {
+    "prompt": "Two muted descending amber cockpit warning tones with a short dry tail.",
+    "duration": 0.44
+  },
+  "tractor_lock": {
+    "prompt": "A magnetic tractor pickup catches with a rising resonant hum and a gentle snap.",
+    "duration": 0.56
+  },
+  "gun_pulse": {
+    "prompt": "A single tight, bright sci fi pulse cannon zap, instant attack with a short descending tail.",
+    "duration": 0.22
+  },
+  "gun_quad": {
+    "prompt": "One volley of four close spaced plasma pops from paired spacecraft cannons, hot and punchy.",
+    "duration": 0.3
+  },
+  "gun_tachyon": {
+    "prompt": "A piercing narrow energy beam streak with a dense electrical buzz, quick taper.",
+    "duration": 0.27
+  },
+  "secondary_concussion": {
+    "prompt": "A heavy torpedo kicks out of a ship tube with a clunk and a receding rocket rush.",
+    "duration": 0.83
+  },
+  "secondary_swarm": {
+    "prompt": "Three small guided rockets spit in rapid succession and whistle away.",
+    "duration": 0.8
+  },
+  "secondary_emp": {
+    "prompt": "A capacitor discharges with a low electric thump and an expanding rippling electromagnetic wave.",
+    "duration": 0.95
+  },
+  "flare_deploy": {
+    "prompt": "A countermeasure dispenser rattles off a cluster of flares, sharp pops and sparkling fizz.",
+    "duration": 0.67
+  },
+  "enemy_laser": {
+    "prompt": "A distant hostile interceptor laser snaps past with a thin nasal descending whine.",
+    "duration": 0.27
+  },
+  "enemy_missile": {
+    "prompt": "A distant missile motor ignites with a bark and fades into a short receding hiss.",
+    "duration": 0.6
+  },
+  "enemy_bioshot": {
+    "prompt": "An alien creature spits a pressurized spore missile, wet pop and whistling tail.",
+    "duration": 0.52
+  },
+  "missile_deflect": {
+    "prompt": "A fast projectile glances off an energy shield with a bright ricochet and Doppler whistle.",
+    "duration": 0.47
+  },
+  "hull_impact": {
+    "prompt": "A blunt impact shakes a metal cockpit panel, muted bass thud with a brief rattle.",
+    "duration": 0.45
+  },
+  "shield_hit": {
+    "prompt": "A short plucked electrical membrane ripple as a spacecraft shield absorbs an impact.",
+    "duration": 0.32
+  },
+  "shield_empty": {
+    "prompt": "A sputtering electric shield collapses down in pitch with two short warning pulses.",
+    "duration": 0.57
+  },
+  "shield_regen": {
+    "prompt": "A quiet rising electrical shimmer as a deflector field reconnects.",
+    "duration": 0.58
+  },
+  "shield_surge": {
+    "prompt": "A powerful upward cascade of capacitor energy swells into a clear shield resonance.",
+    "duration": 0.75
+  },
+  "shield_block": {
+    "prompt": "An incoming shot bounces off an armored energy barrier with a sharp hollow metallic zing.",
+    "duration": 0.32
+  },
+  "vent_overheat": {
+    "prompt": "A hot gun cooling vent bursts open with a sharp pressurized steam hiss.",
+    "duration": 0.75
+  },
+  "vent_ready": {
+    "prompt": "A cooling vent latch snaps shut with a short high ready chirp.",
+    "duration": 0.33
+  },
+  "evade_shift": {
+    "prompt": "A single lateral maneuvering thruster blasts to one side, fast air pressure whoosh.",
+    "duration": 0.58
+  },
+  "barrel_roll": {
+    "prompt": "Two maneuvering thrusters fire in succession in a rising then falling corkscrew swoosh.",
+    "duration": 0.8
+  },
+  "avionics_switch": {
+    "prompt": "A compact cockpit relay switches with a tactile click and a soft electronic blip.",
+    "duration": 0.28
+  },
+  "systems_denied": {
+    "prompt": "Two short dry low electronic buzzes from a cockpit interlock.",
+    "duration": 0.28
+  },
+  "radar_ping": {
+    "prompt": "One clear sonar-like radar range ping, bright attack with a short fading echo.",
+    "duration": 0.5
+  },
+  "hazard_alert": {
+    "prompt": "A concise alternating pair of cockpit hazard beeps, gently urgent.",
+    "duration": 0.54
+  },
+  "frost_contact": {
+    "prompt": "A sudden frosty crackle spreads across a glass canopy in tiny brittle ice crystals.",
+    "duration": 0.62
+  },
+  "acid_contact": {
+    "prompt": "Liquid acid spatters against metal and sizzles away sharply.",
+    "duration": 0.62
+  },
+  "spore_static": {
+    "prompt": "A burst of gritty radio static stutters and fades as spores obscure a radar receiver.",
+    "duration": 0.67
+  },
+  "tripwire_contact": {
+    "prompt": "A taut electrical laser wire lashes across a hull with a sizzling snap.",
+    "duration": 0.5
+  },
+  "thermal_charge": {
+    "prompt": "A hostile heat projector winds up with a rising furnace hum and electric whine.",
+    "duration": 0.85
+  },
+  "thermal_contact": {
+    "prompt": "A hot energy sheet washes over a metal hull with a brief fierce hiss.",
+    "duration": 0.53
+  },
+  "volatile_ignite": {
+    "prompt": "A rock core begins an unstable chain reaction, brittle crack followed by fast sizzling.",
+    "duration": 0.65
+  },
+  "boss_collapse": {
+    "prompt": "A huge armored vessel buckles with a deep tearing metallic groan and cascading distant booms.",
+    "duration": 1.45
+  },
+  "tower_fracture": {
+    "prompt": "A heavy support tower shears with a low crack, rattling falling debris.",
+    "duration": 0.92
+  },
+  "tracking_jam": {
+    "prompt": "A radar signal scrambles into descending digital chatter and then abruptly cuts out.",
+    "duration": 0.54
+  },
+  "cloak_engage": {
+    "prompt": "An electronic cloaking field shimmers, pitches down and vanishes into silence.",
+    "duration": 0.65
+  },
+  "streak_gain": {
+    "prompt": "A short triumphant ascending sequence of bright cockpit score tones.",
+    "duration": 0.54
+  },
+  "streak_lost": {
+    "prompt": "A scored combo falls away in three muted descending tones.",
+    "duration": 0.46
+  },
+  "ejection": {
+    "prompt": "Explosive canopy bolts pop and an escape capsule rockets clear with a forceful air rush.",
+    "duration": 1.05
+  },
+  "boss_breach": {
+    "prompt": "A massive armored core unlocks with a metallic double clunk and a clear high targeting tone.",
+    "duration": 0.87
+  },
+  "hull_critical": {
+    "prompt": "Three urgent low, dry electronic warning pulses from a damaged cockpit.",
+    "duration": 0.7
+  },
+  "ice_landing": {
+    "prompt": "A great chunk of ice slams into frozen ground with a brittle crash and scattering crystalline splinters.",
+    "duration": 0.9
+  },
+  "ruin_landing": {
+    "prompt": "A stone slab breaks loose and crashes into a sandy canyon floor, dry crunch and rolling grit.",
+    "duration": 0.95
+  },
+  "vent_eruption": {
+    "prompt": "A volcanic steam vent blasts upward, a deep pressure pop giving way to rushing hot gas.",
+    "duration": 1
+  },
+  "rock_flyby": {
+    "prompt": "A fast tumbling boulder streaks across the pilot's path with a low Doppler whirr and gravelly rattle.",
+    "duration": 0.72
+  },
+  "drone_launch": {
+    "prompt": "An armored carrier bay releases two scout drones, a hydraulic clack and two short receding motor whines.",
+    "duration": 0.76
+  },
+  "web_cast": {
+    "prompt": "An electric tripwire lattice unfurls in a fast sweep of tight sizzling filaments.",
+    "duration": 0.64
+  },
+  "thermal_discharge": {
+    "prompt": "An industrial heat weapon fires a broad sustained sweep of searing energy with a hard attack.",
+    "duration": 0.78
+  },
+  "claw_release": {
+    "prompt": "A giant claw slips off a metal fuselage, scraping talons followed by the rush of the craft being thrown.",
+    "duration": 0.82
+  },
+  "torpedo_burst": {
+    "prompt": "A compact explosive projectile strikes a surface with a sharp crack and short bassy expanding boom.",
+    "duration": 0.69
+  },
+  "rescue_mold": {
+    "prompt": "An industrial steel casting mold slides onto a foundry tug with a deep clunk and the transport clamps lock shut.",
+    "duration": 0.86
+  },
+  "rescue_converter": {
+    "prompt": "A power plug clicks loudly into a socket. The click is followed immediately by a brief low electrical buzz and a single clean test beep.",
+    "duration": 0.76
+  },
+  "rescue_reeds": {
+    "prompt": "A pallet of wet leafy reeds slides aboard a small ship, soft rustling leaves, dripping water and a single wooden thump.",
+    "duration": 0.91
+  },
+  "rescue_tow": {
+    "prompt": "A towing hook catches with a hefty metallic clank, the wire cable twangs under tension and settles.",
+    "duration": 0.92
+  },
+  "rescue_relay": {
+    "prompt": "A hardwired flight data cartridge disengages with a crisp little mechanical click and a rapid three-pip transfer confirmation.",
+    "duration": 0.68
+  }
+}

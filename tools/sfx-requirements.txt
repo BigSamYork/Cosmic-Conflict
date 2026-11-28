@@ -1,0 +1,3 @@
+# Install the platform's PyTorch, torchaudio and torchvision wheels first.
+setuptools<81
+moss-soundeffect-v2 @ git+https://github.com/OpenMOSS/MOSS-TTS.git@934d6826b084c46a0d033402174d5f8ac4ed2519#subdirectory=moss_soundeffect_v2

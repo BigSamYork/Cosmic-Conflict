@@ -80,9 +80,122 @@ jobs:
           name: CosmicConflict-voices-${{ env.BUILD_SHA }}
           path: ${{ runner.temp }}/cosmic-voice-overlay/
           if-no-files-found: error
+          overwrite: true
+
+  sfx:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    defaults:
+      run:
+        shell: bash
+    env:
+      BUILD_SHA: ${{ github.event_name == 'workflow_dispatch' && github.sha || github.event.pull_request.merge_commit_sha }}
+    outputs:
+      overlay: ${{ steps.plan.outputs.missing != '0' }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.base.ref || github.sha }}
+          fetch-depth: ${{ github.event.pull_request.merged && '0' || '1' }}
+          persist-credentials: false
+
+      - name: Select merged commit from main history
+        if: github.event_name == 'pull_request_target'
+        run: |
+          git merge-base --is-ancestor "$BUILD_SHA" HEAD
+          git switch --detach "$BUILD_SHA"
+
+      - name: Test incremental sound preparation
+        run: python3 -m unittest discover -s tools/tests -p 'test_generate_sfx.py'
+
+      - name: Check shipped sound effects
+        id: plan
+        run: |
+          python3 tools/generate_sfx.py plan | tee "$RUNNER_TEMP/sfx-plan.json"
+          missing=$(jq -er .missing_count "$RUNNER_TEMP/sfx-plan.json")
+          echo "missing=$missing" >> "$GITHUB_OUTPUT"
+
+      - name: Restore previously rendered effects
+        if: steps.plan.outputs.missing != '0'
+        uses: actions/cache/restore@v6
+        with:
+          path: .tools/sfx-cache
+          key: sfx-v1-${{ hashFiles('current_dev/data/sfx_*.json') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            sfx-v1-${{ hashFiles('current_dev/data/sfx_*.json') }}-
+            sfx-v1-
+
+      - name: Count uncached effects
+        if: steps.plan.outputs.missing != '0'
+        id: probe
+        run: |
+          missing=$(python3 tools/generate_sfx.py plan --cache-dir .tools/sfx-cache | jq -er .missing_count)
+          echo "missing=$missing" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-python@v6
+        if: steps.plan.outputs.missing != '0' && steps.probe.outputs.missing != '0'
+        with:
+          python-version: '3.12'
+
+      - name: Install CPU sound renderer
+        if: steps.plan.outputs.missing != '0' && steps.probe.outputs.missing != '0'
+        env:
+          PIP_NO_CACHE_DIR: '1'
+        run: |
+          # Make room for the 11 GB model on this disposable audio-only runner.
+          if [[ "$RUNNER_ENVIRONMENT" == github-hosted && -d /usr/local/lib/android/sdk ]]; then
+            sudo rm -rf -- /usr/local/lib/android/sdk
+          fi
+          # CPU inference peaks around 15 GiB. Leave room for the runner and OS.
+          memory_kib=$(awk '/^(MemTotal|SwapTotal):/ {total += $2} END {print total}' /proc/meminfo)
+          if (( memory_kib < 20 * 1024 * 1024 )); then
+            swap_mib=$((20 * 1024 - memory_kib / 1024))
+            sudo install -m 600 /dev/null "$RUNNER_TEMP/sfx.swap"
+            sudo fallocate -l "${swap_mib}M" "$RUNNER_TEMP/sfx.swap"
+            sudo mkswap "$RUNNER_TEMP/sfx.swap"
+            sudo swapon "$RUNNER_TEMP/sfx.swap"
+          fi
+          python3 -m pip install torch==2.9.0 torchaudio==2.9.0 torchvision==0.24.0 --index-url https://download.pytorch.org/whl/cpu
+          python3 -m pip install -r tools/sfx-requirements.txt
+
+      - name: Prepare missing effects
+        if: steps.plan.outputs.missing != '0'
+        id: generate
+        env:
+          OMP_NUM_THREADS: '4'
+        run: python3 tools/generate_sfx.py generate --cache-dir .tools/sfx-cache
+
+      # Save finished cues even when a later render fails. A new immutable key
+      # per attempt lets the next run extend a partial cache.
+      - name: Save newly rendered effects
+        if: ${{ !cancelled() && steps.probe.outputs.missing != '0' && (steps.generate.outcome == 'success' || steps.generate.outcome == 'failure') && hashFiles('.tools/sfx-cache/*.ogg') != '' }}
+        uses: actions/cache/save@v6
+        with:
+          path: .tools/sfx-cache
+          key: sfx-v1-${{ hashFiles('current_dev/data/sfx_*.json') }}-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: Verify and collect effects missing from the checkout
+        if: steps.plan.outputs.missing != '0'
+        run: |
+          python3 tools/generate_sfx.py verify
+          mkdir -p "$RUNNER_TEMP/sfx-overlay"
+          while IFS= read -r cue; do
+            cp "current_dev/audio/generated_sfx/$cue.ogg" "$RUNNER_TEMP/sfx-overlay/"
+          done < <(jq -r '.missing[]' "$RUNNER_TEMP/sfx-plan.json")
+
+      - name: Share missing effects with every platform
+        if: steps.plan.outputs.missing != '0'
+        uses: actions/upload-artifact@v7
+        with:
+          name: CosmicConflict-sfx-${{ env.BUILD_SHA }}
+          path: ${{ runner.temp }}/sfx-overlay/
+          if-no-files-found: error
+          compression-level: 0
+          overwrite: true
 
   build:
-    needs: voices
+    needs: [voices, sfx]
     if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
     runs-on: windows-latest
     timeout-minutes: 120
@@ -126,6 +239,12 @@ jobs:
         run: |
           $config = Get-Content tools/toolchain.json -Raw | ConvertFrom-Json
           "godot=$($config.godot)" >> $env:GITHUB_OUTPUT
+
+      - uses: actions/download-artifact@v7
+        if: needs.sfx.outputs.overlay == 'true'
+        with:
+          name: CosmicConflict-sfx-${{ env.BUILD_SHA }}
+          path: current_dev/audio/generated_sfx
 
       # Next version = game_version from toolchain.json, or one patch above the newest
       # existing vMAJOR.MINOR.x tag if that version has already been released.
@@ -182,6 +301,8 @@ jobs:
           "iscc=$iscc" >> $env:GITHUB_OUTPUT
 
       - name: Test, export and package
+        env:
+          COSMIC_VERIFY_VOICES_ONLY: '1'
         run: |
           $official = '${{ steps.android.outputs.release }}' -eq 'true'
           ./tools/build.ps1 -Platform All -AndroidUnsigned:$official -AndroidPreview:(!$official) -Iscc '${{ steps.inno.outputs.iscc }}' -Version '${{ steps.version.outputs.version }}'
@@ -228,7 +349,7 @@ jobs:
           if-no-files-found: error
 
   macos:
-    needs: [voices, build]
+    needs: [voices, sfx, build]
     runs-on: macos-latest
     timeout-minutes: 60
     env:
@@ -255,6 +376,12 @@ jobs:
         with:
           name: CosmicConflict-voices-${{ env.BUILD_SHA }}
           path: .
+
+      - uses: actions/download-artifact@v7
+        if: needs.sfx.outputs.overlay == 'true'
+        with:
+          name: CosmicConflict-sfx-${{ env.BUILD_SHA }}
+          path: current_dev/audio/generated_sfx
 
       - name: Cache verified Mac toolchain
         id: cache
@@ -284,6 +411,8 @@ jobs:
           unzip -p "$templates" templates/macos.zip > "$GITHUB_WORKSPACE/.tools/mac/macos.zip"
 
       - name: Export, verify and package universal app
+        env:
+          COSMIC_VERIFY_VOICES_ONLY: '1'
         shell: bash
         run: bash tools/build-macos.sh
 

@@ -11,6 +11,7 @@ var health_scale: float = 1.0
 var patrol := SurfacePatrol.new()
 const Boarding := preload("res://scripts/vespera_boarding.gd")
 signal boarding_cue(id: String)
+signal sound_requested(id: String)
 var boarding: Boarding
 const RescueRun := preload("res://scripts/rescue_run.gd")
 signal hull_knock
@@ -19,6 +20,7 @@ var rescue: RescueRun
 
 func _ready() -> void:
 	add_child(patrol)
+	patrol.sound_requested.connect(sound_requested.emit)
 	var guides := GeometryBatch.new()
 	# Mark the entrances with solid lamps. The terrain between them stays open.
 	for distance: float in [GroundRoute.FORK + 100.0, GroundRoute.REJOIN - 100.0]:
@@ -56,6 +58,7 @@ func _ready() -> void:
 	for i in range(3):
 		var supply := SupplyPickup.new()
 		supply.hide()
+		supply.sound_requested.connect(sound_requested.emit)
 		supply.kind = ["shield", "ordnance", "flare"][i]
 		supply.transform = GroundRoute.frame(2020.0 + i * 220)
 		add_child(supply)
@@ -78,6 +81,7 @@ func advance(delta: float, previous: Vector3, pilot: Vector3, campaign: Campaign
 				rescue = RescueRun.new()
 				add_child(rescue)
 				rescue.cue.connect(boarding_cue.emit)
+				rescue.sound_requested.connect(sound_requested.emit)
 				rescue.knock.connect(hull_knock.emit)
 			var outcome := rescue.advance(delta, previous, pilot, campaign, flight, route)
 			if is_instance_valid(rescue.battery) and not rescue.battery.missile_requested.is_connected(battery_missile.emit):
@@ -91,6 +95,7 @@ func advance(delta: float, previous: Vector3, pilot: Vector3, campaign: Campaign
 				boarding = Boarding.new()
 				add_child(boarding)
 				boarding.cue.connect(boarding_cue.emit)
+				boarding.group_boarded.connect(func() -> void: sound_requested.emit("patrol_rescue"))
 			var result := boarding.advance(flight.distance, previous, pilot, route, flight.shots)
 			if not result.is_empty():
 				campaign.vespera_boarding = result
@@ -109,12 +114,14 @@ func advance(delta: float, previous: Vector3, pilot: Vector3, campaign: Campaign
 		messages.append(contract)
 	if not announced and flight.distance >= GroundRoute.FORK - GroundRoute.WARNING_DISTANCE:
 		announced = true
+		sound_requested.emit("radar_ping")
 		messages.append("FORK AHEAD / LEFT: PAD COURIER / RIGHT: RELAY WALKER" if sector == "kharon" and story else "FORK AHEAD / FLY LEFT FOR SAFE / RIGHT FOR HAZARD")
 	for supply in supplies:
 		var message: String = supply.advance(delta, previous, pilot, route.selected, campaign, flight)
 		if not message.is_empty():
 			messages.append(message)
 	if route.finish_hazard(flight.distance, flight.hull > 0):
+		sound_requested.emit("patrol_complete")
 		messages.append("HAZARD TRENCH COMPLETE / REJOINING MAIN ROUTE")
 	return messages
 
