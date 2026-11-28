@@ -239,10 +239,6 @@
     "prompt": "Explosive canopy bolts pop and an escape capsule rockets clear with a forceful air rush.",
     "duration": 1.05
   },
-  "incoming_lock": {
-    "prompt": "Two tense pulsed warning pips at different pitches from a spacecraft missile proximity detector.",
-    "duration": 0.52
-  },
   "boss_breach": {
     "prompt": "A massive armored core unlocks with a metallic double clunk and a clear high targeting tone.",
     "duration": 0.87

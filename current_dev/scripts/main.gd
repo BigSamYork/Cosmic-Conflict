@@ -2158,11 +2158,8 @@ func _update_contacts() -> void:
 	var stealth_seen: bool = false
 	hud.contacts.clear()
 	hud.incoming.clear()
-	var previous_intercept := hud.sensors.intercept_seconds
 	var previous_collision := hud.sensors.collision_seconds
 	hud.scan_flight_deck(camera, targets, missiles, mineral_pickups, ground_branch.supplies if ground_branch != null else [], director.tracked if is_instance_valid(director.tracked) else null)
-	if is_inf(previous_intercept) and is_finite(hud.sensors.intercept_seconds):
-		sound.play_cue("incoming_lock")
 	if is_inf(previous_collision) and is_finite(hud.sensors.collision_seconds):
 		sound.play_cue("hazard_alert")
 	hud.salvage_contacts.clear()
