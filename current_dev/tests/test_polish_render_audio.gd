@@ -36,7 +36,7 @@ func verify_audio() -> void:
 	AudioServer.add_bus_effect(bus, recording)
 	recording.set_recording_active(true)
 	await create_timer(5).timeout
-	check(music.failure_message.is_empty() and music.players[music.active].stream.resource_path.ends_with("Fanfare for Space.ogg") and music.players[music.active].get_playback_position() > 4, "Astra Market plays the opening score")
+	check(music.failure_message.is_empty() and music.players[music.active].stream.resource_path.ends_with("Fanfare for Space.ogg") and music.players[music.active].get_playback_position() > 4, "Astra Market plays its station theme")
 	var peak: float = AudioServer.get_bus_peak_volume_left_db(bus, 0)
 	check(peak > -60 and peak < -10, "Native soundtrack signal is restrained rather than silent or clipped (%.2fdB)" % peak)
 	music.request_scene("cryo")
@@ -135,8 +135,100 @@ func verify_visuals() -> void:
 	game.pause_flight()
 	await capture(game, "music-paused-settings")
 	check(game.get_viewport().get_visible_rect().encloses(game.hud.menu.get_global_rect()), "Pause statistics, music controls and resume buttons fit the native viewport")
+	await verify_boss_score(game)
+	await verify_boss_radio(game)
 	game.queue_free()
 	await process_frame
+
+func verify_boss_score(game: Node3D) -> void:
+	game.campaign.sector = "ignis"
+	game.campaign.phase = "ground_boss"
+	await game._load_phase()
+	var music: AmbientMusic = game.music
+	music.set_level(70, false)
+	game._process(0.01)
+	music._process(AmbientMusic.CROSSFADE)
+	check(music.current == AmbientMusic.BOSS_BATTLE and music.players[music.active].stream.resource_path.ends_with("/Final Count.ogg"), "The pursuit opens with Final Count")
+	var opening_player := music.players[music.active]
+	var boss: BossEncounter = game.boss
+	boss.advance(30, game.camera.global_position, Vector3.ZERO)
+	boss.parts[0].receive_hit(boss.parts[0].armor)
+	boss.advance(0.02, game.camera.global_position, Vector3.ZERO)
+	game._process(0.01)
+	music._process(0.01)
+	check(boss.rage_stage == 1 and music.players[music.active] == opening_player, "Final Count continues through the first retaliation")
+	boss.parts[1].receive_hit(boss.parts[1].armor)
+	boss.advance(0.02, game.camera.global_position, Vector3.ZERO)
+	game._process(0.01)
+	await create_timer(0.25).timeout
+	var player := music.players[music.active]
+	check(boss.rage_stage == 2 and player.stream.resource_path.ends_with("/Failing Defense.ogg") and player.get_playback_position() > 0, "Real boss damage starts Failing Defense")
+	game.pause_flight()
+	game._process(0.01)
+	check(player.stream_paused, "Pausing the fight pauses the enraged score")
+	game.resume_flight()
+	game._process(0.01)
+	music._process(music.fade_duration)
+	check(not player.stream_paused and player == music.players[music.active], "Resuming continues the same battle recording")
+	boss.core.receive_hit(boss.core.armor)
+	game._process(0.01)
+	music._process(AmbientMusic.CROSSFADE)
+	check(music.current == "ignis" and not player.playing, "Victory returns to the sector soundtrack")
+
+func verify_boss_radio(game: Node3D) -> void:
+	game.automation = ""
+	game.automated_session = false
+	game.campaign.sector = "xylo"
+	game.campaign.phase = "orbit_boss"
+	game.settings["mute"] = false
+	game.settings["voice_volume"] = 70
+	var voice: ComputerVoice = game.computer_voice
+	voice.stop_speech(true)
+	await game._load_phase()
+	game.resume_flight()
+	check(voice.policy.event == "recon_xylo_orbit", "The pilot hears the tactical briefing when resuming a boss checkpoint")
+	await finish_recording(voice.player)
+	var radio := voice.boss_player
+	check(voice.last_line == "xylo_orbit_arrival" and radio.playing, "The Hive Mother transmits her own recorded arrival speech")
+	check(not game.hud.radio_speaker.is_empty() and not game.hud.radio_caption.is_empty(), "The live radio subtitle identifies the speaker")
+	if voice.boss_cue.is_empty():
+		return
+	await capture(game, "hive-mother-radio")
+	radio.seek(2.0)
+	# The speech can have a pause at any individual audio mix tick.
+	var bus := AudioServer.get_bus_index(radio.bus)
+	var peak := -100.0
+	for _sample in range(18):
+		await create_timer(0.05).timeout
+		peak = maxf(peak, AudioServer.get_bus_peak_volume_left_db(bus, 0))
+	var mark := radio.get_playback_position()
+	check(mark >= 2.0 and peak > -65, "The boss recording produces audio on the voice channel (%.1f dB, %.2f s)" % [peak, mark])
+	var solo_db := radio.volume_db
+	check(game._voice_event("hull_critical"), "A critical warning starts during the boss transmission")
+	await create_timer(0.20).timeout
+	check(voice.player.playing and radio.playing and radio.get_playback_position() > mark and not game.hud.radio_caption.is_empty(), "The two voices play together and captions follow the uninterrupted radio")
+	check(radio.volume_db <= solo_db - 15 and voice.player.volume_db == solo_db, "Only the boss drops in level under the cockpit warning")
+	game.pause_flight()
+	var paused_at := radio.get_playback_position()
+	await create_timer(0.25).timeout
+	check(voice.player.stream_paused and radio.stream_paused and absf(radio.get_playback_position() - paused_at) < 0.08, "Pausing holds both voices mid-sentence")
+	game.resume_flight()
+	await finish_recording(voice.player)
+	await create_timer(0.4).timeout
+	check(radio.playing and is_equal_approx(radio.volume_db, solo_db) and voice.mix_speaking, "The foreground warning ends and the boss regains its solo level while the soundtrack stays ducked")
+	game.boss.advance(60, game.camera.global_position, Vector3.ZERO)
+	var sac: BossPart = game.boss.parts[0]
+	for _i in range(3):
+		game._strike({"collider": sac, "position": sac.aim_point()}, 1)
+	await finish_recording(radio)
+	check(voice.last_line == "xylo_orbit_hurt_1" and radio.playing and voice.boss_reactions.is_empty(), "Three real hits produce one voiced injury reaction")
+	game._start_boss_destruction()
+	check(not radio.playing and not voice.mix_speaking and voice.boss_sector.is_empty() and game.hud.radio_caption.is_empty(), "Boss defeat clears both radio and subtitles")
+
+func finish_recording(player: AudioStreamPlayer) -> void:
+	if player.playing:
+		player.seek(maxf(0.0, player.stream.get_length() - 0.10))
+	await create_timer(0.45).timeout
 
 func capture(game: Node3D, name: String) -> void:
 	await process_frame

@@ -54,7 +54,6 @@ func build(next_phase: String, entry: Transform3D = Transform3D.IDENTITY, destin
 		boss.health_scale = health_scale
 		add_child(boss)
 		boss.configure_pursuit(entry)
-		boss.missile_requested.connect(func(at: Vector3, direction: Vector3) -> void: missile_requested.emit(at, direction))
 		boss.sweep_requested.connect(func(emitter: ThermalEmitter) -> void: sweep_requested.emit(emitter))
 		targets.assign(boss.parts)
 	elif phase == "orbit":
@@ -276,7 +275,7 @@ func _advance_carrier_drones(delta: float, pilot: Transform3D) -> void:
 	drone_clock -= delta
 	if drone_clock > 0 or carrier_drones.size() > 2:
 		return
-	drone_clock = 9.0
+	drone_clock = 9.0 - boss.rage_stage * 1.5
 	for side in [-1.0, 1.0]:
 		var drone := EnemyFighter.new()
 		drone.sector = "cryo"
@@ -290,7 +289,7 @@ func _advance_carrier_drones(delta: float, pilot: Transform3D) -> void:
 		drone.phase = side
 		add_child(drone)
 		drone.global_position = drone.spawn_position
-		drone.cooldown = 2.5
+		drone.cooldown = 2.5 - boss.rage_stage * 0.45
 		drone.missile_requested.connect(func(at: Vector3, direction: Vector3) -> void: missile_requested.emit(at, direction))
 		targets.append(drone)
 		carrier_drones.append(drone)

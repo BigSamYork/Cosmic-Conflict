@@ -1,0 +1,442 @@
+{
+  "model": "ResembleAI/chatterbox-turbo",
+  "revision": "749d1c1a46eb10492095d68fbcf55691ccf137cd",
+  "voice": "Boss cast",
+  "catalog_sha256": "70b0a9d15d8b30fb4f88663e965c0630f920628fb384ac2090b9eed19918bfcc",
+  "rate": 24000,
+  "channels": 1,
+  "clips": [
+    {
+      "id": "ignis_ground_arrival",
+      "speaker": "ignis_ground",
+      "event": "arrival",
+      "text_sha256": "9152fd7a5ad37a0113722781b922cfbdaffeed73c5d2414e5d07c2fc4ff7cab0",
+      "audio_sha256": "e356da6730ed3efa551470c5f3d2f183ea7a4bce75eccc8b4c225b03b5f15366",
+      "seconds": 14.412,
+      "bytes": 691828
+    },
+    {
+      "id": "ignis_ground_hurt_1",
+      "speaker": "ignis_ground",
+      "event": "hurt_1",
+      "text_sha256": "b2a5fffa161a04d3093f49205cd40eb0565db9a1a8bc5fdc637ecc471a066999",
+      "audio_sha256": "89e13f8b73d58aa89a38ac79e4a512cb3c6128e3db9c1e73b6f97b5d249426aa",
+      "seconds": 1.799,
+      "bytes": 86416
+    },
+    {
+      "id": "ignis_ground_hurt_2",
+      "speaker": "ignis_ground",
+      "event": "hurt_2",
+      "text_sha256": "ec78f9c3095fd00e3b9b7e185df3f90b475895e50467cecaf3084275040fc52b",
+      "audio_sha256": "6e8eb8c5d3a30eb7fa8bd1c168b0b0684e1214089c704a43d603f0d8b8ad80ad",
+      "seconds": 2.261,
+      "bytes": 108574
+    },
+    {
+      "id": "ignis_ground_hurt_3",
+      "speaker": "ignis_ground",
+      "event": "hurt_3",
+      "text_sha256": "8e2510f166cd6d1795c27d64a2bfe65fddf1bfb041c14a92324337ed302f88e8",
+      "audio_sha256": "50a178956f4a831fd09569a428792552752b2adf10c35fd72c2c553291603458",
+      "seconds": 1.212,
+      "bytes": 58200
+    },
+    {
+      "id": "ignis_orbit_arrival",
+      "speaker": "ignis_orbit",
+      "event": "arrival",
+      "text_sha256": "9edba594e602c2ebe075cc8d46c6e8bab1a875a783336ebf4ac258c870019ba6",
+      "audio_sha256": "7e6d8f534ddc1ade8b205fba9f5a8c78f379fc75871824a88f254e57ed9f101f",
+      "seconds": 12.457,
+      "bytes": 597998
+    },
+    {
+      "id": "ignis_orbit_hurt_1",
+      "speaker": "ignis_orbit",
+      "event": "hurt_1",
+      "text_sha256": "055d3c95110e9359a8c75a49e26a0bbee645765556bd02f6146ccace7857033b",
+      "audio_sha256": "9ac16847536b75173301a2c2e8c35955d8bb02084ed9adb240d1d9b2766dafa7",
+      "seconds": 1.982,
+      "bytes": 95162
+    },
+    {
+      "id": "ignis_orbit_hurt_2",
+      "speaker": "ignis_orbit",
+      "event": "hurt_2",
+      "text_sha256": "ec495b39cc1ab2cd72048db293e748d721bf888635d91b9d75ff3717d6e3ab19",
+      "audio_sha256": "dc48806e3ec56fe741d6a932d3585193aa26366e73742fbc12ce962d7101ddcc",
+      "seconds": 1.463,
+      "bytes": 70286
+    },
+    {
+      "id": "ignis_orbit_hurt_3",
+      "speaker": "ignis_orbit",
+      "event": "hurt_3",
+      "text_sha256": "8a6dabd8d8f3aad84135c53084d750539130fd69bdf06a8087bcbc0e99411231",
+      "audio_sha256": "7e91f743156d95c150b5ddd54324c31a48c1b6664219e575ae1bed0a562fc559",
+      "seconds": 1.59,
+      "bytes": 76348
+    },
+    {
+      "id": "cryo_ground_arrival",
+      "speaker": "cryo_ground",
+      "event": "arrival",
+      "text_sha256": "ba5858df4bac4ba8a1bbb3941217b070bfc1a3bc4fc3af5ab16bd35369fdaa29",
+      "audio_sha256": "e6c7005f4a22302bc70ddb8358fe5a44b356eae9805c4a86e824b5c283d89a10",
+      "seconds": 16.222,
+      "bytes": 778706
+    },
+    {
+      "id": "cryo_ground_hurt_1",
+      "speaker": "cryo_ground",
+      "event": "hurt_1",
+      "text_sha256": "c8cf1c29d6af0153de0f66f8481f99ad1ee3b9a9f8c70144c03f2130980efa1a",
+      "audio_sha256": "c9662a6b62b04bde38bca64bf7530348540a4492b7537eb49bb496abf2bac3b3",
+      "seconds": 2.757,
+      "bytes": 132364
+    },
+    {
+      "id": "cryo_ground_hurt_2",
+      "speaker": "cryo_ground",
+      "event": "hurt_2",
+      "text_sha256": "5afbc48473200098fe71c618530f1559003c579bef245c73fe0094ad281b4412",
+      "audio_sha256": "2bbbf0e465ace6ca0bcb7d45a8668a8867e2f5d60a99c3da341e154d3dce9d83",
+      "seconds": 1.737,
+      "bytes": 83424
+    },
+    {
+      "id": "cryo_ground_hurt_3",
+      "speaker": "cryo_ground",
+      "event": "hurt_3",
+      "text_sha256": "7a175c2119500709570dbdb3cd807a4bcc71c9272801dbc94a8909aef00371c0",
+      "audio_sha256": "511b078ee1b54c3bf04e85c23cf8e72c5cef849836e246b8828f4e0f5e7f1e4b",
+      "seconds": 1.355,
+      "bytes": 65102
+    },
+    {
+      "id": "cryo_orbit_arrival",
+      "speaker": "cryo_orbit",
+      "event": "arrival",
+      "text_sha256": "0913eb8545fc85a1aab9641174306fa0aa584e088cb220365cf8a0a176b29c31",
+      "audio_sha256": "84bcd5321840202a347f221bc5d7a4680290babed0b160a4247e73f1facc6303",
+      "seconds": 12.074,
+      "bytes": 579606
+    },
+    {
+      "id": "cryo_orbit_hurt_1",
+      "speaker": "cryo_orbit",
+      "event": "hurt_1",
+      "text_sha256": "61a902467786908bb0991ecf9647186dd59257a9940471e7a272a20236659459",
+      "audio_sha256": "7a173a0ffab0502bb08b72145d7c1918077d3d19422b356c29cf4b056aac3a98",
+      "seconds": 0.908,
+      "bytes": 43608
+    },
+    {
+      "id": "cryo_orbit_hurt_2",
+      "speaker": "cryo_orbit",
+      "event": "hurt_2",
+      "text_sha256": "12ce657c6ebc7dae20e4ac05a79e02ed6d6df864830d4f172281936999da01bd",
+      "audio_sha256": "86728726b444b6b28f210fa9ebe8794afec1b931e75af31c54a79f69c7fbfc42",
+      "seconds": 1.839,
+      "bytes": 88316
+    },
+    {
+      "id": "cryo_orbit_hurt_3",
+      "speaker": "cryo_orbit",
+      "event": "hurt_3",
+      "text_sha256": "7ca1431ba54eca4672d4ee46ad64559026ee7b7885079f91d74ec0da4ab19533",
+      "audio_sha256": "98084c2399719282248c9b974c86d8a3ef10afc4258a092ec65f8a0a571ee8e2",
+      "seconds": 1.966,
+      "bytes": 94432
+    },
+    {
+      "id": "vespera_ground_arrival",
+      "speaker": "vespera_ground",
+      "event": "arrival",
+      "text_sha256": "a325e507370b5d5ccf6eefe7bc800518cbac348fa597b46f8e4829c7b318567f",
+      "audio_sha256": "db49d35d6123df7de9f4d6d4cc38af86e49f6a66834ffd6615eeed267739f38b",
+      "seconds": 11.648,
+      "bytes": 559128
+    },
+    {
+      "id": "vespera_ground_hurt_1",
+      "speaker": "vespera_ground",
+      "event": "hurt_1",
+      "text_sha256": "a09c4a8602e127db8f79acba537153f898cc2e0222557f1f7fd49e8241593cae",
+      "audio_sha256": "905251f9426d55ae944b7bb71ebc915477e84de5d714c42da018458d18858969",
+      "seconds": 0.951,
+      "bytes": 45670
+    },
+    {
+      "id": "vespera_ground_hurt_2",
+      "speaker": "vespera_ground",
+      "event": "hurt_2",
+      "text_sha256": "0cf54904be558c29dfa6e5d56cb0dcd5b95efcccf1b4956d945d2b2d23312b61",
+      "audio_sha256": "6d28daf598414c6fd469092f13378dba45fd908f025667951fb87a01193b38d9",
+      "seconds": 2.361,
+      "bytes": 113388
+    },
+    {
+      "id": "vespera_ground_hurt_3",
+      "speaker": "vespera_ground",
+      "event": "hurt_3",
+      "text_sha256": "803a0a1c4e5619c1a9a3607389a749ff4fc37dbecb6c0f01438a94e835a1a50b",
+      "audio_sha256": "ba4a9fa6bd04c4c57b0db667f414e5d26ce729a6e146528724e3cb54763b85ea",
+      "seconds": 1.409,
+      "bytes": 67688
+    },
+    {
+      "id": "vespera_orbit_arrival",
+      "speaker": "vespera_orbit",
+      "event": "arrival",
+      "text_sha256": "a07dd93d9029391849708ef8988208de36765a1e7f2a9f331732eb0ed882636f",
+      "audio_sha256": "7fee5ab38a0e5c01f25974b1828b22265058299cb0df248a4f6d94da3872628d",
+      "seconds": 14.973,
+      "bytes": 718742
+    },
+    {
+      "id": "vespera_orbit_hurt_1",
+      "speaker": "vespera_orbit",
+      "event": "hurt_1",
+      "text_sha256": "59792ffd01d1a03d1b604c4a303c9915fb0fe9dc81691102d28805c025470d9d",
+      "audio_sha256": "a18e364d60517782a27416b3d8113b8ab607cf80b88fd7d17306c0f2f350e3bd",
+      "seconds": 1.304,
+      "bytes": 62616
+    },
+    {
+      "id": "vespera_orbit_hurt_2",
+      "speaker": "vespera_orbit",
+      "event": "hurt_2",
+      "text_sha256": "228b5809286030792bd03d1e0c593b602a1348675f489d0b5936c99876ff5beb",
+      "audio_sha256": "f3b36ab56027b636ee40da160d4f1908630e9c7251bcd444cfb6d4f2bc047c35",
+      "seconds": 2.538,
+      "bytes": 121886
+    },
+    {
+      "id": "vespera_orbit_hurt_3",
+      "speaker": "vespera_orbit",
+      "event": "hurt_3",
+      "text_sha256": "75adde9760ab8456837eec6f4d640ee6519b6d8384ce142b5f6971cb18801fa6",
+      "audio_sha256": "0e4b882e20e499771959f0244f27681091894ab7a083b2b1da6a7b742c1b9d59",
+      "seconds": 2.051,
+      "bytes": 98492
+    },
+    {
+      "id": "xylo_ground_arrival",
+      "speaker": "xylo_ground",
+      "event": "arrival",
+      "text_sha256": "534e7eab85c92e87f3ab190bc304f72f9d3356341ce8958d51c8851e1cc6fcc0",
+      "audio_sha256": "aa3c39bc3d6d291a7d80d932b91853460af65ff34f1a1b41cf86f207054ec5c5",
+      "seconds": 12.907,
+      "bytes": 619572
+    },
+    {
+      "id": "xylo_ground_hurt_1",
+      "speaker": "xylo_ground",
+      "event": "hurt_1",
+      "text_sha256": "90ba11a13c8b1d197f9a7b77f41eb4b37d77d3785a9af6ffc619dfc1bd957abf",
+      "audio_sha256": "860ad8a81a3a1bd6605bef7df6255b4998e4bc44ab2ffb53c6031b28d51cc718",
+      "seconds": 1.648,
+      "bytes": 79148
+    },
+    {
+      "id": "xylo_ground_hurt_2",
+      "speaker": "xylo_ground",
+      "event": "hurt_2",
+      "text_sha256": "bde42a538eec85752c3ccc3cc90d5381dc187e75791f2a5511a53e09268f8919",
+      "audio_sha256": "7925bc17f752452ed15da334c2e8d56c57aef4813fdc969a733594afcd15e2fa",
+      "seconds": 1.226,
+      "bytes": 58898
+    },
+    {
+      "id": "xylo_ground_hurt_3",
+      "speaker": "xylo_ground",
+      "event": "hurt_3",
+      "text_sha256": "ce1b0f2f614194d9c0271aa4d1f899564f371d3b54c15c031b88f42bf836cda4",
+      "audio_sha256": "bf58caaa8c6fcfd7a6a4a318b9468acaaf08757227e2c405ed28345c7e67df86",
+      "seconds": 1.092,
+      "bytes": 52442
+    },
+    {
+      "id": "xylo_orbit_arrival",
+      "speaker": "xylo_orbit",
+      "event": "arrival",
+      "text_sha256": "cd3dabfb14e77080b385441359960537e494c6f6fabe94e69db3431febe1a16b",
+      "audio_sha256": "a6e0c3a1bfaaa5ada99fda6dfc2bfc65ca1d8fa3432e57c68a70e0e14ddc5f5a",
+      "seconds": 16.098,
+      "bytes": 772758
+    },
+    {
+      "id": "xylo_orbit_hurt_1",
+      "speaker": "xylo_orbit",
+      "event": "hurt_1",
+      "text_sha256": "f8e9e99d367d0aec6ac3fd5dbf84e5a0366f26175dbf2b401d6349f54076e81e",
+      "audio_sha256": "bc94df698c2f3cbc17a9a40ff8fac09607047e6f8c5b8bbec3e5e2ccb26d4aa4",
+      "seconds": 1.071,
+      "bytes": 51448
+    },
+    {
+      "id": "xylo_orbit_hurt_2",
+      "speaker": "xylo_orbit",
+      "event": "hurt_2",
+      "text_sha256": "be116839ce3582b226346c7a2c21525e5254d2dadb80fc9e441c89c3628a4519",
+      "audio_sha256": "e9a2e025a704611559d91f9195351be76c69ab4509561c78492bc82c9372f404",
+      "seconds": 2.244,
+      "bytes": 107738
+    },
+    {
+      "id": "xylo_orbit_hurt_3",
+      "speaker": "xylo_orbit",
+      "event": "hurt_3",
+      "text_sha256": "94a8b8619c25459de606c61d06056d9783ccb279ce573a3da29253f4d5f26b68",
+      "audio_sha256": "7e3e07e9e06ab61f6a921bfceea1207ed6c5088531c57e254bea0b02b734cd51",
+      "seconds": 2.035,
+      "bytes": 97740
+    },
+    {
+      "id": "thalassa_ground_arrival",
+      "speaker": "thalassa_ground",
+      "event": "arrival",
+      "text_sha256": "f9676570caba3dad3af5329199706b8ab21d2a8a3f867be6b6bc1830bcb6580b",
+      "audio_sha256": "d95a1d79fd2fa3e416687c82b56e71b3624dabfc2fd639de84a093fa2b95057b",
+      "seconds": 12.913,
+      "bytes": 619858
+    },
+    {
+      "id": "thalassa_ground_hurt_1",
+      "speaker": "thalassa_ground",
+      "event": "hurt_1",
+      "text_sha256": "8a621999c1b5157d20ae26bda19a8ce77b12bec9b17987946e051ce73c2001a0",
+      "audio_sha256": "11291edb8c646954ec3cb326c19d81ceef873e13b0829bf696d7d2d1a02f4163",
+      "seconds": 0.976,
+      "bytes": 46890
+    },
+    {
+      "id": "thalassa_ground_hurt_2",
+      "speaker": "thalassa_ground",
+      "event": "hurt_2",
+      "text_sha256": "7115252c88c6a6db008efbc9771eb1de90d452093ceadca24ea50c1d8dfa651b",
+      "audio_sha256": "d389648e48ad0a64ceab267c4ee8dc8a89d3d6b39f750cfcfbb0191bf1ebbc6f",
+      "seconds": 1.37,
+      "bytes": 65808
+    },
+    {
+      "id": "thalassa_ground_hurt_3",
+      "speaker": "thalassa_ground",
+      "event": "hurt_3",
+      "text_sha256": "6dbea505d0ed886d27ebef45bcd6e5454c7ae9bbdcc754ef7ba5819c9dd1fb34",
+      "audio_sha256": "09898a9292fde62a1dbdd5314dcad24ed6f57d4be9ccc95996ac2fdb24fb0f37",
+      "seconds": 1.472,
+      "bytes": 70678
+    },
+    {
+      "id": "thalassa_orbit_arrival",
+      "speaker": "thalassa_orbit",
+      "event": "arrival",
+      "text_sha256": "895bbedcbd874dbd65b070d2909d690718f106f7612504195a66b43721d54ff3",
+      "audio_sha256": "bb83eb4f1e75a952349ed6c59e6478ab64db983f10cc416615f43da991aa97c8",
+      "seconds": 14.937,
+      "bytes": 717018
+    },
+    {
+      "id": "thalassa_orbit_hurt_1",
+      "speaker": "thalassa_orbit",
+      "event": "hurt_1",
+      "text_sha256": "1b88f411932c99ce17acb60d81fdb6362c4b745b7f179573542103737c164619",
+      "audio_sha256": "dd0d8c7d79932ff1a48ee8fb6398be05d65954b26d0209a007202dbe55c00faa",
+      "seconds": 1.205,
+      "bytes": 57898
+    },
+    {
+      "id": "thalassa_orbit_hurt_2",
+      "speaker": "thalassa_orbit",
+      "event": "hurt_2",
+      "text_sha256": "02bc27d5d39e4a8ac017dd214d8b86e32db10191a20f2132c595ad977bd73b77",
+      "audio_sha256": "033c078fc6cfb6ee9097b6bd863e3fa07b52502e0f5f2f5d09ccd8e3c795bb78",
+      "seconds": 1.857,
+      "bytes": 89162
+    },
+    {
+      "id": "thalassa_orbit_hurt_3",
+      "speaker": "thalassa_orbit",
+      "event": "hurt_3",
+      "text_sha256": "a1fc307f255dcd14507a574fb8ef9091ebfb857e280ce668d7d0f6fd6a2e9164",
+      "audio_sha256": "c4af4598a47ad3c011d81469a3acc1281a1968482569e5b9aa1d2c18a42f7e70",
+      "seconds": 1.955,
+      "bytes": 93896
+    },
+    {
+      "id": "kharon_ground_arrival",
+      "speaker": "kharon_ground",
+      "event": "arrival",
+      "text_sha256": "addce96b29d386afb58fc03210b1c4929b90e882446c0c70efda71f67b36bf90",
+      "audio_sha256": "9992b73ae897608daeaebe7b9478f739a76d96e4a43da3d3a9e6378bbc993ed8",
+      "seconds": 14.167,
+      "bytes": 680082
+    },
+    {
+      "id": "kharon_ground_hurt_1",
+      "speaker": "kharon_ground",
+      "event": "hurt_1",
+      "text_sha256": "f94570a31f839908ade7a4aa33f65847989888d6400c7fcaf0b0c69e91ebfed5",
+      "audio_sha256": "39ee406b456a92a32ddd70d7056615eae06d45c2249a55c9dd565e0bb78a510f",
+      "seconds": 1.605,
+      "bytes": 77108
+    },
+    {
+      "id": "kharon_ground_hurt_2",
+      "speaker": "kharon_ground",
+      "event": "hurt_2",
+      "text_sha256": "341072425af194b832fd52e235dbf1341760f73e9c8f33d601fcb2ae7c76cc10",
+      "audio_sha256": "e25bf7aa00c0aad530a9b8e89c1623c92199fe6da0b92d6076e75ff5d893b9ae",
+      "seconds": 1.616,
+      "bytes": 77590
+    },
+    {
+      "id": "kharon_ground_hurt_3",
+      "speaker": "kharon_ground",
+      "event": "hurt_3",
+      "text_sha256": "5874b80848e92484b35ae2adf878d0eecbf1324a3935909f7de9fa8e604f0bb5",
+      "audio_sha256": "dc3899cce1ef68698506ad06eb1b52010c6dd2a85a4f7f82d271649da6cf5e7d",
+      "seconds": 1.371,
+      "bytes": 65848
+    },
+    {
+      "id": "kharon_orbit_arrival",
+      "speaker": "kharon_orbit",
+      "event": "arrival",
+      "text_sha256": "7b7377bb661337a3db09b3d6e0c013a2c3017f3a1fb2be45cf8728668d5af311",
+      "audio_sha256": "bf6cd778f0da5e668ad21c8ac4f2917b96c4879ccf7b9066c96864088ba0a274",
+      "seconds": 12.855,
+      "bytes": 617086
+    },
+    {
+      "id": "kharon_orbit_hurt_1",
+      "speaker": "kharon_orbit",
+      "event": "hurt_1",
+      "text_sha256": "3942302eb30509dc91c14caf83bc4188bae9ad87c3e2e6734354d3ffe46348d9",
+      "audio_sha256": "e273bc38a1555ea1874b4fe90e29b1a281da25889ed0e7121fa5d1921a0d2799",
+      "seconds": 1.503,
+      "bytes": 72208
+    },
+    {
+      "id": "kharon_orbit_hurt_2",
+      "speaker": "kharon_orbit",
+      "event": "hurt_2",
+      "text_sha256": "69a4107b640d6bec21d1fbb1887beede97c55dbb4a6d6eee064388e75961bb7f",
+      "audio_sha256": "1806b071266e63bbfbe4d313dc9c9402c550914d3220aeef9f5b6810d6c097ef",
+      "seconds": 2.366,
+      "bytes": 113594
+    },
+    {
+      "id": "kharon_orbit_hurt_3",
+      "speaker": "kharon_orbit",
+      "event": "hurt_3",
+      "text_sha256": "4dd2a81d702f4255f51c8e9c979db1414238764fda37fa40cd3fee9eb892d60c",
+      "audio_sha256": "265cd69a45e8bfa33df4a8d0c5ae74b2e60d4a37c909170c84f5a24a029b695b",
+      "seconds": 1.16,
+      "bytes": 55730
+    }
+  ]
+}

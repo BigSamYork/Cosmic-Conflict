@@ -1,0 +1,19 @@
+[remap]
+
+importer="oggvorbisstr"
+type="AudioStreamOggVorbis"
+uid="uid://hw0e7xdy3bpg"
+path="res://.godot/imported/Failing Defense.ogg-d96ca0cc1f6a70751d17deb4511a7bf6.oggvorbisstr"
+
+[deps]
+
+source_file="res://assets/music/licensed/Failing Defense.ogg"
+dest_files=["res://.godot/imported/Failing Defense.ogg-d96ca0cc1f6a70751d17deb4511a7bf6.oggvorbisstr"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

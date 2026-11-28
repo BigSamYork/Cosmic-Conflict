@@ -12,7 +12,10 @@ Licensed under Creative Commons Attribution 4.0 International (CC BY 4.0).
 https://creativecommons.org/licenses/by/4.0/
 https://incompetech.com/music/royalty-free/
 
-Fanfare for Space — Two Knocks Home
+Come Play with Me — Two Knocks Home
+Final Count — Boss pursuit and battle
+Failing Defense — Enraged boss battles
+Fanfare for Space — Astra Market
 Evening Melodrama — Title and campaign honors
 Look Busy — Astra Market
 Five Armies — Ignis Prime
@@ -42,6 +45,8 @@ Computer dialogue combines text supplied by the project owner with original
 additional lines. The voices of Lark and Captain Tomas Vale were rendered
 locally with Resemble AI's Chatterbox-Turbo (MIT). Both character references
 derive from the model's built-in synthetic sample. The game ships the audio.
+The twelve boss voices use the same synthetic source cast, with individual
+pitch, pace, resonance, and transmission effects rendered with FFmpeg.
 https://github.com/resemble-ai/chatterbox
 https://huggingface.co/ResembleAI/chatterbox-turbo
 

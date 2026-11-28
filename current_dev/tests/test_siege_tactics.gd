@@ -20,11 +20,68 @@ func run() -> void:
 		for orbital in [false, true]:
 			verify_contract(sector, orbital)
 			verify_breach_mounts(sector, orbital)
+			await verify_aim_points(sector, orbital)
 		await verify_tower(sector)
 	verify_turret()
 	await process_frame
 	print("SIEGE_TACTICS_FAILURES=", failures)
 	quit(failures)
+
+func verify_aim_points(sector: String, orbital: bool) -> void:
+	var boss := BossEncounter.new()
+	boss.sector = sector
+	boss.orbital = orbital
+	root.add_child(boss)
+	await physics_frame
+	await physics_frame
+	var origin := Vector3(0, 0, 112.5 if orbital else 82.5)
+	if sector == "xylo":
+		var protected_armor := boss.core.armor
+		boss.core.receive_hit(20)
+		check(boss.core.armor == protected_armor and boss.core.shield_cover.is_visible_in_tree(), "The closed chest guards the heart")
+		if orbital:
+			for spitter in boss.turrets.slice(0, 3):
+				hit(spitter)
+		else:
+			hit(boss.parts[0])
+			hit(boss.parts[1])
+		boss.advance(0.01, origin, Vector3.ZERO)
+		await physics_frame
+		await physics_frame
+	for part in boss.parts:
+		if part.destroyed:
+			continue
+		var aim := part.aim_point()
+		var ray := PhysicsRayQueryParameters3D.create(origin, aim + origin.direction_to(aim) * 6, 3)
+		var hit := boss.get_world_3d().direct_space_state.intersect_ray(ray)
+		check(hit.get("collider") == part, "%s %s: pilot can aim at %s" % [sector, "orbit" if orbital else "ground", boss.part_label(part)])
+	if sector == "xylo":
+		check(boss.core.face_offset.is_zero_approx() and boss.core.position.x > 0 and boss.core.target_face.get_child(0).name == "boss_heart", "Xylo heart is set into the left side of the body")
+		check(boss.core.unlocked and not boss.core.shield_cover.is_visible_in_tree(), "Breaking the interlock opens the chest")
+		for rib_height: float in [0.29, -0.45]:
+			var rib := boss.core.to_global(Vector3.UP * rib_height * boss.core.nacelle_radius)
+			var ray := PhysicsRayQueryParameters3D.create(rib + Vector3.BACK * 80, rib + Vector3.FORWARD * 5, 3)
+			var blocked := boss.get_world_3d().direct_space_state.intersect_ray(ray)
+			check(blocked.get("collider") == boss.body, "Intact ribs still stop shots over the exposed heart")
+	if sector in ["xylo", "cryo", "vespera"]:
+		verify_animated_core(boss.core, sector)
+	boss.free()
+
+func verify_animated_core(core: BossPart, sector: String) -> void:
+	var track: StringName = {"xylo": &"Systole", "cryo": &"Vent", "vespera": &"Refract"}[sector]
+	var surface := core.face_mesh
+	check(surface.get_blend_shape_count() == 1, "Imported %s core carries its moving geometry" % sector)
+	if surface.get_blend_shape_count() != 1:
+		return
+	check(surface.mesh.get_blend_shape_name(0) == track, "Correct %s animation is bound" % track)
+	core.unlocked = true
+	core.animate_reactor(0.192)
+	var peak := surface.get_blend_shape_value(0)
+	core.animate_reactor(0.56)
+	var next := surface.get_blend_shape_value(0)
+	check(absf(next - peak) > 0.08, "%s moves during an encounter" % track)
+	if sector == "xylo":
+		check(peak > 0.95 and next < 0.10, "Ventricles contract and relax each beat")
 
 func verify_contract(sector: String, orbital: bool) -> void:
 	var boss := BossEncounter.new()

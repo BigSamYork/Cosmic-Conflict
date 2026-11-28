@@ -17,13 +17,16 @@ ROOT = Path(__file__).resolve().parents[1]
 ASSETS = Path("current_dev/assets")
 CATALOGS = {"lines": ("voice", "voice"), "opening": ("opening", "opening"),
             "arrival": ("arrival", "arrival"), "boarding": ("boarding", "boarding"),
-            "rescues": ("rescues", "rescues")}
+            "rescues": ("rescues", "rescues"), "bosses": ("voice/bosses", "bosses")}
 MODEL = "ResembleAI/chatterbox-turbo"
 REVISION = "749d1c1a46eb10492095d68fbcf55691ccf137cd"
 STOCK = "Chatterbox-Turbo / stock"
 CASTS = {"lines": {"lark": "Chatterbox-Turbo / Lark"},
          "boarding": {"lark": "Chatterbox-Turbo / Lark", "attendant": STOCK}}
 STANDARD_CAST = {"lark": CASTS["lines"]["lark"], "vale": "Chatterbox-Turbo / Captain Tomas Vale"}
+BOSS_ROLES = {f"{sector}_{stage}" for sector in ("ignis", "cryo", "vespera", "xylo", "thalassa", "kharon")
+              for stage in ("ground", "orbit")}
+BOSS_EVENTS = {"arrival", "hurt_1", "hurt_2", "hurt_3"}
 
 
 def sha(data):
@@ -74,7 +77,14 @@ class Catalog:
         cast = CASTS.get(name, STANDARD_CAST)
         if name == "rescues":
             cast = {role: STANDARD_CAST.get(role, STOCK) for role in self.data["cast"]}
-        if name == "lines":
+        if name == "bosses":
+            self.expected_voice = "Boss cast"
+            cast = BOSS_ROLES
+            if set(self.data) != cast or any(set(events) != BOSS_EVENTS for events in self.data.values()):
+                raise ValueError(f"{self.source}: incomplete boss cast or dialogue")
+            self.lines = [dict(id=f"{role}_{event}", speaker=role, event=event, text=text)
+                          for role, events in self.data.items() for event, text in events.items()]
+        elif name == "lines":
             if self.expected_voice != cast["lark"]:
                 raise ValueError(f"{self.source}: unexpected voice")
             self.lines = [line for section in self.data["sections"] for line in section["lines"]]
@@ -116,6 +126,11 @@ class Catalog:
     def recipe(self, line):
         role = line.get("speaker", "lark")
         profile = self.voice / "profiles" / f"{role}.wav"
+        if self.name == "bosses":
+            # The authored cast mixes its two reference voices and the stock
+            # voice. Renderer changes already invalidate the enclosing cache.
+            refs = [sha((self.voice / "profiles" / f"{actor}.wav").read_bytes()) for actor in sorted(STANDARD_CAST)]
+            return sha(json.dumps([self.name, role, line["text"], refs], ensure_ascii=False).encode())
         return sha(json.dumps([self.name, role, line["text"],
                                sha(profile.read_bytes()) if role in STANDARD_CAST else "stock"],
                               ensure_ascii=False).encode("utf-8"))
@@ -146,13 +161,19 @@ class Catalog:
         with tempfile.TemporaryDirectory(prefix="cosmic-voices-") as directory:
             stage = Path(directory)
             source = stage / self.source.name
-            data = ({**self.data, "sections": [{"lines": lines}]} if self.name == "lines"
-                    else {**self.data, "cues": lines})
+            selection = []
+            if self.name == "bosses":
+                data = self.data
+                selection = ["--only", *(line["id"] for line in lines)]
+            elif self.name == "lines":
+                data = {**self.data, "sections": [{"lines": lines}]}
+            else:
+                data = {**self.data, "cues": lines}
             write_json(source, data)
             subprocess.run([os.environ.get("COSMIC_TTS_PYTHON") or sys.executable,
                             str(self.voice / "render_chatterbox.py"),
                             str(source), str(stage / "out"), "--profiles",
-                            str(self.voice / "profiles")], check=True)
+                            str(self.voice / "profiles"), *selection], check=True)
             records = {clip["id"]: clip for clip in read_json(stage / "out" / self.index.name)["clips"]}
             for line in lines:
                 key = line["id"]

@@ -133,7 +133,7 @@ func verify_gameplay() -> void:
 	game.campaign.phase = "ground_boss"
 	await game._load_phase()
 	game._process(0.0)
-	check(game.music.requested == "cryo", "Entering a boss keeps the current world's theme")
+	check(game.music.requested == AmbientMusic.BOSS_BATTLE, "Entering a boss requests the pursuit score")
 	check(game.falling_ice.is_empty(), "Ground boss entry cannot retain old falling-ice hazards")
 	game.campaign.sector = "ignis"
 	game.campaign.phase = "ground"
@@ -168,7 +168,7 @@ func verify_recordings() -> void:
 	var credits := FileAccess.get_file_as_string("res://assets/music/credits.txt")
 	check("Kevin MacLeod" in credits and "https://creativecommons.org/licenses/by/4.0/" in credits, "Music credits name the artist and license")
 	var titles: Array = AmbientMusic.TRACKS.values()
-	titles.append("Fanfare for Space")
+	titles.append("Come Play with Me")
 	for title: String in titles:
 		var stream := load("res://assets/music/licensed/%s.ogg" % title) as AudioStreamOggVorbis
 		check(stream != null and stream.get_length() > 30 and title in credits, "Packaged and credited recording: " + title)

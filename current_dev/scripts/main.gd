@@ -286,6 +286,9 @@ func _ready() -> void:
 	computer_voice = ComputerVoice.new()
 	computer_voice.speaking_changed.connect(sound.set_ducked)
 	computer_voice.speaking_changed.connect(music.set_ducked)
+	computer_voice.boss_caption_changed.connect(func(speaker: String, caption: String) -> void:
+		hud.radio_speaker = speaker
+		hud.radio_caption = caption)
 	computer_voice.fault.connect(hud.show_message)
 	add_child(computer_voice)
 	_load_settings()
@@ -858,6 +861,8 @@ func _physics_process(delta: float) -> void:
 	var previous_recharge: float = flight.recharge_delay
 	var previous_shields: float = flight.shields
 	var volleys: int = flight.advance(delta, held and fire_armed)
+	if is_campaign and campaign.phase in ["ground", "orbit"] and flight.duration - flight.elapsed <= 18.0 and not automated_session and automation.is_empty():
+		computer_voice.start_boss_radio(campaign.sector, campaign.phase == "orbit")
 	_advance_rotors(delta, held and fire_armed and flight.overheat_remaining <= 0.0)
 	if previous_vent > 0 and flight.overheat_remaining == 0:
 		sound.play_cue("vent_ready")
@@ -919,9 +924,11 @@ func _physics_process(delta: float) -> void:
 		burrow_serpent.advance(self, delta, to_global(previous), camera.global_position)
 	if boss != null:
 		var core_was_exposed := boss.core.unlocked
-		boss.advance(delta, camera.position, (camera.position - previous) / delta)
+		boss.advance(delta, camera.position, (camera.position - previous) / delta, flight.collision_radius)
 		if boss.core.unlocked and not core_was_exposed and not boss.defeated():
 			sound.play_cue("boss_breach")
+		if boss.death_time < 0 and boss.rage_stage > 0:
+			computer_voice.boss_hurt(boss.rage_stage + 1)
 		var cloaked: bool = boss.cloak != null and boss.cloak.active() and boss.parts[0].unlocked and not boss.defeated()
 		if cloaked and not voice_nyx_cloaked:
 			sound.play_cue("cloak_engage")
@@ -1051,8 +1058,7 @@ func _check_obstacles(previous: Vector3, current: Vector3, canyon_contact: bool 
 		player_probe_shape.radius = flight.collision_radius
 	query.transform = Transform3D(Basis.IDENTITY, previous)
 	query.motion = current - previous
-	# Boss ordnance still uses its broad cover volume. The pilot touches its
-	# moving visual hull, so empty spaces between the wings remain flyable.
+	# Pilot collision already includes the hull and all articulated attachments.
 	var omitted: Array[RID] = waterline_rids.duplicate()
 	if boss != null:
 		omitted.append(boss.body.get_rid())
@@ -1385,6 +1391,9 @@ func _strike(result: Dictionary, damage: int, secondary_hit: bool = false, recor
 		var had_skipped: bool = collider is EnemyFighter and collider.skipped
 		var was_interrupted: bool = collider is BossTurret and collider.interrupted
 		var killed: bool
+		if collider is BossPart and collider.biological:
+			result = ImpactSpray.skin_contact(collider, result, result.get("direction", camera.global_position.direction_to(at)))
+			at = result["position"]
 		if collider is DestructibleTower:
 			killed = collider.receive_hit_at(applied_damage, at, result.get("direction", camera.global_position.direction_to(at)))
 		else:
@@ -1393,6 +1402,8 @@ func _strike(result: Dictionary, damage: int, secondary_hit: bool = false, recor
 			sound.play_cue("cloak_engage")
 		elif collider is BossTurret and collider.interrupted and not was_interrupted:
 			sound.play_cue("tracking_jam")
+		if collider is BossPart and collider.get_parent() == boss and collider.armor < previous_armor and not boss.defeated():
+			computer_voice.boss_hurt(1)
 		_confirm_impact(result, previous_armor, killed)
 		if not collider is DestructibleTower and (killed or ImpactSpray.surface_for(collider) != ImpactSpray.Surface.FLESH):
 			_spawn_breakup(collider, killed)
@@ -1446,17 +1457,20 @@ func _strike(result: Dictionary, damage: int, secondary_hit: bool = false, recor
 					elif boss == null or boss.death_time < 0:
 						if collider is BossRadar:
 							campaign.stats["radars"] += 1
+							_clear_thermal_sweeps()
 						var explosion := DestructionEffect.new()
 						explosion.reduced = settings["reduced_effects"]
 						explosion.source = collider
 						explosion.size = 4.0 if collider is BossTurret or collider is ThermalEmitter else 6.0
 						add_child(explosion)
 						explosions.append(explosion)
-						hud.show_message("BOSS RADAR DESTROYED / TURRET INTERVAL +25%" if collider is BossRadar else (boss.part_label(collider) + " DESTROYED" if boss != null else "SECTION DESTROYED"))
+						if boss != null:
+							hud.show_message(boss.destruction_notice(collider))
 				else:
 					campaign.stats["enemies"] += 1
 					_award_combat_kill(25 if collider is GroundTurret else 35 if collider is EnemyFighter and collider.has_directional_shield() else 20)
-			_spawn_burst(at)
+			if not (collider is BossPart and collider.biological):
+				_spawn_burst(at)
 		return true
 	elif collider is EnemyMissile and collider.receive_hit():
 		if record_hit:
@@ -1512,16 +1526,21 @@ func _confirm_impact(result: Dictionary, previous_armor: int, destroyed: bool) -
 	if normal.is_zero_approx():
 		normal = toward_pilot
 	var surface := ImpactSpray.surface_for(target)
-	var flash_color := Color("#ffc073") if surface == ImpactSpray.Surface.HULL else Color("#d5ac91") if surface == ImpactSpray.Surface.STONE else Color("#f65f65")
-	combat_lights.flash(at + normal.normalized() * 1.7, flash_color, 19.0, 0.24, 3.0)
+	if surface != ImpactSpray.Surface.FLESH:
+		var flash_color := Color("#ffc073") if surface == ImpactSpray.Surface.HULL else Color("#d5ac91")
+		combat_lights.flash(at + normal.normalized() * 1.7, flash_color, 19.0, 0.24, 3.0)
 	if target is RangeTarget and not target.destroyed:
-		target.mark_impact(at, -toward_pilot, surface == ImpactSpray.Surface.FLESH, previous_armor)
+		target.mark_impact(at, result.get("direction", -toward_pilot), surface == ImpactSpray.Surface.FLESH, previous_armor)
+	if target is BossPart and target.biological:
+		target.last_blood_contact = target.to_local(at)
+		target.last_blood_normal = (target.global_basis.transposed() * normal).normalized()
 	if impact_sprays.size() >= ImpactSpray.MAX_BURSTS:
 		impact_sprays.pop_front().queue_free()
 	var spray := ImpactSpray.new()
 	add_child(spray)
 	var size := clampf(at.distance_to(camera.global_position) / 100.0, 1.0, 2.0)
-	spray.build(at, normal.normalized(), surface, size, settings["reduced_effects"])
+	var host := target.get_parent() as BossEncounter if target is BossPart else null
+	spray.build(at, normal.normalized(), surface, size, settings["reduced_effects"], host)
 	impact_sprays.append(spray)
 	if destroyed:
 		sound.play_destruction(surface)
@@ -1746,18 +1765,17 @@ func _advance_rock_fragments(delta: float, previous_pilot: Vector3, pilot: Vecto
 			rock_fragments.remove_at(i)
 
 func _start_boss_destruction() -> void:
+	computer_voice.end_boss_radio()
 	boss.begin_destruction()
-	for sweep in thermal_sweeps:
-		sweep.queue_free()
-	thermal_sweeps.clear()
-	hud.thermal_warning = false
+	_clear_thermal_sweeps()
 	var effect := DestructionEffect.new()
 	effect.reduced = settings["reduced_effects"]
 	effect.source = boss
 	effect.size = 27.0 if boss.orbital else 22.0
 	effect.fracture_requested.connect(func() -> void:
 		if is_instance_valid(boss):
-			combat_lights.flash(boss.global_position + Vector3.UP * 8, Color("#ff944a"), 88, 1.3, 6.0)
+			if not boss.core.biological:
+				combat_lights.flash(boss.global_position + Vector3.UP * 8, Color("#ff944a"), 88, 1.3, 6.0)
 			var fragments := BreakupEffect.new()
 			add_child(fragments)
 			fragments.build(boss, true, VectorArt.AMBER, 1024, 4.0, 14.0)
@@ -1766,6 +1784,12 @@ func _start_boss_destruction() -> void:
 	add_child(effect)
 	explosions.append(effect)
 	sound.play_cue("boss_collapse")
+
+func _clear_thermal_sweeps() -> void:
+	for sweep in thermal_sweeps:
+		sweep.queue_free()
+	thermal_sweeps.clear()
+	hud.thermal_warning = false
 
 func _advance_storm(delta: float, previous: Vector3) -> void:
 	var glow := 0.0
@@ -1974,10 +1998,7 @@ func _fire_emp() -> void:
 	if boss != null and not boss.defeated() and _secondary_visible(boss.core.aim_point(), EMPPulse.RANGE, boss.body):
 		boss.stun()
 		stunned += 1
-		for sweep in thermal_sweeps:
-			sweep.queue_free()
-		thermal_sweeps.clear()
-		hud.thermal_warning = false
+		_clear_thermal_sweeps()
 	if cleared > 0 or stunned > 0:
 		flight.hits += 1
 		campaign.stats["hits"] += 1
@@ -2117,10 +2138,29 @@ func _fire_enemy_laser(fighter: EnemyFighter) -> void:
 	add_child(beam)
 	beams.append({"node": beam, "remaining": 0.14})
 
-func _launch_missile(origin: Vector3, direction: Vector3) -> void:
+func _boss_special_hit(attack_name: String, damage: float) -> void:
+	if mode != Mode.FLIGHT or flight.evade_remaining > 0 or flight.roll_remaining > 0:
+		return
+	if not _apply_pilot_damage(attack_name, damage):
+		return
+	match boss.sector:
+		"cryo":
+			_apply_frost()
+		"ignis":
+			if flight.add_external_heat(damage):
+				hud.show_message("EXTERNAL HEAT OVERLOAD / VENTING")
+				sound.play_cue("vent_overheat")
+		"xylo":
+			if flight.apply_spores():
+				hud.show_message("SPORE HIT / RADAR INTERFERENCE")
+				sound.play_cue("spore_static")
+
+func _launch_missile(origin: Vector3, direction: Vector3, source_boss: BossEncounter = null) -> void:
 	if mode != Mode.FLIGHT or missiles.size() >= MAX_MISSILES:
 		return
 	var missile := EnemyMissile.new()
+	if source_boss != null:
+		missile.boss_fire_control = weakref(source_boss)
 	missile.frost = is_campaign and campaign.sector == "cryo" and flight.missiles_launched % 3 == 1
 	missile.biological = is_campaign and campaign.sector == "xylo"
 	missile.position = origin
@@ -2163,6 +2203,9 @@ func _update_contacts() -> void:
 	var previous_vent_warning: bool = hud.vent_warning
 	var previous_gate_warning: bool = hud.gate_warning
 	var stealth_seen: bool = false
+	var closest_module: Dictionary = {}
+	var focused_part: BossPart
+	var focus_radius_squared := 38.0 * 38.0
 	hud.contacts.clear()
 	hud.incoming.clear()
 	var previous_collision := hud.sensors.collision_seconds
@@ -2220,6 +2263,8 @@ func _update_contacts() -> void:
 		var tint: Color = VectorArt.HOSTILE if target is GroundTurret else VectorArt.AMBER if target is BossPart and not target.core else VectorArt.CYAN
 		if target is BossTurret:
 			tint = VectorArt.HOSTILE
+		elif target is BossPart and target.core and target.biological:
+			tint = Color("#ff8280")
 		elif target is ThermalEmitter:
 			tint = Color("#ffb650")
 		elif target is DroneBay:
@@ -2256,7 +2301,14 @@ func _update_contacts() -> void:
 		if target is BossPart:
 			contact["boss_part"] = true
 			contact["shielded"] = target.shield_cover != null and not target.unlocked
+			var offset_sq := cursor.distance_squared_to(contact.screen)
+			if boss != null and offset_sq < focus_radius_squared:
+				closest_module = contact
+				focused_part = target
+				focus_radius_squared = offset_sq
 		hud.contacts.append(contact)
+	if focused_part != null:
+		closest_module["focused_module"] = boss.target_hint(focused_part)
 	if hud.vent_warning and not previous_vent_warning:
 		_voice_event("ignis_vent")
 	if hud.gate_warning and not previous_gate_warning:
@@ -2314,6 +2366,8 @@ func _process(delta: float) -> void:
 			scene = "station"
 		elif is_campaign and campaign != null and audio_mode not in [Mode.TITLE, Mode.CAMPAIGN_COMPLETE]:
 			scene = campaign.sector
+			if boss != null and not boss.defeated():
+				scene = AmbientMusic.ENRAGED if boss.rage_stage == 2 else AmbientMusic.BOSS_BATTLE
 		elif audio_mode in [Mode.FLIGHT, Mode.PAUSE, Mode.COMPLETE] and flight.training:
 			scene = "ignis"
 		music.request_scene(scene)
@@ -2335,6 +2389,12 @@ func _process(delta: float) -> void:
 	if boss != null and mode == Mode.FLIGHT:
 		hud.objective = boss.objective()
 		hud.boss_fraction = boss.health_fraction()
+		if boss.rage_stage > 0:
+			var title: String = SectorCatalog.ORBITAL_BOSSES[boss.sector] if boss.orbital else SectorCatalog.GROUND_BOSSES[boss.sector]
+			hud.phase_title = title.to_upper() + (" / ENRAGED" if boss.rage_stage == 2 else " / RETALIATING")
+		hud.boss_warning = boss.attack_warning()
+	else:
+		hud.boss_warning = ""
 	var measuring_transit: bool = mode == Mode.TRANSITION and ((automation == "--launch-benchmark" and launch_approach != null) or (automation == "--orbit-benchmark" and sequence == "blockade_exit") or (automation == "--belt-benchmark" and mission_world != null and mission_world.phase == "asteroids") or (automation in ["--boss-benchmark", "--entry-benchmark"] and sequence in ["orbital_victory", "belt_transfer"]))
 	var warmed: bool = flight.elapsed > 2.0 or (automation == "--launch-benchmark" and launch_approach != null and launch_approach.age > 2.0)
 	if not automation.is_empty() and (mode == Mode.FLIGHT or measuring_transit) and warmed and frame_ms > 0.0:
@@ -2411,9 +2471,11 @@ func _apply_settings() -> void:
 		else:
 			music.set_level(int(settings["music_volume"]), bool(settings["mute"]) or automated_session or not automation.is_empty())
 
-func _clear_stage() -> void:
+func _clear_stage(preserve_boss_radio := false) -> void:
 	rescue_convoy = null # Parented to world; world owns its lifetime.
 	hud.story_seconds = 0
+	if not preserve_boss_radio:
+		computer_voice.end_boss_radio()
 	computer_voice.cancel_group("vespera_boarding")
 	surface_events.reset()
 	_set_canopy_shade(0.0)
@@ -2944,7 +3006,6 @@ func _enter_phase(continuous: bool) -> void:
 		boss.health_scale = campaign.health_multiplier()
 		world.add_child(boss)
 		boss.configure_pursuit(entry, canyon_distance, director.ground_course)
-		boss.missile_requested.connect(_launch_missile)
 		targets.assign(boss.parts)
 		targets.append_array(turrets)
 		_stream_road_turrets(canyon_distance)
@@ -2963,7 +3024,7 @@ func _enter_phase(continuous: bool) -> void:
 				approaching_belt = null
 			var previous_world: Node3D = world
 			world = null
-			_clear_stage()
+			_clear_stage(campaign.phase == "orbit_boss")
 			retired_world = previous_world
 		else:
 			if continuous:
@@ -2985,6 +3046,8 @@ func _enter_phase(continuous: bool) -> void:
 			if not rock.fragment: _spawn_rock_fragments(rock))
 		targets = scene.targets
 		boss = scene.boss
+	if boss != null:
+		boss.missile_requested.connect(_launch_missile.bind(boss))
 	var titles: Dictionary = {"ground": "GROUND ASSAULT / " + SectorCatalog.name_for(campaign.sector).to_upper(), "ground_boss": SectorCatalog.GROUND_BOSSES[campaign.sector].to_upper() + " / PURSUIT", "orbit": "ORBITAL DOGFIGHT / AUTO TRACKING", "orbit_boss": SectorCatalog.ORBITAL_BOSSES[campaign.sector].to_upper() + " / PURSUIT", "asteroids": "ASTEROID ESCAPE / AVOIDANCE ONLINE"}
 	hud.phase_title = titles[campaign.phase]
 	if campaign.phase == "asteroids" and campaign.sector == "xylo":
@@ -3014,7 +3077,10 @@ func _enter_phase(continuous: bool) -> void:
 	sound.pause_sounds(false)
 	computer_voice.pause_speech(false)
 	if campaign.phase.ends_with("_boss"):
+		boss.special_hit.connect(_boss_special_hit)
 		_voice_event("recon_" + campaign.sector + ("_orbit" if boss.orbital else "_ground"))
+		if not automated_session and automation.is_empty():
+			computer_voice.start_boss_radio(campaign.sector, boss.orbital)
 	elif campaign.phase == "ground" and not continuous and automation.is_empty() and not automated_session:
 		computer_voice.say_arrival(campaign.sky_quarter, campaign.headlight)
 	elif campaign.phase == "ground" and campaign.sector in ["ignis", "vespera", "xylo"]:
@@ -3424,6 +3490,7 @@ func _eject() -> void:
 	credit_hoops.clear()
 	if ship_loss != null or campaign.ship.is_empty():
 		return
+	computer_voice.end_boss_radio()
 	_clear_parasites()
 	if surface_events.pilot_caught:
 		surface_events.reset()
@@ -3914,7 +3981,7 @@ func _run_music_test() -> void:
 	music.set_paused(false)
 	music.request_scene("station")
 	await get_tree().create_timer(4.5).timeout
-	_check(music.current == "station" and music.players[music.active].playing and not music.players[1 - music.active].playing, "Docking crossfades to the opening score and releases the previous recording")
+	_check(music.current == "station" and music.players[music.active].playing and not music.players[1 - music.active].playing, "Docking crossfades to the station theme and releases the previous recording")
 	music.set_level(0, false)
 	_check(not music.players[0].playing and not music.players[1].playing, "Packaged music volume zero stops playback")
 	_finish_automation()

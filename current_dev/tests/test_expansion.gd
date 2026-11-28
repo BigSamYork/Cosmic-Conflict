@@ -463,6 +463,10 @@ func verify_boss_radars() -> void:
 				all_visible = all_visible and game.camera.is_position_in_frustum(part.aim_point())
 			check(all_visible, "Closer framing retains every required weak point in view")
 			var radar: BossRadar = boss.radars[0]
+			game.cursor = game.camera.unproject_position(radar.aim_point())
+			game._update_contacts()
+			var focused: Array = game.hud.contacts.filter(func(c: Dictionary) -> bool: return c.has("focused_module"))
+			check(focused.size() == 1 and focused[0].focused_module == boss.target_hint(radar) and "GUIDANCE" in boss.target_hint(radar), "The reticle explains what shooting the selected radar changes in %s %s" % [sector, stage])
 			check(radar.position.is_equal_approx(boss.radar_mount(-1)) and radar.get_parent() == boss and radar.scanner != null, "The rotating radar has a solid support rooted on the actual boss hull")
 			var scanner_pose: Basis = radar.scanner.basis
 			boss.advance_visuals(0.5)
@@ -482,14 +486,25 @@ func verify_boss_radars() -> void:
 			check(not contact.is_empty() and contact["collider"] == radar, "The mounted radar's actual shootable collision is exposed beyond hull cover")
 			if contact.is_empty() or contact["collider"] != radar:
 				continue
+			game._clear_missiles()
+			boss.missile_requested.emit(radar.aim_point(), Vector3.FORWARD)
+			check(game.missiles.size() == 1 and game.missiles[0].boss_fire_control.get_ref() == boss, "Each boss launcher routes exactly one missile through its own tracking system")
+			var launched: EnemyMissile = game.missiles[0]
+			if stage == "orbit_boss":
+				game.mission_world.missile_requested.emit(radar.aim_point(), Vector3.FORWARD)
+				check(game.missiles.size() == 2 and game.missiles[1].boss_fire_control == null, "Escort missiles keep their independent guidance")
+			if boss.thermal_emitter != null:
+				game._start_thermal_sweep(boss.thermal_emitter)
 			for _i in range(6):
 				game._strike(contact, 1)
+			check("GUIDANCE AT 35%" in game.hud.message and is_equal_approx(launched.guidance_strength(), 0.35) and game.thermal_sweeps.is_empty(), "First dish breaks the lock on an airborne round, cancels the sweep and reports the loss")
 			check(radar.destroyed and radar.collision_layer == 0 and not radar.visible, "Six actual baseline hits destroy the radar, hide it and remove collision")
 			check(game.campaign.credits == credits and game.campaign.stats["enemies"] == enemies and game.campaign.combo_kills == streak and not boss.core.unlocked, "Destroying a radar awards no cash and leaves the core sealed")
 			check(not game._strike({"collider": radar, "position": radar.aim_point()}, 10) and game.campaign.credits == credits, "Destroyed radar cannot be rewarded again")
 			boss.advance(0.01, game.camera.global_position, Vector3.ZERO)
 			check(boss.turrets[0].interval_multiplier == 1.25, "One radar loss slows turret cadence by the agreed interval multiplier")
-			boss.radars[1].receive_hit(boss.radars[1].armor)
+			game._strike({"collider": boss.radars[1], "position": boss.radars[1].aim_point()}, boss.radars[1].armor)
+			check("MISSILES UNGUIDED" in game.hud.message and launched.guidance_strength() == 0.0, "Losing both dishes disables in-flight guidance and reports the new firing mode")
 			boss.advance(0.01, game.camera.global_position, Vector3.ZERO)
 			check(boss.core.unlocked == (sector == "vespera"), "Both shield radars expose the Vespera core, with other sector objectives still active")
 			check(boss.turrets[0].interval_multiplier == 1.5 and not game.explosions.is_empty() and not game.debris.is_empty(), "Both radars stack additively and real destruction includes explosion and hull-colored breakup")
@@ -497,6 +512,30 @@ func verify_boss_radars() -> void:
 			var hull_before: Vector3 = boss.global_position
 			boss.advance(0.1, game.camera.global_position, Vector3.ZERO)
 			check(camera_before.is_equal_approx(game.camera.basis) and boss.global_position.distance_to(hull_before) < 6, "Gentle boss drift does not impose a camera oscillation or aiming lock")
+			var shields: float = game.flight.shields
+			game.flight.evade_remaining = 0.1
+			boss.special_hit.emit("TEST STRIKE", 12.0)
+			check(game.flight.shields == shields, "Side-dash evades the boss strike")
+			game.flight.evade_remaining = 0
+			boss.special_hit.emit("TEST STRIKE", 12.0)
+			check(game.flight.shields == shields - 12.0, "The %s %s encounter routes a special hit to pilot shields" % [sector, stage])
+			if sector == "xylo":
+				check(game.flight.radar_static_remaining > 0, "Biological strikes disrupt radar")
+			elif sector == "cryo":
+				check(game.flight.frost_remaining > 0, "Carrier and bore-mech strikes can frost the cockpit")
+			elif sector == "ignis":
+				check(game.flight.heat > 0, "Thermal weapon hits heat the pilot's reactor")
+			for side in range(2):
+				var feed: BossPart = boss.parts[side]
+				game._strike({"collider": feed, "position": feed.aim_point()}, feed.armor)
+				if boss.defeated():
+					check(sector == "thalassa" and stage == "ground_boss" and side == 1, "The second ballast pod sinks its walker immediately")
+					break
+				check("BATTERY RELOAD DOUBLED" in game.hud.message, "Breaking a feed reports the change to the pilot")
+				for battery in boss.turrets:
+					var same_side := signf(feed.position.x) == signf(battery.position.x)
+					check(battery.feed_lost == (side == 1 or same_side), "The destroyed %s affects the correct launcher bank" % boss.part_label(feed))
+				boss.advance(0.01, game.camera.global_position, Vector3.ZERO)
 
 func verify_transitions() -> void:
 	await phase("ignis", "launch")

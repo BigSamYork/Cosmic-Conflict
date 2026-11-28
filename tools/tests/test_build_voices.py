@@ -22,7 +22,13 @@ from hashlib import sha256
 catalog, output = map(pathlib.Path, sys.argv[1:3])
 output.mkdir()
 data = json.loads(catalog.read_text(encoding="utf-8"))
-lines = data["cues"] if "cues" in data else data["sections"][0]["lines"]
+if catalog.stem == "bosses":
+    requested = set(sys.argv[sys.argv.index("--only") + 1:])
+    lines = [dict(id=f"{role}_{event}", speaker=role, text=text)
+             for role, events in data.items() for event, text in events.items()
+             if f"{role}_{event}" in requested]
+else:
+    lines = data["cues"] if "cues" in data else data["sections"][0]["lines"]
 records = []
 for line in lines:
     key = line["id"]
@@ -63,12 +69,19 @@ class BuildVoiceTests(unittest.TestCase):
         (voice / "render_chatterbox.py").write_text(FAKE_RENDERER, encoding="utf-8")
         lark = "Chatterbox-Turbo / Lark"
         vale = "Chatterbox-Turbo / Captain Tomas Vale"
-        for catalog in ("lines", "opening", "arrival", "boarding", "rescues"):
-            folder = voice if catalog == "lines" else assets / catalog
+        for catalog in ("lines", "opening", "arrival", "boarding", "rescues", "bosses"):
+            folder = voice if catalog == "lines" else voice / "bosses" if catalog == "bosses" else assets / catalog
             folder.mkdir(exist_ok=True)
             lines = [{"id": key, "speaker": "lark", "text": "This was previously rendered."}
                      for key in ("clearance", "last_car")]
-            if catalog == "lines":
+            if catalog == "bosses":
+                name = "Boss cast"
+                data = {f"{sector}_{stage}": {event: "Recorded boss line." for event in ("arrival", "hurt_1", "hurt_2", "hurt_3")}
+                        for sector in ("ignis", "cryo", "vespera", "xylo", "thalassa", "kharon")
+                        for stage in ("ground", "orbit")}
+                lines = [dict(id=f"{role}_{event}", speaker=role, text=text)
+                         for role, events in data.items() for event, text in events.items()]
+            elif catalog == "lines":
                 name = lark
                 data = {"voice": name, "sections": [{"lines": lines}]}
             else:
@@ -115,6 +128,20 @@ class BuildVoiceTests(unittest.TestCase):
         self.assertNotIn("TEST_RENDER", self.run_cli("prepare").stdout)
         self.assertFalse(self.overlay.exists())
         self.run_cli("verify")
+
+    def test_boss_bank_preserves_reviewed_takes_and_only_renders_a_new_id(self):
+        folder = self.checkout / ASSETS / "voice/bosses"
+        receipt = folder / "generated-bosses.json"
+        reviewed = json.loads(receipt.read_bytes())
+        missing = reviewed["clips"].pop()["id"]
+        (folder / f"{missing}.wav").unlink()
+        self.assertIn("previously recorded ID", self.run_cli("verify", success=False).stderr)
+        receipt.write_text(json.dumps(reviewed), encoding="utf-8")
+        self.assertIn("render=1", self.run_cli("probe").stdout)
+        self.assertEqual(self.run_cli("prepare").stdout.count("TEST_RENDER "), 1)
+        self.run_cli("verify")
+        files = self.overlay / ASSETS / "voice/bosses"
+        self.assertEqual({path.name for path in files.iterdir()}, {f"{missing}.wav", receipt.name})
 
     def test_missing_lines_only_and_cache_across_clean_checkouts(self):
         destinations = {"lines": "voice", "arrival": "arrival", "opening": "opening",

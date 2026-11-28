@@ -1,0 +1,19 @@
+[remap]
+
+importer="oggvorbisstr"
+type="AudioStreamOggVorbis"
+uid="uid://ba3iyu1yxg4xy"
+path="res://.godot/imported/Final Count.ogg-f0822eac28444bb4b871bc45ac08c1e2.oggvorbisstr"
+
+[deps]
+
+source_file="res://assets/music/licensed/Final Count.ogg"
+dest_files=["res://.godot/imported/Final Count.ogg-f0822eac28444bb4b871bc45ac08c1e2.oggvorbisstr"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

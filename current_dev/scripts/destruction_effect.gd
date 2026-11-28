@@ -11,6 +11,8 @@ var reduced := false
 var plume := MultiMeshInstance3D.new()
 static var smoke_shader := preload("res://shaders/blast_cloud.gdshader")
 static var cloud_material := ShaderMaterial.new()
+static var blood_material := ShaderMaterial.new()
+var wound: BossPart
 static var sprite := QuadMesh.new()
 
 func _ready() -> void:
@@ -29,19 +31,28 @@ func _ready() -> void:
 		particles.set_instance_custom_data(i, Color(family, direction, phase, delay))
 	if cloud_material.shader == null:
 		cloud_material.shader = smoke_shader
+		blood_material.shader = preload("res://shaders/blood_rupture.gdshader")
 	plume.multimesh = particles
-	plume.material_override = cloud_material
+	if source is BossEncounter and source.core.biological:
+		wound = source.core
+	elif source is BossPart and source.biological:
+		wound = source
+	plume.material_override = blood_material if wound != null else cloud_material
 	plume.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(plume)
 	plume.set_instance_shader_parameter(&"radius", size)
-	var organic: bool = (source is BossEncounter and source.sector == "xylo") or (source is BossPart and source.biological)
-	plume.set_instance_shader_parameter(&"organic", organic)
+	if wound != null:
+		var host := wound.get_parent() as BossEncounter
+		plume.set_instance_shader_parameter(&"orbital", host != null and host.orbital)
+		plume.set_instance_shader_parameter(&"whole_body", source is BossEncounter)
 	advance(0)
 
 func advance(delta: float) -> void:
 	age += delta
 	if is_instance_valid(source) and age < 1.7:
 		global_transform = source.global_transform
+		if is_instance_valid(wound):
+			global_position = wound.to_global(wound.last_blood_contact) if wound.last_blood_contact.is_finite() else wound.aim_point()
 	plume.set_instance_shader_parameter(&"age", age)
 	if age > 1.2 and not fired:
 		fired = true

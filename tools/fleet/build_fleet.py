@@ -6,9 +6,12 @@ bow and +Z is up. The glTF exporter maps these to Godot -Z and +Y.
 
 from math import cos, sin, pi, tau
 from pathlib import Path
+import sys
 
 import bpy
 from mathutils import Vector
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from cardiac_socket import carve_chest
 
 ROOT = Path.cwd()
 OUTPUT = ROOT / "current_dev/assets/fleet"
@@ -50,6 +53,9 @@ FINISH = {
     "paint": 0.15,
     "stripe": 0.16,
     "ceramic": 0.12,
+    "lining": 0.55,
+    "fascia": 0.58,
+    "costal": 0.61,
 }
 
 
@@ -944,7 +950,7 @@ def bio(name, kind, variant=0, distant=False):
                 [3, 1.6, 0.81, 0.12],
                 "stripe",
             )
-        return s
+        return carve_chest(s, (4, -23.3, -4), 4.3, sealed=name == "leviathan_sealed")
     mother = kind == "mother"
     k = 0.49 if mother else 1
     ysign = -1 if mother else 1
@@ -1060,6 +1066,7 @@ def all_ships():
         armor.engine((side * 1.30, -0.80, 0.43), 0.42, 1.48, "stripe")
     yield armor
     yield bio("leviathan", "leviathan")
+    yield bio("leviathan_sealed", "leviathan")
     yield bio("insect", "insect")
     yield bio("hive_mother", "mother")
     yield bio("hive_mother_far", "mother", distant=True)
@@ -1092,12 +1099,18 @@ def author_material(kind, hexcode):
     return mat
 
 
-def bake(s, scene, game_material, output=OUTPUT):
+def bake(s, scene, game_material, output=OUTPUT, shape_keys=None):
     mesh = bpy.data.meshes.new(s.name)
     mesh.from_pydata(s.vertices, [], s.faces)
     mesh.update()
     obj = bpy.data.objects.new(s.name, mesh)
     scene.collection.objects.link(obj)
+    if shape_keys:
+        obj.shape_key_add(name="Basis")
+        for name, deform in shape_keys.items():
+            key = obj.shape_key_add(name=name)
+            for index, vertex in enumerate(key.data):
+                vertex.co = deform(vertex.co.copy(), index)
     # The runtime gets a single surface. Color is the paint swatch and UV.x
     # identifies the finish, including glazing and animated ion emitters.
     paint = mesh.color_attributes.new(name="Livery", type="BYTE_COLOR", domain="CORNER")
@@ -1117,6 +1130,8 @@ def bake(s, scene, game_material, output=OUTPUT):
             coords.extend((FINISH[kind], 0.5) * polygon.loop_total)
     paint.data.foreach_set("color", samples)
     uv.data.foreach_set("uv", coords)
+    if hasattr(s, "custom_normals"):
+        mesh.normals_split_custom_set_from_vertices(s.custom_normals)
     mesh.materials.append(game_material)
     bpy.ops.object.select_all(action="DESELECT")
     obj.select_set(True)
@@ -1161,12 +1176,17 @@ def main():
         obj = bake(s, scene, game_material)
         positions.append(obj)
     # Keep the native library in real units with room to inspect each vessel.
-    small = [obj for obj in positions if max(obj.dimensions) < 35]
-    large = [obj for obj in positions if max(obj.dimensions) >= 35]
+    small = [obj for obj in positions if max(obj.dimensions) < 35 and obj.name != "leviathan_sealed"]
+    large = [obj for obj in positions if max(obj.dimensions) >= 35 and obj.name != "leviathan_sealed"]
     for i, obj in enumerate(small):
         obj.location = ((i % 5) * 18, -(i // 5) * 20, 0)
     for i, obj in enumerate(large):
         obj.location = ((i % 3) * 142, 106 + (i // 3) * 153, 0)
+    sealed = scene.objects["leviathan_sealed"]
+    sealed.location = scene.objects["leviathan"].location + Vector((4, -23.3, -4))
+    sealed.scale = (4.3,) * 3
+    sealed.hide_viewport = True
+    sealed.hide_render = True
     bpy.ops.object.select_all(action="DESELECT")
     scene.display.shading.color_type = "MATERIAL"
     for screen in bpy.data.screens:

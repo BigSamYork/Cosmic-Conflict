@@ -192,10 +192,9 @@ station music continues. Asteroid artwork now takes less time to generate.
   larger hitboxes, distinct supplied heavy cockpits and battleship silhouettes.
   They are actual purchasable player hulls, not hostile ships or scenery unlocks.
   Existing upgrades transfer on purchase; ejection loses the hull/equipment.
-- Each boss carries two rotating scanners. Six baseline hits destroy one and earn
-  30 CR. Every lost scanner reduces the launchers' ability to lead the ship and
-  increases firing intervals by 25%. On Vespera, the scanners also power reactor
-  shielding. Recover both scanners intact elsewhere for a 75 CR intelligence bounty.
+- Each boss carries two rotating scanners. Six baseline hits destroy one.
+  Each loss increases the firing interval by 25% of the original interval.
+  On Vespera, the scanners also power the phase prism's shield.
 - **Closer boss view:** stable pursuit is 25% closer (82.5m ground, 112.5m orbit),
   with gentle 24-second left/right hull drift. Mouse aiming remains active;
   no forced oscillating camera is added.
@@ -256,9 +255,11 @@ historical; the current rules above and reference sections take precedence.
   kicks your ship off course and deals 14 hull damage through shields. The automatic
   centerline stays clear. Clearing ice awards no credits, enemy kill or streak.
   Pause freezes the warning and fall.
-- Kevin MacLeod’s “Fanfare for Space” accompanies the opening and plays
-  in Astra Market. Each world loops its own recording through ground
-  combat, orbital flight and both bosses. Docking crossfades to the market
+- Kevin MacLeod’s “Come Play with Me” accompanies the opening cutscene.
+  Astra Market plays “Fanfare for Space”. Each world loops its own recording through ground
+  combat and orbital flight. Boss pursuit opens with “Final Count”. When a
+  boss becomes enraged, “Failing Defense” takes over until victory.
+  Docking crossfades to the market
   score. Pause holds playback and computer speech lowers the music.
 - **Music controls:** the title/pause menu has a separate music slider, default
   60%; zero stops music. Master mute silences everything. Voice volume is
@@ -344,10 +345,11 @@ Developer assistance remains marked for the entire operation, including later to
   deal 18 damage once per eruption, shields first, with no lingering corrosion.
 - **Spore clouds:** exposure adds two seconds of non-stacking radar static.
   Aiming, steering, Shift, weapons, health displays and critical warnings remain usable.
-- **Biological bosses:** Bio-Titan Goliath has articulated legs, long claws and
-  organic weak points. Hive Mother Leviathan has a segmented arched body,
-  mandibles and biological spitter batteries. Both still require the amber
-  organs before their cyan core becomes vulnerable.
+- Rupture both amber spore sacs on the Goliath, then shoot through the
+  bleeding gap between its left ribs. Against the Hive Mother Leviathan,
+  silence any three spitters and aim through the opening below its eyes.
+  The intact chest hides the heart. Even after it splits, the rib edges
+  protect the tissue behind them.
 - **A living fleet, not an asteroid belt:** the final 60-second Xylo stage has
   large background Hive Mothers, egg-like craft and 232 physical egg ships.
   The center course remains clear, while steering off-center can collide with eggs.
@@ -674,6 +676,24 @@ Developer assistance remains marked for the entire operation, including later to
   Destroyed sections stay gone. Damaged sockets continue venting smoke or ichor.
 - The boss health bar tracks progress along the available victory routes.
   The computer's briefing identifies the systems. Optional brackets mark the hitboxes.
+- Hold the reticle over a subsystem to see what destroying it will do. One
+  lost dish interrupts targeting and leaves missiles with 35% guidance, even
+  in flight. Two lost dishes leave the boss firing unguided rockets and blind
+  barrages. Hydra escorts have their own guidance.
+- Each side's power feed, coolant pod or biological sac supplies its own
+  battery. Breaking it doubles that battery's reload time and reduces special
+  attack damage by 20% of the original strength. These effects stack with the
+  sector objective, including opening the heart or sinking the walker.
+- As damage mounts, the
+  cockpit reports **Retaliating** and then **Enraged**. Watch the charge lines
+  and the dodge cue on the top display. Shooting out a charging weapon or
+  firing an EMP interrupts its attack. A roll or side-dash can carry you through
+  an incoming strike.
+- Each boss has its own radio voice. You can hear its beliefs on approach
+  and its shorter reactions when you damage it. The cockpit identifies the
+  speaker and captions the transmission. Recon and cockpit warnings bring
+  the boss radio down in the mix. Its speech and captions continue, then
+  its volume rises smoothly when the cockpit channel clears.
 
 ## Peripheral-field refinements from v0.6.1
 
@@ -1171,6 +1191,10 @@ spoken line, so take care with hull and ejection messages.
 
 The game plays bundled Chatterbox-Turbo recordings offline. The opening casts
 Captain Tomas Vale and Lark separately. The spoofed beacon uses Lark's voice.
+Each boss has a recorded arrival speech and three injury reactions. Edit the
+transcripts in `current_dev/assets/voice/bosses.json` and render the cast with
+`.\tools\generate-voice.ps1 -Bosses -Overwrite`. This render uses FFmpeg for
+the individual voices' pitch, pace, and transmission effects.
 The Windows Voice Editor also plays the bundled takes for unchanged text.
 For new text it uses the configured Turbo Python environment, or Microsoft Zira
 Desktop on a standard installation. Older catalogs keep their selected Windows

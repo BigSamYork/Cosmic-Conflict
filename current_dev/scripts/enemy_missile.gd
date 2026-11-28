@@ -16,7 +16,14 @@ var diverted: bool = false
 var diversion_age: float = 0.0
 var frost: bool = false
 var biological: bool = false
+var boss_fire_control: WeakRef
 var wake: EngineWake
+
+func guidance_strength() -> float:
+	if boss_fire_control == null:
+		return 1.0
+	var source := boss_fire_control.get_ref() as BossEncounter
+	return source.radar_guidance() if source != null and source.death_time < 0 else 0.0
 
 func _ready() -> void:
 	collision_layer = 4
@@ -43,10 +50,11 @@ func advance(delta: float, previous_pilot: Vector3, pilot: Vector3, pilot_radius
 	if age >= MAX_AGE or diversion_age >= 2.0:
 		retire()
 		return
-	if age < HOMING_TIME and not diverted and dangerous:
+	var guidance := guidance_strength() if age < HOMING_TIME else 0.0
+	if age < HOMING_TIME * guidance and not diverted and dangerous:
 		var desired: Vector3 = aim_direction(position, pilot, (pilot - previous_pilot) / delta)
 		if desired.length_squared() > 0.0:
-			direction = direction.slerp(desired, 1.0 - exp(-1.4 * delta)).normalized()
+			direction = direction.slerp(desired, 1.0 - exp(-1.4 * guidance * delta)).normalized()
 	var previous: Vector3 = position
 	var next: Vector3 = previous + direction * SPEED * delta
 	var query := PhysicsRayQueryParameters3D.create(previous, next, 1)

@@ -2,8 +2,11 @@ class_name AmbientMusic
 extends Node
 
 signal fault(message: String)
+const BOSS_BATTLE := "boss_battle"
+const ENRAGED := "boss_enraged"
 const TRACKS := {
 	"title": "Evening Melodrama", "station": "Fanfare for Space",
+	BOSS_BATTLE: "Final Count", ENRAGED: "Failing Defense",
 	"ignis": "Five Armies", "cryo": "Constancy Part Three", "vespera": "Clenched Teeth",
 	"xylo": "Grave Matters", "thalassa": "Mighty and Meek", "kharon": "Americana",
 }
@@ -19,6 +22,7 @@ var requested: String = "title"
 var current: String = ""
 var active: int = 0
 var fade_time: float = CROSSFADE
+var fade_duration: float = CROSSFADE
 var volume_percent: int = DEFAULT_VOLUME
 var suppressed: bool = true
 var paused: bool = false
@@ -52,7 +56,7 @@ func set_level(percent: int, suppress: bool) -> void:
 			player.stop()
 			player.stream = null
 		current = ""
-		fade_time = CROSSFADE
+		fade_time = fade_duration
 	_apply_gain()
 
 func request_scene(scene: String) -> void:
@@ -75,7 +79,7 @@ func _process(delta: float) -> void:
 	if paused or not enabled():
 		return
 	var death_cue := requested == SHIP_LOSS
-	if current != requested and (death_cue or fade_time >= CROSSFADE):
+	if current != requested and (death_cue or fade_time >= fade_duration):
 		var path := "res://assets/music/licensed/%s.ogg" % (LOSS_TRACK if death_cue else TRACKS[requested])
 		var stream := load(path) as AudioStreamOggVorbis
 		if stream == null:
@@ -88,19 +92,20 @@ func _process(delta: float) -> void:
 		players[active].volume_db = -80
 		players[active].play()
 		current = requested
+		fade_duration = 1.25 if current == ENRAGED else CROSSFADE
 		fade_time = 0
 		if death_cue:
 			# The ejection is a hard musical cut, even during a world crossfade.
 			players[1 - active].stop()
 			players[1 - active].stream = null
 			players[active].volume_db = 0
-			fade_time = CROSSFADE
-	if fade_time < CROSSFADE:
-		fade_time = minf(CROSSFADE, fade_time + delta)
-		var amount: float = smoothstep(0, CROSSFADE, fade_time)
+			fade_time = fade_duration
+	if fade_time < fade_duration:
+		fade_time = minf(fade_duration, fade_time + delta)
+		var amount: float = smoothstep(0, fade_duration, fade_time)
 		players[active].volume_db = linear_to_db(maxf(0.0001, amount))
 		players[1 - active].volume_db = linear_to_db(maxf(0.0001, 1.0 - amount))
-		if fade_time >= CROSSFADE and players[1 - active].playing:
+		if fade_time >= fade_duration and players[1 - active].playing:
 			players[1 - active].stop()
 			players[1 - active].stream = null
 	var dialogue_gain := 0.65 if death_cue else 0.28

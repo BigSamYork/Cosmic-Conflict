@@ -19,6 +19,7 @@ func _initialize() -> void:
 func run() -> void:
 	verify_policy()
 	verify_catalog()
+	verify_boss_recordings()
 	verify_editable_catalog()
 	verify_frequency()
 	await verify_events()
@@ -89,6 +90,21 @@ func verify_catalog() -> void:
 	check(voice.policy.clock == before, "Pause freezes speech-policy timing")
 	voice.free()
 
+func verify_boss_recordings() -> void:
+	var catalog: Script = load("res://scripts/boss_dialogue.gd")
+	var recordings := {}
+	var speakers := {}
+	for sector in SectorCatalog.AVAILABLE:
+		for orbital in [false, true]:
+			for event in ["arrival", "hurt_1", "hurt_2", "hurt_3"]:
+				var cue: Dictionary = catalog.cue(sector, orbital, event)
+				var stream: AudioStream = load(cue.audio)
+				check(stream != null and stream.get_length() > (5.0 if event == "arrival" else 0.5), "Packaged voice has playable speech for " + cue.id)
+				check(not cue.text.is_empty() and not cue.speaker.is_empty(), "Subtitle and speaker accompany " + cue.id)
+				speakers[cue.speaker] = true
+				recordings[cue.audio] = true
+	check(speakers.size() == 12 and recordings.size() == 48, "All twelve bosses have an individual speaker, an arrival speech and three injury lines")
+
 func verify_events() -> void:
 	var packed: PackedScene = load("res://main.tscn")
 	var game: Node3D = packed.instantiate()
@@ -145,6 +161,16 @@ func verify_events() -> void:
 	game.campaign.phase = "orbit_boss"
 	await game._load_phase()
 	check(recorder.requests.count("recon_thalassa_orbit") == 1, "Orbital entry briefs the Storm Ark instead of the surface walker")
+	game.campaign.phase = "orbit"
+	await game._load_phase()
+	game.flight.elapsed = game.flight.duration - 17.9
+	game._physics_process(1.0 / 60)
+	check(recorder.boss_sector == "thalassa" and recorder.boss_orbital, "The Storm Ark opens its radio channel on approach")
+	recorder.boss_hurt(1)
+	game.campaign.phase = "orbit_boss"
+	game._begin_sequence("blockade_exit")
+	game._enter_phase(true)
+	check(recorder.boss_injury_seen == 1, "The continuous intercept preserves the same encounter radio session")
 	game.automation = "--unit-fixture"
 	recorder.requests.clear()
 	game._voice_event("ejection")
@@ -269,6 +295,10 @@ func verify_frequency() -> void:
 			var reply := "midnight_fitted" if quarter == 3 and fitted else name + "_lark"
 			check(voice.last_line == reply and voice.player.bus == voice.bus_name and voice.player.stream.get_length() > 0, "Lark answers with recorded cue %s" % reply)
 			voice.stop_speech(true)
+	voice.start_boss_radio("ignis", false)
+	for level in [1, 1, 2, 3]:
+		voice.boss_hurt(level)
+	check(voice.boss_reactions == [1, 3], "Rapid cumulative damage preserves the first reaction and current phase without an obsolete middle line")
 	voice.free()
 
 func check(condition: bool, description: String) -> void:

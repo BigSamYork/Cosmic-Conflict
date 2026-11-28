@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" path="res://scripts/opening.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/opening_stage.gd" id="2"]
-[ext_resource type="AudioStream" path="res://assets/music/licensed/Fanfare for Space.ogg" id="3"]
+[ext_resource type="AudioStream" path="res://assets/music/licensed/Come Play with Me.ogg" id="3"]
 
 [sub_resource type="Gradient" id="Shade"]
 offsets = PackedFloat32Array(0, 0.3, 1)
@@ -24,8 +24,6 @@ script = ExtResource("2")
 
 [node name="Score" type="AudioStreamPlayer" parent="."]
 stream = ExtResource("3")
-
-[node name="Drone" type="AudioStreamPlayer" parent="."]
 
 [node name="Overlay" type="CanvasLayer" parent="."]
 
