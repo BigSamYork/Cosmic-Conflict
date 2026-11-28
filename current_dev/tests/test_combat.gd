@@ -457,7 +457,9 @@ func verify_ship_contacts(game: Node3D) -> void:
 	var heading: Basis = game.director.frame.basis
 	game._check_obstacles(center + sweep, center - sweep)
 	check(game.flight.hull == 82 and game.flight.shields == 100 and game.flight.impacts == 1, "Sweeping across an actual fighter hull damages the hull through full shields")
-	check(game.flight.offset.length() > 1 and not game.director.frame.basis.is_equal_approx(heading), "The orbital flight path and heading both deflect on contact")
+	check(game.flight.offset.length() > 1 and game.director.frame.basis.is_equal_approx(heading), "Contact separates the hull without snapping the cockpit")
+	game.director.advance("orbit", 1.0 / 60, 0, 0, game.targets, Vector2.ZERO, true)
+	check(not game.director.frame.basis.is_equal_approx(heading), "Heading deflects progressively after contact")
 	bandit.receive_hit(999)
 	game.flight.advance(1.1, false)
 	await physics_frame

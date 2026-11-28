@@ -9,6 +9,7 @@ var near_pass: bool = true
 var course: Transform3D = Transform3D.IDENTITY
 var course_position: Vector3
 var appearance: Node3D
+var protected_brood := false
 var spin: Vector3
 
 func _ready() -> void:
@@ -38,6 +39,18 @@ func animate(time: float) -> void:
 
 func collision_radius() -> float:
 	return radius * 1.4
+
+func mark_brood() -> void:
+	protected_brood = true
+	var lamp := Label3D.new()
+	lamp.text = "BROOD / HOLD FIRE"
+	lamp.font_size = 42
+	lamp.pixel_size = 0.032
+	lamp.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	lamp.modulate = Color("#ff959d")
+	lamp.position.y = radius + 1
+	lamp.visibility_range_end = 200
+	add_child(lamp)
 
 func tint() -> Color:
 	if infested:

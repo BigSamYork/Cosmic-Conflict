@@ -26,6 +26,10 @@ func run() -> void:
 	verify_failure_paths()
 	for outcome in ["quiet", "miss", "fire"]:
 		verify_boarding(outcome)
+	for id in ["ignis", "cryo", "xylo", "thalassa", "kharon"]:
+		verify_rescue(id, false, false)
+		verify_rescue(id, true, true)
+	verify_rescue("kharon", true, false)
 	var rovers := XyloRovers.new()
 	root.add_child(rovers)
 	var drivetrain: AnimationPlayer = rovers.drivetrains[0]
@@ -57,6 +61,40 @@ func begin(job: int) -> void:
 	patrol.job_order = [job, job, job]
 	flight.distance = SurfacePatrol.MARKS[0] - 140.0
 	patrol.advance(0.016, Vector3.ZERO, Vector3.ZERO, campaign, flight, route)
+
+func verify_rescue(id: String, right_lane: bool, miss: bool) -> void:
+	var run := preload("res://scripts/rescue_run.gd").new()
+	root.add_child(run)
+	var state := CampaignState.new()
+	state.sector = id
+	var ship := FlightState.new()
+	ship.configure_campaign(state)
+	var branch := GroundRoute.new()
+	branch.advance(GroundRoute.FORK, 7 if right_lane else -7)
+	var previous := Vector3.ZERO
+	var outcome := ""
+	var knocks := [0]
+	run.knock.connect(func() -> void: knocks[0] += 1)
+	for i in 550:
+		ship.distance = 1150 + i * 2.1
+		var frame := GroundRoute.frame(ship.distance) if right_lane else FlightState.rail_frame(ship.distance)
+		var at := frame * Vector3(80 if miss else 6 if id == "xylo" else 1, 2, 0)
+		outcome = run.advance(0.05, previous, at, state, ship, branch)
+		if not outcome.is_empty(): break
+		if not miss and is_instance_valid(run.battery):
+			run.battery.receive_hit(run.battery.armor)
+		if not miss and is_instance_valid(run.walker_effect):
+			run.walker_effect.walker.receive_hit(36)
+		previous = at
+	var expected: String = {"ignis":"mold", "cryo":"converter", "thalassa":"cradle", "xylo":"pallet", "kharon":"relay" if right_lane else "courier"}[id]
+	check(outcome == ("backup" if miss else expected), "%s rescue resolves the player's actual route: %s" % [id, outcome])
+	if id == "thalassa": check(knocks[0] == 3, "The maintenance compartment answers with three knocks")
+	state.rescue_method = outcome
+	var retry := state.copy()
+	retry.eject()
+	check(retry.home_manifest.is_empty() and retry.rescue_method.is_empty(), "An ejection does not credit the rescue")
+	state.dock(true)
+	check(state.copy().home_manifest.get(id) == outcome, "Astra retains the actual rescue method on disk")
 
 func verify_boarding(scenario: String) -> void:
 	var scene := preload("res://scripts/vespera_boarding.gd").new()

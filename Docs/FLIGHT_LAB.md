@@ -43,7 +43,30 @@ separate by up to 116 m before rejoining.
 
 ## Orbital encounters
 
-### Vespera boarding prototype (first tour)
+### Two Knocks Home (first tour)
+
+The six evacuations can be flown in any order. Meet the local crew on approach:
+
+| Sector | What the crew needs from you |
+|---|---|
+| Ignis | Shoot the marked battery so the apprentice can bring the old mold across. Cover the foundry tug until she clears the plate for launch. |
+| Cryo | Stay beside the power tender's wing light for two seconds to transfer the ward's converter. Listen for the nurse's amended passenger count after the orbital battle. |
+| Vespera | Hold fire through the center lane as the attendant boards three groups. |
+| Xylo | Collect the reed pallet. In the belt, guide the clinic boat past the red brood without hitting marked eggs. The boat takes an outside passage if the brood is hit; pirates are fair targets. |
+| Thalassa | Listen for three knocks and fly beside the tug to guide its cradle. The maintenance section comes home with the Aegis-4, even if a long cable is needed. |
+| Kharon | Left: cover the pad courier. Right: disable the walker at the wired relay. Hear all three pilots read back their coordinates before they jump. |
+
+A missed transfer has an alternate rescue; it doesn't lock the campaign.
+Astra adds the outcome to the arrivals manifest only on successful docking.
+Ejection doesn't rescue anyone. The first six-world tour closes with Lark's
+roll call and two knocks before the medal. Old saves keep their original
+clears without invented mission outcomes; repeat tours retain ordinary contracts.
+
+The cockpit now stays nose-forward through ground-boss destruction and ascent.
+In dogfights, collision kicks are applied over several frames rather than
+turning the camera instantly; taking the stick doesn't discard the ship's bank.
+
+### Vespera boarding
 
 On the Vespera-9 ground run, watch for three numbered amber flares near the
 terminal after the fork. Lark's clearance leaves all three lit. When she hands
@@ -55,6 +78,12 @@ After defeating the orbital boss, listen for the last-car call; Astra's
 debrief identifies which ramp the families used.
 
 The six lines are in [`boarding.json`](../current_dev/assets/voice/boarding.json).
+The other rescue and homecoming lines are in [`rescues.json`](../current_dev/assets/voice/rescues.json).
+Windows, Android and macOS package builds run `tools/build-story-audio.py`
+before importing resources. It uses pinned Chatterbox-Turbo, the Vale/Lark
+profiles and stock colony speakers; incomplete or mismatched recordings block
+export. Set `COSMIC_TTS_MODEL` for an offline model or `COSMIC_TTS_PYTHON`
+for a preconfigured interpreter. Test-only runs can use captions without weights.
 To render the bundled WAVs with the established Lark profile and the stock
 attendant, run `.\tools\generate-voice.ps1 -Boarding` from the project root.
 Use `-Overwrite` to replace existing takes. The same pinned Chatterbox-Turbo
