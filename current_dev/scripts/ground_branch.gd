@@ -80,6 +80,7 @@ func advance(delta: float, previous: Vector3, pilot: Vector3, campaign: Campaign
 				rescue = RescueRun.new()
 				add_child(rescue)
 				rescue.cue.connect(boarding_cue.emit)
+				rescue.sound_requested.connect(sound_requested.emit)
 				rescue.knock.connect(hull_knock.emit)
 			var outcome := rescue.advance(delta, previous, pilot, campaign, flight, route)
 			if is_instance_valid(rescue.battery) and not rescue.battery.missile_requested.is_connected(battery_missile.emit):

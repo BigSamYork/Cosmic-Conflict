@@ -68,7 +68,7 @@
     "duration": 0.8
   },
   "patrol_restart": {
-    "prompt": "An electrical jumper crackles and a small spacecraft motor spins up smoothly.",
+    "prompt": "The sound of a starter motor turning over. A brief electrical crackle, a low rising motor whir, then the engine catches.",
     "duration": 0.9
   },
   "patrol_complete": {
@@ -286,5 +286,25 @@
   "torpedo_burst": {
     "prompt": "A compact explosive projectile strikes a surface with a sharp crack and short bassy expanding boom.",
     "duration": 0.69
+  },
+  "rescue_mold": {
+    "prompt": "An industrial steel casting mold slides onto a foundry tug with a deep clunk and the transport clamps lock shut.",
+    "duration": 0.86
+  },
+  "rescue_converter": {
+    "prompt": "A power plug clicks loudly into a socket. The click is followed immediately by a brief low electrical buzz and a single clean test beep.",
+    "duration": 0.76
+  },
+  "rescue_reeds": {
+    "prompt": "A pallet of wet leafy reeds slides aboard a small ship, soft rustling leaves, dripping water and a single wooden thump.",
+    "duration": 0.91
+  },
+  "rescue_tow": {
+    "prompt": "A towing hook catches with a hefty metallic clank, the wire cable twangs under tension and settles.",
+    "duration": 0.92
+  },
+  "rescue_relay": {
+    "prompt": "A hardwired flight data cartridge disengages with a crisp little mechanical click and a rapid three-pip transfer confirmation.",
+    "duration": 0.68
   }
 }

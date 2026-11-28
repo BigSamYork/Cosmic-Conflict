@@ -19,6 +19,7 @@ REVISION = "e35df4d82fbe87fcd5d14e5d100e349c0c3c076d"
 STEPS = 32
 LOOPS = {"engine_surface", "engine_space"}
 RATE = 48000
+MIN_SOURCE_PEAK = 0.001
 # Ogg uses the same polynomial as crc32 with the opposite bit order.
 REVERSE_BITS = bytes(int(f"{value:08b}"[::-1], 2) for value in range(256))
 
@@ -82,9 +83,41 @@ def valid_clip(path, seconds):
     return False
 
 
-def recipe_key(name, spec):
-    recipe = [MODEL, REVISION, STEPS, "edit-v2", name, spec]
+def recipe_key(name, spec, version="edit-v3"):
+    recipe = [MODEL, REVISION, STEPS, version, name, spec]
     return hashlib.sha256(json.dumps(recipe, sort_keys=True).encode()).hexdigest()
+
+
+def reinforce_treble(clip):
+    """Give extremely high one-shots an audible lower component on small speakers."""
+    import numpy as np
+
+    power = np.abs(np.fft.rfft(clip)) ** 2
+    frequencies = np.fft.rfftfreq(len(clip), 1 / RATE)
+    total = power.sum()
+    if total == 0 or power[frequencies < 4000].sum() >= 0.01 * total:
+        return clip
+    if power[frequencies >= 8000].sum() <= 0.70 * total:
+        return clip
+
+    import torch
+    from torchaudio.functional import pitch_shift
+
+    # Two octaves place a 10–16 kHz chime at 2.5–4 kHz. Keep the original
+    # and tuck the lower copy 9 dB underneath it, following the original gaps.
+    signal = torch.from_numpy(clip.astype(np.float32, copy=False))
+    lower = pitch_shift(signal, RATE, -24, n_fft=1024, hop_length=128).numpy()
+    window = np.ones(RATE // 200) / (RATE // 200)
+    envelope = np.convolve(np.abs(clip), window, mode="same")
+    lower *= np.minimum(1.0, envelope / max(envelope.max() * 0.05, 1e-12))
+    lower_rms = np.sqrt(np.mean(lower ** 2))
+    if lower_rms <= 1e-12:
+        return clip
+    return clip + lower * (0.35 * np.sqrt(np.mean(clip ** 2)) / lower_rms)
+
+
+class InvalidTake(ValueError):
+    """An inference completed without producing usable audio."""
 
 
 def load_model(local_dir):
@@ -126,8 +159,9 @@ def render(pipe, name, spec, destination, seed):
                  num_inference_steps=STEPS, seed=seed, progress_bar_cmd=iter)
     audio = audio[0, 0].float().cpu().numpy()
     audio = sosfilt(butter(2, 28, "highpass", fs=RATE, output="sos"), audio)
-    if not np.isfinite(audio).all() or np.max(np.abs(audio)) < 0.0001:
-        raise ValueError(f"{name}: model returned silent or non-finite audio")
+    needed = count + (min(RATE // 8, count // 4) if loop else 0)
+    if len(audio) < needed or not np.isfinite(audio).all() or np.max(np.abs(audio)) < MIN_SOURCE_PEAK:
+        raise InvalidTake(f"{name}: model returned short, near-silent or non-finite audio")
     if loop:
         blend = min(RATE // 8, count // 4)
         clip = audio[blend:blend + count].copy()
@@ -143,13 +177,14 @@ def render(pipe, name, spec, destination, seed):
         if active.size:
             start = min(len(audio) - count, start + max(0, active[0] - RATE // 500))
         clip = audio[start:start + count].copy()
+        clip = reinforce_treble(clip)
         attack = min(48, count // 8)
         release = min(RATE // 40, count // 5)
         clip[:attack] *= np.linspace(0, 1, attack)
         clip[-release:] *= np.linspace(1, 0, release)
     peak = float(np.max(np.abs(clip)))
-    if peak < 0.0001 or len(clip) != count:
-        raise ValueError(f"{name}: empty or short edit")
+    if peak < MIN_SOURCE_PEAK or len(clip) != count:
+        raise InvalidTake(f"{name}: empty or short edit")
     # Keep dense sweeps below dialogue and preserve the crest of short clicks.
     # Headroom also accommodates reconstruction peaks in Vorbis decoding.
     rms = float(np.sqrt(np.mean(clip ** 2)))
@@ -183,7 +218,9 @@ def prepare(args):
         output = args.output_dir / f"{name}.ogg"
         if valid_clip(output, spec["duration"]):
             continue
-        with tempfile.TemporaryDirectory(dir=args.output_dir) as staging:
+        # Hidden staging is on the same volume for atomic publication, and
+        # Godot's editor won't import a partially written sound.
+        with tempfile.TemporaryDirectory(prefix=".render-", dir=args.output_dir) as staging:
             temp = Path(staging) / "render.ogg"
             if name in cached:
                 shutil.copyfile(cached[name], temp)
@@ -191,7 +228,16 @@ def prepare(args):
                 if pipe is None:
                     pipe = load_model(args.model_dir)
                 print(f"Rendering {name}", flush=True)
-                render(pipe, name, spec, temp, int(recipe_key(name, spec)[:8], 16))
+                # A mastering change invalidates cached files while retaining the model take.
+                seed = int(recipe_key(name, spec, "edit-v2")[:8], 16)
+                for attempt in range(3):
+                    try:
+                        render(pipe, name, spec, temp, (seed + attempt) % (2**32))
+                        break
+                    except InvalidTake as error:
+                        if attempt == 2:
+                            raise
+                        print(f"{error}; trying the next seed", flush=True)
             if not valid_clip(temp, spec["duration"]):
                 raise ValueError(f"{name}: invalid render")
             os.replace(temp, output)

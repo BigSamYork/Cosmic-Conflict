@@ -22,7 +22,6 @@ var credit_hoops := preload("res://scripts/credit_hoops.gd").new()
 const RescueConvoy := preload("res://scripts/rescue_convoy.gd")
 var rescue_convoy: RescueConvoy
 var orbit_story_beat := 0
-var knock_clip: AudioStreamWAV
 var homecoming_clock := -1.0
 var homecoming_knocks := 0
 const Piledriver := preload("res://scripts/kharon_piledriver.gd")
@@ -255,7 +254,7 @@ func _ready() -> void:
 			command.pressed = true
 			_unhandled_input(command))
 	hud.flight = flight
-	hud.credits_text = "Cosmic Conflict v%s\nCockpit artwork supplied by the project owner.\nVoices of Lark and Captain Tomas Vale rendered with Chatterbox-Turbo by Resemble AI.\n\n" % ProjectSettings.get_setting("application/config/version") + FileAccess.get_file_as_string("res://assets/music/credits.txt") + "\n\n" + Engine.get_license_text() + "\n\n" + JSON.stringify(Engine.get_copyright_info(), "\t") + "\n\n" + JSON.stringify(Engine.get_license_info(), "\t")
+	hud.credits_text = "Cosmic Conflict v%s\nCockpit artwork supplied by the project owner.\nVoices of Lark and Captain Tomas Vale rendered with Chatterbox-Turbo by Resemble AI.\nGenerated sound effects rendered with MOSS-SoundEffect v2.0 by OpenMOSS.\n\n" % ProjectSettings.get_setting("application/config/version") + FileAccess.get_file_as_string("res://assets/music/credits.txt") + "\n\n" + Engine.get_license_text() + "\n\n" + JSON.stringify(Engine.get_copyright_info(), "\t") + "\n\n" + JSON.stringify(Engine.get_license_info(), "\t")
 	hud.launch_requested.connect(start_flight)
 	hud.resume_requested.connect(resume_flight)
 	hud.title_requested.connect(show_title)
@@ -1150,8 +1149,7 @@ func _boarding_cue(id: String) -> void:
 		computer_voice.say_boarding(id)
 
 func _play_story_knock() -> void:
-	if knock_clip == null: knock_clip = preload("res://scripts/opening.gd")._bulkhead_knock()
-	sound.play_sound(knock_clip)
+	sound.play_cue("bulkhead_knock")
 
 func _advance_rescue_flight(delta: float) -> void:
 	if is_instance_valid(rescue_convoy):
@@ -1373,6 +1371,7 @@ func _strike(result: Dictionary, damage: int, secondary_hit: bool = false, recor
 		var applied_damage: int = maxi(damage, collider.armor) if one_hit_kill and is_campaign else damage
 		if collider is EggShip and collider.protected_brood and is_campaign and campaign.rescue_method != "detour":
 			campaign.rescue_method = "detour"
+			sound.play_cue("hazard_alert")
 			hud.objective = "FOLLOW THE CLINIC BOAT / OUTSIDE PASSAGE"
 			_boarding_cue("xylo_detour")
 		var previous_armor: int = collider.armor
@@ -2972,6 +2971,7 @@ func _enter_phase(continuous: bool) -> void:
 			rescue_convoy = RescueConvoy.new()
 			world.add_child(rescue_convoy)
 			rescue_convoy.configure(campaign.sector)
+			sound.play_cue("radar_ping")
 			rescue_convoy.advance(0, director.frame, false)
 		if campaign.sector == "ignis" and campaign.phase == "orbit":
 			_boarding_cue("ignis_orbit")

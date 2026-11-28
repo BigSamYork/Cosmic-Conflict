@@ -22,7 +22,7 @@
   "blockade_exit": {"prompt": "Capital ship intercept computer acquires a target, two purposeful radar pips then a tight lock chirp.", "duration": 0.65},
   "belt_transfer": {"prompt": "Spaceship navigation computer calculates a narrow flight corridor, fast electronic scanning pulses resolving to a clear high ping.", "duration": 0.70},
   "belt_exit": {"prompt": "A distant friendly station beacon is picked up on the cockpit receiver, two clear electronic sonar pings with a touch of radio noise.", "duration": 0.72},
-  "belt_climb": {"prompt": "A short burst of maneuvering jets swings a starfighter nose up, pressurized engine hiss passing across the cockpit.", "duration": 1.0},
+  "belt_climb": {"prompt": "A compact spacecraft thruster fires once. A valve clicks open, an exhaust jet whooshes past with a rising motor whine and shuts off sharply.", "duration": 1.0},
   "station_approach": {"prompt": "Space station docking clearance transponder, two alternating clean electronic beeps followed by a gentle resolving chirp.", "duration": 0.66},
   "docking": {"prompt": "Autodock maneuvering thrusters pulse softly twice, pneumatic jets braking a small spacecraft inside a hangar.", "duration": 1.1},
   "docking_latch": {"prompt": "A spacecraft comes to rest in its berth, heavy docking collar clunks shut and hydraulic pressure vents.", "duration": 1.0},

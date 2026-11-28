@@ -3,6 +3,12 @@ extends Node3D
 ## Middle surface encounter on a colony's first rescue. Its result travels
 ## with the sortie; only a successful docking adds it to Astra's manifest.
 signal cue(id: String)
+signal sound_requested(id: String)
+const OUTCOME_SOUNDS := {
+	"mold": "rescue_mold", "converter": "rescue_converter", "pallet": "rescue_reeds",
+	"cradle": "rescue_tow", "relay": "rescue_relay", "courier": "patrol_freight",
+	"backup": "patrol_failed",
+}
 const ENTRY := 1940.0
 const END := ENTRY + 260.0
 const INTRO := {
@@ -111,6 +117,7 @@ func advance(delta: float, previous: Vector3, pilot: Vector3, state: CampaignSta
 func _resolve(outcome: String, line: String) -> String:
 	prompt = ""
 	cue.emit(line)
+	sound_requested.emit(OUTCOME_SOUNDS[outcome])
 	hide()
 	queue_free()
 	return outcome
