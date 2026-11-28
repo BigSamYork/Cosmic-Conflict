@@ -4,3 +4,5 @@ releases/
 versions/
 *.tmp
 *.log
+/current_dev/assets/boarding/
+/current_dev/assets/rescues/

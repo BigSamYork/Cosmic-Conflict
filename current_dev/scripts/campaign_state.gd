@@ -37,6 +37,17 @@ var tour_result: Dictionary = {}
 var ship: String = "rook"
 var parked_ships: Array[String] = []
 var vespera_boarding := ""
+var rescue_method := ""
+var home_manifest: Dictionary = {}
+var homecoming_pending := false
+const METHODS := {
+	"ignis":["mold","backup"], "cryo":["converter","backup"], "vespera":["quiet","covered"],
+	"xylo":["pallet","backup","brood_passage","detour"], "thalassa":["cradle","backup"],
+	"kharon":["relay","courier","backup"]
+}
+
+func first_rescue() -> bool:
+	return tour == 1 and not cleared_sectors.has(sector)
 var credits: int = 0
 var earned: int = 0
 var spent: int = 0
@@ -121,6 +132,8 @@ func dock(completed: bool) -> void:
 	if settled_sortie_id != sortie_id:
 		debrief = {"completion": 0, "hull": 0, "accuracy": 0, "shots": stats["shots"] - sortie_start_shots, "hits": stats["hits"] - sortie_start_hits}
 		if completed:
+			if first_rescue() and rescue_method in METHODS[sector]:
+				home_manifest[sector] = rescue_method
 			stats["sorties"] += 1
 			if not cleared_sectors.has(sector):
 				cleared_sectors.append(sector)
@@ -133,6 +146,7 @@ func dock(completed: bool) -> void:
 	hull = hull_capacity()
 	shields = shield_capacity()
 	if completed and tour_complete() and tour_result.is_empty():
+		homecoming_pending = tour == 1 and required_sectors.size() == SectorCatalog.AVAILABLE.size()
 		_seal_tour()
 
 func tour_complete() -> bool:
@@ -177,6 +191,8 @@ func continue_tour() -> String:
 		return "The saved tour counter has reached its supported limit."
 	tour_start = totals()
 	tour += 1
+	homecoming_pending = false
+	rescue_method = ""
 	tour_best_streak = 0
 	tour_damage_complete = true
 	tour_result = {}
@@ -193,6 +209,7 @@ func eject() -> void:
 	if ship.is_empty() or not tour_result.is_empty():
 		return
 	stats["ejections"] += 1
+	rescue_method = ""
 	vespera_boarding = ""
 	ship = ""
 	headlight = false
@@ -226,6 +243,7 @@ func depart(destination: String) -> String:
 	if not can_visit(destination):
 		return "Clear the remaining available sectors before starting a replay."
 	sector = destination
+	rescue_method = ""
 	vespera_boarding = ""
 	select_sky(Time.get_time_dict_from_system().second)
 	sortie_id += 1
@@ -358,6 +376,7 @@ func switch_hull(item: String) -> String:
 func to_dict() -> Dictionary:
 	return {"schema": SCHEMA, "phase": phase, "sector": sector, "sky_quarter": sky_quarter, "headlight": headlight, "cleared_sectors": cleared_sectors.duplicate(), "replays_unlocked": replays_unlocked, "ship": ship, "credits": credits, "earned": earned, "spent": spent,
 		"vespera_boarding": vespera_boarding, "parked_ships": parked_ships.duplicate(), "purchase_counts": purchase_counts.duplicate(), "primary_level": primary_level, "shield_level": shield_level, "heat_sink_level": heat_sink_level, "power_mode": power_mode, "secondary": secondary, "ammo": ammo,
+		"rescue_method": rescue_method, "home_manifest": home_manifest.duplicate(), "homecoming_pending": homecoming_pending,
 		"hull": hull, "shields": shields, "sortie_id": sortie_id, "settled_sortie_id": settled_sortie_id,
 		"last_result": last_result, "assisted": assisted, "stats": stats.duplicate(),
 		"combo_kills": combo_kills, "best_streak": best_streak, "combat_score": combat_score, "combo_bonus_credits": combo_bonus_credits,
@@ -385,6 +404,18 @@ func restore(source: Dictionary) -> String:
 	if data.get("vespera_boarding", "") not in ["", "quiet", "covered"]:
 		return "Invalid Vespera boarding outcome."
 	vespera_boarding = data.get("vespera_boarding", "")
+	var method: Variant = data.get("rescue_method", vespera_boarding)
+	if method != "" and method not in METHODS.get(data.get("sector"), []):
+		return "Invalid current rescue method."
+	var arrivals: Variant = data.get("home_manifest", {})
+	if not arrivals is Dictionary or not data.get("homecoming_pending", false) is bool:
+		return "Invalid homecoming record."
+	for destination in arrivals:
+		if not METHODS.has(destination) or arrivals[destination] not in METHODS[destination]:
+			return "Invalid arrival in Astra's manifest."
+	rescue_method = method
+	home_manifest = arrivals.duplicate()
+	homecoming_pending = data.get("homecoming_pending", false)
 	var receipts: Variant = data.get("purchase_counts", {})
 	if not receipts is Dictionary:
 		return "Invalid market purchase history."

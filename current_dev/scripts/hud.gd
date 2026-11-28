@@ -329,7 +329,7 @@ func show_market(state: CampaignState, error: String = "") -> void:
 	var result: String = SectorCatalog.name_for(state.sector).to_upper() + " COMPLETE" if state.last_result == "completed" else "PILOT RECOVERED" if state.last_result == "ejected" else "DOCKED"
 	_add_label(stack, "%s / Ships and shields are fully repaired here, free of charge.\nHull purchases transfer fitted upgrades. Ejection loses the ship and its equipment." % result, 18, MUTED)
 	if state.last_result == "completed":
-		var dispatch := _add_label(stack, "LARK   /   " + SectorCatalog.dispatch_for(state.sector, state.vespera_boarding), 18, CYAN)
+		var dispatch := _add_label(stack, "LARK   /   " + SectorCatalog.home_report(state.sector, state.home_manifest, state.vespera_boarding), 18, CYAN)
 		dispatch.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	if not error.is_empty():
 		_add_label(stack, error, 19, VectorArt.HOSTILE)
@@ -476,7 +476,7 @@ func show_sector_map(state: CampaignState = null) -> void:
 		var description: Label = _add_label(labels, SectorCatalog.DESCRIPTIONS[id], 16, MUTED)
 		description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		description.custom_minimum_size.x = 380
-		var request := _add_label(labels, SectorCatalog.DISTRESS[id], 16, WHITE)
+		var request := _add_label(labels, "Aegis-4 is home. Patrol the tow lane." if id == "thalassa" and state != null and (state.home_manifest.has("thalassa") or state.cleared_sectors.has("thalassa") or state.tour > 1) else SectorCatalog.DISTRESS[id], 16, WHITE)
 		request.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		request.custom_minimum_size.x = 380
 		var available: bool = SectorCatalog.AVAILABLE.has(id)

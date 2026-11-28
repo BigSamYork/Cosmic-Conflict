@@ -19,6 +19,12 @@ const SKY_LIGHT := [Vector3(0.53, 0.26, 0.50), Vector3(1.04, 0.69, 0.43), Vector
 var headlamp := SpotLight3D.new()
 var weapon_lamp := SpotLight3D.new()
 var credit_hoops := preload("res://scripts/credit_hoops.gd").new()
+const RescueConvoy := preload("res://scripts/rescue_convoy.gd")
+var rescue_convoy: RescueConvoy
+var orbit_story_beat := 0
+var knock_clip: AudioStreamWAV
+var homecoming_clock := -1.0
+var homecoming_knocks := 0
 const Piledriver := preload("res://scripts/kharon_piledriver.gd")
 var combat_lights := CombatLighting.new()
 var surface_weather := SurfaceWeather.new()
@@ -472,6 +478,8 @@ func _build_world(training: bool = true) -> void:
 		ground_branch = GroundBranch.new()
 		ground_branch.boarding_cue.connect(_boarding_cue)
 		ground_branch.sound_requested.connect(sound.play_cue)
+		ground_branch.hull_knock.connect(_play_story_knock)
+		ground_branch.battery_missile.connect(_launch_missile)
 		ground_branch.sector = sector
 		ground_branch.health_scale = campaign.health_multiplier()
 		director.ground_route = ground_branch.route
@@ -883,6 +891,8 @@ func _physics_process(delta: float) -> void:
 		director.advance(campaign.phase, delta, flight.distance, flight.elapsed, targets, flight.aim, flight.precision_hold)
 		if not had_lock and is_instance_valid(director.tracked):
 			sound.play_cue("radar_ping")
+		if campaign.first_rescue():
+			_advance_rescue_flight(delta)
 	if not is_campaign or campaign.phase.begins_with("ground"):
 		_stream_ground(flight.distance)
 	var canyon_contact := false
@@ -1088,7 +1098,7 @@ func _solid_contact(normal: Vector3, reason: String, damage: float = 18.0, separ
 			_update_camera()
 		return
 	if is_campaign and campaign.phase == "orbit":
-		director.frame.basis = frame.basis * Basis(Vector3.UP, -flight.contact_direction.x * 0.18) * Basis(Vector3.RIGHT, flight.contact_direction.y * 0.15)
+		director.contact_turn = Vector2(-flight.contact_direction.x * 0.18, flight.contact_direction.y * 0.15)
 	_update_camera()
 	if _apply_pilot_damage(reason, damage, true) and not automation.is_empty():
 		print("AUTOMATION_IMPACT phase=%s distance=%.2f offset=%s" % [campaign.phase if is_campaign else "training", flight.distance, flight.offset])
@@ -1134,10 +1144,29 @@ func _voice_event(event: String) -> bool:
 
 func _boarding_cue(id: String) -> void:
 	var line: Dictionary = computer_voice.boarding_lines[id]
-	hud.story_caption = ("LARK" if line.speaker == "lark" else "STATION ATTENDANT") + "  /  " + line.text
+	hud.story_caption = String(computer_voice.story_speakers[line.speaker]).to_upper() + "  /  " + line.text
 	hud.story_seconds = maxf(4, line.text.length() / 13.0)
 	if not automated_session and automation.is_empty():
 		computer_voice.say_boarding(id)
+
+func _play_story_knock() -> void:
+	if knock_clip == null: knock_clip = preload("res://scripts/opening.gd")._bulkhead_knock()
+	sound.play_sound(knock_clip)
+
+func _advance_rescue_flight(delta: float) -> void:
+	if is_instance_valid(rescue_convoy):
+		rescue_convoy.advance(delta, director.frame, campaign.rescue_method == "detour")
+	if campaign.phase == "orbit" and campaign.sector == "cryo":
+		if orbit_story_beat == 0 and flight.elapsed >= 9:
+			orbit_story_beat = 1
+			_boarding_cue("cryo_count")
+		elif orbit_story_beat == 1 and flight.elapsed >= 14:
+			orbit_story_beat = 2
+			_boarding_cue("cryo_quiet")
+	elif campaign.phase == "asteroids" and campaign.sector == "kharon":
+		if orbit_story_beat < 3 and flight.elapsed >= 2 + 5.0 * orbit_story_beat:
+			_boarding_cue(["kharon_one", "kharon_two", "kharon_three"][orbit_story_beat])
+			orbit_story_beat += 1
 
 func _voice_route(hard: bool) -> bool:
 	if computer_voice == null or automated_session or not automation.is_empty():
@@ -1342,6 +1371,10 @@ func _strike(result: Dictionary, damage: int, secondary_hit: bool = false, recor
 		if record_hit:
 			_record_weapon_hit()
 		var applied_damage: int = maxi(damage, collider.armor) if one_hit_kill and is_campaign else damage
+		if collider is EggShip and collider.protected_brood and is_campaign and campaign.rescue_method != "detour":
+			campaign.rescue_method = "detour"
+			hud.objective = "FOLLOW THE CLINIC BOAT / OUTSIDE PASSAGE"
+			_boarding_cue("xylo_detour")
 		var previous_armor: int = collider.armor
 		var had_skipped: bool = collider is EnemyFighter and collider.skipped
 		var was_interrupted: bool = collider is BossTurret and collider.interrupted
@@ -2254,6 +2287,8 @@ func _has_hazard_warning() -> bool:
 	return hud.frost_warning or hud.vent_warning or hud.gate_warning or hud.lightning_warning or hud.acid_warning or hud.web_warning or hud.blast_warning
 
 func _process(delta: float) -> void:
+	if mode == Mode.CAMPAIGN_COMPLETE and homecoming_clock >= 0:
+		_advance_homecoming(delta)
 	weapon_lamp.light_energy *= exp(-delta * (5.0 if settings["reduced_effects"] else 11.0))
 	var now: int = Time.get_ticks_usec()
 	var frame_ms: float = float(now - last_frame_usec) / 1000.0 if last_frame_usec > 0 else 0.0
@@ -2370,6 +2405,7 @@ func _apply_settings() -> void:
 			music.set_level(int(settings["music_volume"]), bool(settings["mute"]) or automated_session or not automation.is_empty())
 
 func _clear_stage() -> void:
+	rescue_convoy = null # Parented to world; world owns its lifetime.
 	hud.story_seconds = 0
 	computer_voice.cancel_group("vespera_boarding")
 	surface_events.reset()
@@ -2792,6 +2828,7 @@ func _load_phase() -> void:
 	_enter_phase(false)
 
 func _enter_phase(continuous: bool) -> void:
+	orbit_story_beat = 0
 	surface_events.reset()
 	_set_canopy_shade(0.0)
 	credit_hoops.clear()
@@ -2930,6 +2967,19 @@ func _enter_phase(continuous: bool) -> void:
 		_voice_event(campaign.sector + "_arrival")
 	elif campaign.phase == "asteroids" and campaign.sector == "xylo":
 		_voice_event("xylo_hive")
+	if campaign.first_rescue():
+		if (campaign.phase == "orbit_boss" and campaign.sector in ["ignis", "cryo", "thalassa"]) or (campaign.phase == "asteroids" and campaign.sector == "xylo"):
+			rescue_convoy = RescueConvoy.new()
+			world.add_child(rescue_convoy)
+			rescue_convoy.configure(campaign.sector)
+			rescue_convoy.advance(0, director.frame, false)
+		if campaign.sector == "ignis" and campaign.phase == "orbit":
+			_boarding_cue("ignis_orbit")
+		if campaign.sector == "xylo" and campaign.phase == "asteroids":
+			for target in targets:
+				if target is EggShip and target.infested: target.mark_brood()
+			hud.objective = "GUIDE THE CLINIC BOAT / SPARE RED BROOD / RAIDERS ARE HOSTILE"
+			_boarding_cue("xylo_landmark")
 	if automation.is_empty() and DisplayServer.get_name() != "headless" and not get_window().has_focus():
 		pause_flight()
 	if not automation.is_empty() and not screenshot_directory.is_empty():
@@ -2944,6 +2994,8 @@ func _finish_phase() -> void:
 	var next: CampaignState = _snapshot()
 	var index: int = CampaignState.PHASES.find(previous_phase)
 	next.phase = CampaignState.PHASES[index + 1]
+	if previous_phase == "asteroids" and next.first_rescue() and next.sector == "xylo" and next.rescue_method != "detour":
+		next.rescue_method = "brood_passage"
 	next.shields = next.shield_capacity()
 	if not _save_campaign(next, _finish_phase):
 		return
@@ -2955,7 +3007,12 @@ func _finish_phase() -> void:
 		"orbit_boss":
 			_begin_sequence("orbital_victory")
 			if campaign.sector == "vespera" and not campaign.vespera_boarding.is_empty(): _boarding_cue("last_car")
-		"asteroids": _begin_sequence("belt_exit")
+			elif campaign.first_rescue():
+				var endings := {"cryo":"cryo_manifest", "ignis":"ignis_cooled", "thalassa":"thalassa_out"}
+				if endings.has(campaign.sector): _boarding_cue(endings[campaign.sector])
+		"asteroids":
+			_begin_sequence("belt_exit")
+			if campaign.sector == "xylo" and campaign.first_rescue(): _boarding_cue("xylo_passed")
 
 func _begin_sequence(kind: String) -> void:
 	credit_hoops.clear()
@@ -3030,7 +3087,7 @@ func _begin_sequence(kind: String) -> void:
 			approaching_boss.missile_requested.connect(_launch_missile)
 			approaching_boss.sweep_requested.connect(_start_thermal_sweep)
 			approaching_boss.build("orbit_boss", end, campaign.sector)
-			director.begin_transition(end, duration, FlightDirector.DOGFIGHT_SPEED, FlightState.SPEED)
+			director.begin_transition(end, duration, FlightDirector.DOGFIGHT_SPEED, FlightState.SPEED, false)
 			hud.objective = "CAPITAL SHIP DETECTED / TURNING ONTO INTERCEPT COURSE"
 		"belt_transfer":
 			director.begin_transition(belt_entry, duration, FlightState.SPEED, FlightDirector.ASTEROID_SPEED)
@@ -3143,18 +3200,6 @@ func _advance_sequence(delta: float) -> void:
 	for tower in towers:
 		tower.advance(delta)
 	_update_camera()
-	if boss != null and not boss.orbital and boss.death_time >= 0 and sequence in ["ground_victory", "ascent"]:
-		var weight := smoothstep(0.0, 0.45, sequence_time) if sequence == "ground_victory" else 1.0 - smoothstep(0.0, 0.9, sequence_time)
-		if weight > 0:
-			var focus := boss.model.global_position
-			for blast in explosions:
-				if blast.source == boss:
-					focus = blast.global_position
-					break
-			var aim := camera.global_position.direction_to(focus)
-			if aim.length_squared() > 0.0 and absf(aim.dot(director.ground_course.basis.y)) < 0.999:
-				var toward_wreck := Basis.looking_at(aim, director.ground_course.basis.y)
-				camera.global_basis = camera.global_basis.slerp(toward_wreck, weight)
 	if launch_approach != null:
 		_advance_ocean(delta)
 		if xylo_rovers != null:
@@ -3318,7 +3363,7 @@ func _complete_docking() -> void:
 	sound.play_cue("docking_latch")
 	if not campaign.tour_result.is_empty():
 		SynthAudio.play_ui(get_tree(), "tour_complete")
-	_voice_event("docking")
+	if mode == Mode.MARKET: _voice_event("docking")
 
 func _eject() -> void:
 	credit_hoops.clear()
@@ -3380,6 +3425,17 @@ func _show_market(error: String = "") -> void:
 		docked = true
 	if phase_log.is_empty() or phase_log[-1] != "market":
 		phase_log.append("market")
+	if campaign.home_manifest.has("xylo") and not station.has_node("ClinicReeds"):
+		var pot := Node3D.new()
+		pot.name = "ClinicReeds"
+		station.add_child(pot)
+		pot.global_transform = camera.global_transform.translated_local(Vector3(4, -1.6, -8))
+		pot.add_child(VectorArt.box(Vector3(1.6, 0.4, 0.65), Color("#47707e")))
+		var stalks := PackedVector3Array()
+		for i in 11:
+			var foot := Vector3((i - 5) * 0.12, 0.2, sin(i * 2.4) * 0.23)
+			stalks.append_array([foot, foot + Vector3(sin(i) * 0.22, 0.6 + fmod(i * 0.37, 0.8), 0)])
+		pot.add_child(VectorArt.lines(stalks, Color("#8acd72")))
 	mode = Mode.MARKET
 	is_campaign = true
 	display_ship.hide()
@@ -3400,12 +3456,36 @@ func _show_campaign_result() -> void:
 	_set_pointer(false)
 	sound.stop_all()
 	computer_voice.stop_speech(true)
+	if campaign.homecoming_pending:
+		homecoming_clock = 0
+		homecoming_knocks = 0
+		var roll: String = computer_voice.boarding_lines["home_roll"].text
+		hud.show_notice("ASTRA / ARRIVALS", "LARK\n" + roll, [])
+		if not automated_session and automation.is_empty(): computer_voice.say_boarding("home_roll")
+		return
 	hud.show_campaign_result(campaign.tour_result, [
 		{"label": "CONTINUE / BEGIN TOUR %d" % (campaign.tour + 1), "action": _confirm_next_tour},
 		{"label": "RETIRE / RECORD AND RETURN TO TITLE", "action": _retire_campaign},
 		{"label": "HALL OF FAME", "action": _show_hall_of_fame},
 		{"label": "HOW RANKS ARE CALCULATED", "action": _show_rank_rules}
 	], campaign.sector)
+
+func _advance_homecoming(delta: float) -> void:
+	homecoming_clock += delta
+	if homecoming_clock < 7 or computer_voice.policy.speaking: return
+	if homecoming_knocks < 2:
+		_play_story_knock()
+		homecoming_knocks += 1
+		homecoming_clock = 6.48 if homecoming_knocks == 1 else 5.2
+		hud.show_notice("ASTRA / ARRIVALS", "[A knock on the hangar wall.]" if homecoming_knocks == 1 else "[Two knocks.]", [])
+		return
+	homecoming_clock = -1
+	_finish_homecoming()
+
+func _finish_homecoming() -> void:
+	var next := campaign.copy()
+	next.homecoming_pending = false
+	if _save_campaign(next, _finish_homecoming): _show_campaign_result()
 
 func _show_rank_rules() -> void:
 	var ladder: Array[String] = []

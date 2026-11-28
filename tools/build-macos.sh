@@ -13,6 +13,7 @@ mkdir -p "$out" "$stage/package"
 sed -E "s/^config\\/version=.*/config\\/version=\"$VERSION\"/" "$stage/project.godot" > current_dev/project.godot
 grep -Fxq "config/version=\"$VERSION\"" current_dev/project.godot
 app="$stage/package/Cosmic Conflict.app"
+python3 tools/build-story-audio.py
 "$editor" --headless --path current_dev --editor --import --quit
 "$editor" --headless --path current_dev --export-release macOS "$app"
 plist="$app/Contents/Info.plist"
