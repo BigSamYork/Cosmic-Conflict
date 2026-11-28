@@ -85,7 +85,10 @@ recordings and cached takes. Platform packaging verifies the WAVs without
 rendering them; missing or mismatched audio blocks export. To keep a reviewed
 take even after a CI cache expires, commit the WAV and its receipt entry.
 The build's voice artifact contains the raw WAVs; release installers contain
-Godot's imported audio, not the original recordings.
+Godot's imported audio, not the original recordings. After copying the rescue
+WAVs and receipt from the artifact, use
+`git add -f current_dev/assets/rescues/*.wav current_dev/assets/rescues/generated-rescues.json`
+to track these files rather than leaving them in the ignored build output.
 Local package builds use the same incremental checks before importing
 resources. Set `COSMIC_TTS_MODEL` for an offline model or `COSMIC_TTS_PYTHON`
 for a preconfigured interpreter. Test-only runs can use captions without weights.
