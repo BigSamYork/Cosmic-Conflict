@@ -80,6 +80,7 @@ jobs:
           name: CosmicConflict-voices-${{ env.BUILD_SHA }}
           path: ${{ runner.temp }}/cosmic-voice-overlay/
           if-no-files-found: error
+          overwrite: true
 
   sfx:
     if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
@@ -300,6 +301,8 @@ jobs:
           "iscc=$iscc" >> $env:GITHUB_OUTPUT
 
       - name: Test, export and package
+        env:
+          COSMIC_VERIFY_VOICES_ONLY: '1'
         run: |
           $official = '${{ steps.android.outputs.release }}' -eq 'true'
           ./tools/build.ps1 -Platform All -AndroidUnsigned:$official -AndroidPreview:(!$official) -Iscc '${{ steps.inno.outputs.iscc }}' -Version '${{ steps.version.outputs.version }}'
@@ -408,6 +411,8 @@ jobs:
           unzip -p "$templates" templates/macos.zip > "$GITHUB_WORKSPACE/.tools/mac/macos.zip"
 
       - name: Export, verify and package universal app
+        env:
+          COSMIC_VERIFY_VOICES_ONLY: '1'
         shell: bash
         run: bash tools/build-macos.sh
 
