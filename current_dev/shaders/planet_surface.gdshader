@@ -60,13 +60,14 @@ void fragment() {
 		color = mix(color, vec3(0.20, 0.47, 0.62), (1.0 - smoothstep(0.006, 0.021, ridge)) * ice * 0.65);
 		atmosphere = vec3(0.25, 0.58, 0.75);
 	} else if (terrain_style == 2) {
-		vec2 uv = vec2(atan(n.z, n.x) / 6.2831853 + 0.5, acos(clamp(n.y, -1.0, 1.0)) / 3.14159265);
-		vec2 grid = abs(fract(uv * vec2(180.0, 90.0)) - 0.5);
-		float roads = smoothstep(0.46, 0.49, max(grid.x, grid.y));
-		float district = step(0.42, hash3(vec3(floor(uv * vec2(180.0, 90.0)), 4.0)));
+		// City lights cluster along settled coasts and follow uneven inland corridors.
+		float district = noise3(n * 19.0 + vec3(3.8, 0.0, 1.1));
+		float coast = 1.0 - smoothstep(0.015, 0.10, abs(continent - 0.48));
+		float lights = (0.25 * land + 0.65 * coast) * smoothstep(0.38, 0.72, district)
+			* smoothstep(0.35, 0.78, fine + 0.18 * (1.0 - smoothstep(0.01, 0.06, ridge)));
 		color = mix(vec3(0.07, 0.07, 0.13), vec3(0.29, 0.14, 0.35), land);
-		color = mix(color, mix(vec3(0.68, 0.26, 0.65), vec3(0.25, 0.82, 0.85), district), roads * (0.25 + 0.65 * land));
-		emission = roads * district * 0.15;
+		color = mix(color, mix(vec3(0.68, 0.26, 0.65), vec3(0.25, 0.82, 0.85), district), lights);
+		emission = lights * 0.25;
 		atmosphere = vec3(0.48, 0.22, 0.65);
 	} else if (terrain_style == 4) {
 		float storm = sin(n.x * 26.0 + n.z * 17.0 + continent * 16.0 + surface_time * 0.025);

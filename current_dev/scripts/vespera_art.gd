@@ -55,11 +55,6 @@ static func terrain_chunk(start: float, branching: bool = false) -> Node3D:
 			var c: Vector3 = floor_point(x + 10, travel + 16)
 			var d: Vector3 = floor_point(x, travel + 16)
 			terrain.surface(PackedVector3Array([a, b, c, d]), PackedInt32Array([0, 1, 2, 0, 2, 3]), Color.WHITE)
-		for route in range(2 if branching else 1):
-			for side in [-1.0, 1.0]:
-				var offset: float = GroundRoute.lateral_offset(travel) if route == 1 else 0
-				var next_offset: float = GroundRoute.lateral_offset(travel + 16) if route == 1 else 0
-				batch.line(floor_point(offset + side * 9, travel) + Vector3.UP * 0.2, floor_point(next_offset + side * 9, travel + 16) + Vector3.UP * 0.2, SIGNAL)
 		for side in [-1.0, 1.0]:
 			for lane in range(2):
 				var x: float = side * (23 + lane * 4)

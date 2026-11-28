@@ -12,6 +12,7 @@ uniform float effect_opacity = 0.0;
 
 void vertex() {
 	position_on_course = VERTEX;
+	course_normal = NORMAL;
 	VERTEX = arrival_local_position(VERTEX, MODEL_MATRIX);
 	COLOR.rgb = palette_to_output(COLOR.rgb);
 }
@@ -20,11 +21,13 @@ void fragment() {
 	// Large overlapping terrain batches cannot be reliably sorted by their center.
 	// Fade their coverage, not their depth: closer ground must always win.
 	float coverage = base_color.a * (use_vertex_color ? COLOR.a : 1.0) * effect_opacity;
-	ivec2 p = ivec2(FRAGCOORD.xy) & ivec2(3);
-	int a = ((p.x & 1) ^ (p.y & 1)) * 2 + (p.y & 1);
-	int b = ((p.x >> 1) ^ (p.y >> 1)) * 2 + (p.y >> 1);
-	if (coverage <= (float(4 * a + b) + 0.5) / 16.0) { discard; }
+	if (coverage < 1.0 && coverage <= arrival_coverage_sample(FRAGCOORD.xy)) { discard; }
 	vec3 eye = normalize(transpose(mat3(MODEL_MATRIX)) * mat3(INV_VIEW_MATRIX) * VIEW);
-	ALBEDO = use_swatch ? ground_color(position_on_course, eye) * COLOR.rgb : base_color.rgb * (use_vertex_color ? COLOR.rgb : vec3(1.0));
-	ALBEDO *= sector_ambient;
+	if (use_swatch) {
+		vec3 glow;
+		vec3 stone = ground_color(position_on_course, eye, glow);
+		ALBEDO = stone * COLOR.rgb * sector_ambient + glow;
+	} else {
+		ALBEDO = base_color.rgb * (use_vertex_color ? COLOR.rgb : vec3(1.0)) * sector_ambient;
+	}
 }

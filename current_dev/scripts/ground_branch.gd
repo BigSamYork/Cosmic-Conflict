@@ -22,14 +22,15 @@ func _ready() -> void:
 	add_child(patrol)
 	patrol.sound_requested.connect(sound_requested.emit)
 	var guides := GeometryBatch.new()
-	for distance in range(int(GroundRoute.FORK), int(GroundRoute.REJOIN), 12):
-		var current: Transform3D = GroundRoute.frame(distance)
-		var next: Transform3D = GroundRoute.frame(distance + 12)
+	# Mark the entrances with solid lamps. The terrain between them stays open.
+	for distance: float in [GroundRoute.FORK + 100.0, GroundRoute.REJOIN - 100.0]:
+		var frame := GroundRoute.frame(distance)
 		for side in [-1.0, 1.0]:
-			guides.line(current * Vector3(side * 8, -10, 0), next * Vector3(side * 8, -10, 0), VectorArt.AMBER)
-			if distance % 48 == 12:
-				guides.line(current * Vector3(side * 9, -10, 0), current * Vector3(side * 9, -5, 0), VectorArt.AMBER)
-	add_child(guides.build())
+			var at := frame * Vector3(side * 8.0, 0, 0)
+			at.y = FrontierArt.SEA_LEVEL if sector == "thalassa" else -1.0
+			guides.box(at + Vector3.UP * 0.8, Vector3(0.8, 1.6, 0.8), Color.WHITE, Color("#39434a"))
+			guides.box(at + Vector3.UP * 1.74, Vector3(0.9, 0.28, 0.9), Color.WHITE, VectorArt.AMBER)
+	add_child(VectorArt.solid(guides.vertices, guides.indices, Color.WHITE, guides.face_colors))
 	for i in range(4):
 		var turret := GroundTurret.new()
 		turret.sector = sector

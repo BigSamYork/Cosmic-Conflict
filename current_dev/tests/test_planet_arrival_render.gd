@@ -41,6 +41,7 @@ func verify_opacity() -> void:
 	camera.make_current()
 	for destination in SectorCatalog.AVAILABLE:
 		var planet: Node3D = LaunchApproach._planet_model(destination)
+		check(planet.get_child_count() == 1, destination + " globe has no wire overlay")
 		scene.add_child(planet)
 		var surface := planet.get_child(0) as MeshInstance3D
 		var material: ShaderMaterial = surface.material_override.duplicate()
@@ -155,14 +156,24 @@ func verify_sector_arrival(game: Node3D, destination: String) -> void:
 	check(not game.launch_approach.planet.visible and -game.camera.global_basis.z.y > 0.3, "The visible station-clearance climb occurs before any planet reveal")
 	await game._capture(destination + "-departure-pullup.png")
 	reach(game, "hyperspace", LaunchApproach.HYPERSPACE_DURATION * 0.5)
-	check(not game.launch_approach.planet.visible and game.launch_approach.streaks.visible, "Hyperspace has streaks, not an already-visible destination")
+	check(not game.launch_approach.planet.visible and game.launch_approach.streaks.visible and not game.launch_approach.plasma.visible,
+		"Hyperspace clears the atmospheric entry effects")
 	await game._capture(destination + "-departure-hyperspace.png")
 	reach(game, "planet_descent", 0.5)
 	await game._capture(destination + "-planet-reveal-start.png")
 	reach(game, "planet_descent", 2.5)
 	check(game.launch_approach.planet.visible and game.launch_approach.planet_material.get_shader_parameter("reveal") == 1, "The detailed globe fades to full appearance only after hyperspace")
 	await game._capture(destination + "-planet-revealed.png")
+	var approach: LaunchApproach = game.launch_approach
+	check(approach.atmosphere.is_visible_in_tree(), destination + " has a visible atmosphere above the globe")
+	var halo := await image("")
+	approach.atmosphere.hide()
+	var bare := await image("")
+	approach.atmosphere.show()
+	check(changed_pixels(halo, bare, Rect2i(240, 215, 1440, 530)) > 250,
+		destination + " atmosphere scatters light in the native arrival frame")
 	var alignment_checked: bool = false
+	var plasma_checked := false
 	for fraction in [0.25, 0.44, 0.56, 0.69, 0.75, 0.81, 0.875, 0.97]:
 		var moment: float = FlightDirector.DESCENT_DURATION * fraction
 		reach(game, "planet_descent", moment)
@@ -170,10 +181,22 @@ func verify_sector_arrival(game: Node3D, destination: String) -> void:
 		var reveal: float = game.launch_approach.terrain_reveal(game.camera.global_transform)
 		print("ARRIVAL_GEOMETRY sector=%s seconds=%.2f height=%.2f terrain=%.3f curvature=%.3f" % [destination, game.sequence_time, height, reveal, game.launch_approach.curvature])
 		await game._capture("%s-descent-%04d.png" % [destination, roundi(moment * 10)])
+		if not plasma_checked and approach.plasma.visible and float(approach.plasma_material.get_shader_parameter("heat")) > 0.4:
+			var hot := await image("")
+			approach.plasma.hide()
+			var cool := await image("")
+			approach.plasma.show()
+			check(changed_pixels(hot, cool, Rect2i(100, 220, 640, 440)) > 350,
+				destination + " reentry plasma illuminates the side of the canopy")
+			check(changed_pixels(hot, cool, Rect2i(880, 440, 160, 90)) < 100,
+				destination + " reentry keeps the pilot's sightline clear")
+			plasma_checked = true
 		if reveal > 0.7 and game.launch_approach.curvature > 0.99 and not alignment_checked:
 			await verify_curved_silhouette(game, destination)
 			alignment_checked = true
 	check(alignment_checked, "The %s approach includes a visibly curved terrain reveal before leveling into the canyon" % destination)
+	check(plasma_checked and not approach.plasma.visible and not approach.atmosphere.visible,
+		destination + " entry heating ends before the surface handoff")
 	# The comparison spans render frames. Hold the installations' running lights
 	# steady so only the globe's visibility changes between the two captures.
 	var pulse: float = FleetArt.hull_material.get_shader_parameter("pulse_strength")
@@ -239,7 +262,6 @@ func verify_curved_silhouette(game: Node3D, destination: String) -> void:
 	mask.shader.code = "shader_type spatial; render_mode unshaded, fog_disabled, cull_disabled; void fragment() { ALBEDO = vec3(1.0); }"
 	solid.material_override = mask
 	planet.scale *= 1.025
-	planet.get_child(1).hide()
 	game.world.hide()
 	var envelope: Image = await image(destination + "-planet-envelope-mask.png")
 	planet.hide()
@@ -260,7 +282,6 @@ func verify_curved_silhouette(game: Node3D, destination: String) -> void:
 	solid.material_override = material
 	planet.transform = transform
 	planet.show()
-	planet.get_child(1).show()
 	environment.background_mode = background
 	environment.background_color = background_color
 	environment.fog_enabled = fog

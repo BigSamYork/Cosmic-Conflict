@@ -129,6 +129,7 @@ var frost_fields: Array[FrostField] = []
 var lightning_fields: Array[StormLightning] = []
 var ocean_material: ShaderMaterial
 var ocean_age: float = 0.0
+var ground_age: float = 0.0
 var falling_ice: Array[FallingIce] = []
 var laser_gates: Array[CityLaserGate] = []
 var city_traffic: CityTraffic
@@ -609,14 +610,6 @@ func _build_world(training: bool = true) -> void:
 				field.position = XyloArt.floor_point(-6.5 if i % 2 == 0 else 6.5, travel)
 				world.add_child(field)
 				xylo_fields.append(field)
-	var beacons := PackedVector3Array()
-	for i in range(120):
-		var travel: float = float(i) * 28.0
-		var origin: Vector3 = FlightState.rail_point(travel)
-		for side in [-1.0, 1.0]:
-			beacons.append(origin + Vector3(side * 10.5, -10.0, 0))
-			beacons.append(origin + Vector3(side * 10.5, -6.0, 0))
-	world.add_child(VectorArt.lines(beacons, Color("#2d7787")))
 	if ground_branch != null:
 		world.add_child(ground_branch)
 		for turret in ground_branch.turrets:
@@ -2377,6 +2370,7 @@ func _apply_settings() -> void:
 		flight.response *= float(CampaignState.SHIPS[campaign.ship]["response"])
 	VectorArt.set_reduced_effects(bool(settings["reduced_effects"]))
 	combat_lights.reduced = settings["reduced_effects"]
+	RenderingServer.global_shader_parameter_set("ground_motion", 0.0 if combat_lights.reduced else 1.0)
 	if ocean_material != null:
 		_configure_ocean_material()
 	if combat_lights.reduced:
@@ -2509,6 +2503,8 @@ func _add_ground_cover(chunk: Node3D) -> void:
 		var mesh: Mesh
 		var transforms: Array[Transform3D] = []
 		if surface is MultiMeshInstance3D:
+			if surface.multimesh.has_meta("decorative_ground_cover"):
+				continue
 			mesh = surface.multimesh.mesh
 			transforms.assign(surface.multimesh.get_meta("placements"))
 			if surface.material_override == GroundArt.foliage_material:
@@ -2570,6 +2566,9 @@ func _bind_ocean(node: Node3D) -> void:
 			mesh.material_override = ocean_material
 
 func _advance_ocean(delta: float) -> void:
+	if (surface_flight or launch_approach != null) and not combat_lights.reduced:
+		ground_age += delta
+		RenderingServer.global_shader_parameter_set("ground_time", ground_age)
 	surface_weather.advance(delta)
 	GroundArt.foliage_material.set_shader_parameter("wave_time", ocean_age + delta if ocean_material != null else surface_weather.age)
 	if ocean_material == null:
@@ -4419,4 +4418,6 @@ func _finish_automation() -> void:
 
 func _exit_tree() -> void:
 	RenderingServer.global_shader_parameter_set("sector_ambient", Vector3.ONE)
+	RenderingServer.global_shader_parameter_set("ground_motion", 1.0)
+	RenderingServer.global_shader_parameter_set("ground_time", 0.0)
 	_set_pointer(false)

@@ -5,6 +5,8 @@ const LEAF := Color("#88bf45")
 const ACID := Color("#d0df45")
 const SHELL := Color("#83b86b")
 const DARK := Color("#173220")
+static var sedge_mesh: ArrayMesh
+static var sedge_material := ShaderMaterial.new()
 
 static func warm_cache() -> void:
 	for factory in [pylon, spitter_base, spitter_head, insect, insect_leg, goliath, goliath_leg, leviathan, hive_mother, rover, acid_plume, spore_plume, sensor]:
@@ -98,7 +100,6 @@ static func terrain_chunk(start: float, branching: bool = false) -> Node3D:
 	var cached: Node3D = VectorArt.cached_model(key)
 	if cached != null:
 		return cached
-	var batch := GeometryBatch.new()
 	var terrain := GeometryBatch.new()
 	var scenery: Array[Transform3D] = []
 	for row in range(8):
@@ -110,16 +111,6 @@ static func terrain_chunk(start: float, branching: bool = false) -> Node3D:
 			var c: Vector3 = floor_point(x + 10, travel + 16)
 			var d: Vector3 = floor_point(x, travel + 16)
 			terrain.surface(PackedVector3Array([a, b, c, d]), PackedInt32Array([0, 1, 2, 0, 2, 3]), Color.WHITE)
-		for route in range(2 if branching else 1):
-			var offset: float = GroundRoute.lateral_offset(travel) if route == 1 else 0
-			var next_offset: float = GroundRoute.lateral_offset(travel + 16) if route == 1 else 0
-			var a: Vector3 = floor_point(offset - 4.2, travel) + Vector3.UP * 0.08
-			var b: Vector3 = floor_point(offset + 4.2, travel) + Vector3.UP * 0.08
-			var c: Vector3 = floor_point(next_offset + 4.2, travel + 16) + Vector3.UP * 0.08
-			var d: Vector3 = floor_point(next_offset - 4.2, travel + 16) + Vector3.UP * 0.08
-			terrain.surface(PackedVector3Array([a, b, c, d]), PackedInt32Array([0, 1, 2, 0, 2, 3]), Color("#67c9ab"))
-			batch.line(a, d, Color("#67964a"))
-			batch.line(b, c, Color("#67964a"))
 	for i in range(6):
 		var travel: float = start + 12 + i * 19
 		var side: float = -1 if i % 2 == 0 else 1
@@ -127,11 +118,113 @@ static func terrain_chunk(start: float, branching: bool = false) -> Node3D:
 		if not branching or absf(x - GroundRoute.lateral_offset(travel)) > 38:
 			var height := 50 + posmod(int(start / 128) * 7 + i * 13, 35)
 			scenery.append(GroundArt.placement(floor_point(x, travel), Vector3(1, height / 48.0, 1), travel * 0.17))
-		var reed: Vector3 = floor_point(side * 16, travel)
-		for blade in range(4):
-			batch.line(reed + Vector3(blade * 0.3, 0, 0), reed + Vector3((blade - 1) * 0.7, 3 + blade * 0.5, 1), ACID.darkened(0.2))
-	var chunk := GroundArt.finish_chunk(batch.build(), terrain, scenery, "xylo", start, branching)
+	var chunk := GroundArt.finish_chunk(Node3D.new(), terrain, scenery, "xylo", start, branching)
+	_add_sedge_banks(chunk, start, branching)
 	return VectorArt.remember_model(key, chunk) if start < VectorArt.TERRAIN_CACHE_CHUNKS * VectorArt.CHUNK_LENGTH else chunk
+
+static func _add_sedge_banks(chunk: Node3D, start: float, branching: bool) -> void:
+	if sedge_mesh == null:
+		sedge_mesh = _make_sedge()
+		sedge_material.shader = preload("res://shaders/xylo_sedge.gdshader")
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(Vector2i(int(start), 3749))
+	var tufts: Array[Transform3D] = []
+	var wind_data := PackedColorArray()
+	for side in [-1.0, 1.0]:
+		for _bed in range(14):
+			var center := start + rng.randf_range(0, VectorArt.CHUNK_LENGTH)
+			var bank_x: float = side * (12.0 + 4.5 * sin(center * 0.044 + side) + rng.randf_range(0.0, 27.0))
+			var bed_size := rng.randf_range(0.7, 1.42)
+			for _tuft in range(rng.randi_range(4, 10)):
+				var travel := center + rng.randfn(0.0, 4.5)
+				var x := bank_x + rng.randfn(0.0, 2.3)
+				if travel < start or travel >= start + VectorArt.CHUNK_LENGTH or absf(x) < 6.1:
+					continue
+				if branching and absf(x - GroundRoute.lateral_offset(travel)) < 6.1:
+					continue
+				var base := floor_point(x, travel)
+				var angle := rng.randf_range(-PI, PI)
+				var size := bed_size * rng.randf_range(0.68, 1.26)
+				var stature := rng.randf_range(0.55, 1.26)
+				tufts.append(GroundArt.placement(base, Vector3(size, size * stature, size), angle))
+				wind_data.append(Color(base.x, base.z, cos(angle), sin(angle)))
+	var grass := MultiMesh.new()
+	grass.transform_format = MultiMesh.TRANSFORM_3D
+	grass.use_custom_data = true
+	grass.mesh = sedge_mesh
+	grass.instance_count = tufts.size()
+	grass.set_meta("decorative_ground_cover", true)
+	for i in tufts.size():
+		grass.set_instance_transform(i, tufts[i])
+		grass.set_instance_custom_data(i, wind_data[i])
+	var bank := MultiMeshInstance3D.new()
+	bank.multimesh = grass
+	bank.material_override = sedge_material
+	bank.extra_cull_margin = 2.0
+	# Past the last visible tuft, cull the entire 128 m batch on the CPU.
+	bank.visibility_range_end = 265.0
+	bank.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	chunk.add_child(bank)
+
+static func _make_sedge() -> ArrayMesh:
+	# Folded, opaque leaves share one mesh and avoid alpha-sorted grass cards.
+	var surface := SurfaceTool.new()
+	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 8953
+	const FOOT := Color("#263728")
+	const STEM := Color("#425d3f")
+	const LEAF_DARK := Color("#406747")
+	const LEAF_LIGHT := Color("#86a45c")
+	const TIP := Color("#b5b56d")
+	const REEDS := 7
+	for blade in range(REEDS):
+		var angle := blade * 2.39996 + rng.randf_range(-0.24, 0.24)
+		var radial := Vector3(cos(angle), 0, sin(angle))
+		var narrow := Vector3(-radial.z, 0, radial.x) * rng.randf_range(0.065, 0.145)
+		var height := rng.randf_range(0.88, 2.25)
+		var reach := rng.randf_range(0.55, 1.26)
+		var foot := radial * rng.randf_range(0.08, 0.35)
+		var belly := foot + Vector3.UP * height * 0.66 + radial * reach * 0.28
+		var tip := foot + Vector3.UP * height + radial * reach
+		var tint := LEAF_DARK.lerp(LEAF_LIGHT, rng.randf())
+		var base := blade * 7
+		_sedge_vertex(surface, foot - narrow * 0.4, FOOT, 0.0)
+		_sedge_vertex(surface, foot + radial * 0.02, STEM, 0.0)
+		_sedge_vertex(surface, foot + narrow * 0.4, FOOT, 0.0)
+		_sedge_vertex(surface, belly - narrow, tint.darkened(0.19), 0.61)
+		_sedge_vertex(surface, belly + radial * 0.065, tint.lightened(0.10), 0.61)
+		_sedge_vertex(surface, belly + narrow, tint, 0.61)
+		_sedge_vertex(surface, tip, tint.lerp(TIP, 0.58), 1.0)
+		for index in [0, 3, 4, 0, 4, 1, 1, 4, 5, 1, 5, 2, 3, 6, 4, 4, 6, 5]:
+			surface.add_index(base + index)
+	# Shorter swords grow on creeping rhizomes around the taller reed. Their
+	# wider footprint lets neighbouring plants merge into uneven stands.
+	for blade in range(18):
+		var angle := blade * 2.39996 + rng.randf_range(-0.42, 0.42)
+		var radial := Vector3(cos(angle), 0, sin(angle))
+		var spread := rng.randf_range(0.28, 2.95)
+		var foot := radial * spread * Vector3(1.4, 1.0, 0.82)
+		var height := rng.randf_range(0.58, 1.28) * (1.13 - spread * 0.14)
+		var reach := radial * rng.randf_range(0.27, 0.76) + Vector3(0.25, 0.0, 0.1)
+		var width := Vector3(-radial.z, 0, radial.x) * rng.randf_range(0.06, 0.115)
+		var belly := foot + Vector3.UP * height * 0.53 + reach * 0.31
+		var tip := foot + Vector3.UP * height + reach
+		var tint := LEAF_DARK.lerp(LEAF_LIGHT, rng.randf_range(0.0, 0.72))
+		var base := REEDS * 7 + blade * 4
+		_sedge_vertex(surface, foot, FOOT, 0.0)
+		_sedge_vertex(surface, belly - width, tint.darkened(0.10), 0.55)
+		_sedge_vertex(surface, belly + width, tint, 0.55)
+		_sedge_vertex(surface, tip, tint.lerp(TIP, 0.30), 1.0)
+		for index in [0, 1, 2, 1, 3, 2]:
+			surface.add_index(base + index)
+	return surface.commit()
+
+static func _sedge_vertex(surface: SurfaceTool, point: Vector3, pigment: Color, flex: float) -> void:
+	surface.set_color(pigment)
+	surface.set_uv(Vector2(0.0, flex))
+	surface.set_normal(Vector3.UP)
+	surface.add_vertex(point)
 
 static func horizon() -> Node3D:
 	var cached: Node3D = VectorArt.cached_model("xylo_horizon")

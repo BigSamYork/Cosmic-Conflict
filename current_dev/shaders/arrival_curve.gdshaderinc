@@ -4,6 +4,16 @@ uniform float arrival_radius = 4000.0;
 uniform float arrival_clearance = 80.0;
 uniform float arrival_curvature = 0.0;
 
+// A stable screen-space sample lets opaque objects fade into the descent
+// without stamping a repeating checkerboard across their silhouettes.
+float arrival_coverage_sample(vec2 pixel) {
+	uvec2 xy = uvec2(pixel);
+	uint bits = xy.x * 1597334677u ^ xy.y * 3812015801u;
+	bits = (bits ^ (bits >> 16u)) * 2246822519u;
+	bits ^= bits >> 13u;
+	return (float(bits & 65535u) + 0.5) / 65536.0;
+}
+
 vec3 arrival_world_position(vec3 world_position) {
 	if (arrival_curvature <= 0.0) {
 		return world_position;

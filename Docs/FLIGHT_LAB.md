@@ -85,10 +85,10 @@ recordings and cached takes. Platform packaging verifies the WAVs without
 rendering them; missing or mismatched audio blocks export. To keep a reviewed
 take even after a CI cache expires, commit the WAV and its receipt entry.
 The build's voice artifact contains the raw WAVs; release installers contain
-Godot's imported audio, not the original recordings. After copying the rescue
-WAVs and receipt from the artifact, use
-`git add -f current_dev/assets/rescues/*.wav current_dev/assets/rescues/generated-rescues.json`
-to track these files rather than leaving them in the ignored build output.
+Godot's imported audio, not the original recordings. The 40 approved rescue
+takes and their receipt are tracked from the [v1.0.14 audio build](https://github.com/BigSamYork/Cosmic-Conflict/actions/runs/46157328636).
+Future builds verify them from Git without requiring a voice cache. For a new
+cue, review the take before explicitly adding its WAV and updated receipt.
 Local package builds use the same incremental checks before importing
 resources. Set `COSMIC_TTS_MODEL` for an offline model or `COSMIC_TTS_PYTHON`
 for a preconfigured interpreter. Test-only runs can use captions without weights.

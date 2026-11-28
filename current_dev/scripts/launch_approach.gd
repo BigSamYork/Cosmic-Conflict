@@ -12,13 +12,26 @@ const TERRAIN_OPAQUE_HEIGHT: float = 60.0
 const CURVE_START_HEIGHT: float = 95.0
 const CURVE_END_HEIGHT: float = 20.0
 const HORIZON_EDGE_LENGTH: float = 500.0
+# Scattering tint and atmospheric shell thickness as a fraction of the globe.
+const ATMOSPHERES := {
+	"ignis": [Color("#f7a475"), 0.084],
+	"cryo": [Color("#8bc9fa"), 0.058],
+	"vespera": [Color("#b4a6ed"), 0.078],
+	"xylo": [Color("#8dd7cd"), 0.094],
+	"thalassa": [Color("#7bbdf6"), 0.102],
+	"kharon": [Color("#eac29a"), 0.066],
+}
 static var horizon_meshes: Dictionary = {}
 var ground_course: Transform3D
 var alignment_frame: Transform3D
 var descent_frame: Transform3D
 var planet: Node3D
 var planet_material: ShaderMaterial
-var planet_lines: ShaderMaterial
+var atmosphere: MeshInstance3D
+var atmosphere_material: ShaderMaterial
+var plasma: ColorRect
+var plasma_material: ShaderMaterial
+var air_depth := 0.0
 var streaks: MultiMeshInstance3D
 var streak_material: ShaderMaterial
 var star_positions := PackedVector3Array()
@@ -36,12 +49,8 @@ func _ready() -> void:
 	planet_material = solid.material_override.duplicate()
 	planet_material.set_shader_parameter("reveal", 0.0)
 	solid.material_override = planet_material
-	var lines := planet.get_child(1) as MeshInstance3D
-	planet_lines = lines.material_override.duplicate()
-	planet_lines.render_priority = 1
-	planet_lines.set_shader_parameter("fade_start", VIEW_DISTANCE)
-	planet_lines.set_shader_parameter("fade_end", VIEW_DISTANCE + 5000)
-	lines.material_override = planet_lines
+	if ATMOSPHERES.has(sector):
+		_build_entry_effects()
 	planet.hide()
 	var unit: MeshInstance3D = VectorArt.lines(PackedVector3Array([Vector3.ZERO, Vector3.BACK]), VectorArt.CYAN)
 	streak_material = unit.material_override.duplicate()
@@ -62,6 +71,56 @@ func _ready() -> void:
 		var radius: float = rng.randf_range(18, 75)
 		star_positions.append(Vector3(cos(angle) * radius, sin(angle) * radius, rng.randf_range(0, 400)))
 	streaks.hide()
+
+func _build_entry_effects() -> void:
+	var profile: Array = ATMOSPHERES[sector]
+	air_depth = profile[1]
+	atmosphere_material = ShaderMaterial.new()
+	atmosphere_material.shader = preload("res://shaders/arrival_atmosphere.gdshader")
+	atmosphere_material.set_shader_parameter("air_color", profile[0])
+	atmosphere_material.set_shader_parameter("shell_depth", air_depth)
+	var sphere := SphereMesh.new()
+	sphere.radius = 1.0
+	sphere.height = 2.0
+	sphere.radial_segments = 128
+	sphere.rings = 64
+	atmosphere = MeshInstance3D.new()
+	atmosphere.mesh = sphere
+	atmosphere.material_override = atmosphere_material
+	atmosphere.extra_cull_margin = air_depth
+	atmosphere.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	planet.add_child(atmosphere)
+	var layer := CanvasLayer.new()
+	layer.layer = 0 # Outside the windshield, below the cockpit and instruments.
+	add_child(layer)
+	plasma_material = ShaderMaterial.new()
+	plasma_material.shader = preload("res://shaders/reentry_plasma.gdshader")
+	plasma_material.set_shader_parameter("flow_map", preload("res://assets/ground/sector_sky.png"))
+	plasma = ColorRect.new()
+	plasma.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	plasma.material = plasma_material
+	layer.add_child(plasma)
+	plasma.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	plasma.hide()
+
+func _advance_entry_effects(camera_at: Vector3, planet_reveal: float, ground_reveal: float) -> void:
+	if atmosphere == null:
+		return
+	var altitude := camera_at.distance_to(planet.global_position) - PLANET_RADIUS
+	var thickness := PLANET_RADIUS * air_depth
+	# The local atmospheric sky takes over as the camera crosses the shell.
+	var outside := smoothstep(thickness, thickness * 1.9, altitude)
+	var visibility := planet_reveal * outside
+	atmosphere.visible = visibility > 0.001
+	if atmosphere.visible:
+		atmosphere_material.set_shader_parameter("reveal", visibility)
+	var entry := 1.0 - smoothstep(thickness * 1.75, thickness * 4.0, altitude)
+	var cooling := smoothstep(95.0, thickness + 75.0, altitude)
+	var heat := planet_reveal * entry * cooling * (1.0 - smoothstep(0.0, 0.65, ground_reveal))
+	plasma.visible = heat > 0.001
+	if plasma.visible:
+		plasma_material.set_shader_parameter("heat", heat)
+		plasma_material.set_shader_parameter("flight_time", age)
 
 func configure(station_frame: Transform3D) -> void:
 	var exit_basis: Basis = station_frame.basis * Basis(Vector3.UP, PI)
@@ -91,6 +150,8 @@ func attach_ground(ground: Node3D, horizon: Node3D = null) -> void:
 				material.set_shader_parameter("swatch", original.get_shader_parameter("swatch"))
 				material.set_shader_parameter("deposits_map", original.get_shader_parameter("deposits_map"))
 				material.set_shader_parameter("surface_id", original.get_shader_parameter("surface_id"))
+				if original.get_shader_parameter("cryo_snow_map") != null:
+					material.set_shader_parameter("cryo_snow_map", original.get_shader_parameter("cryo_snow_map"))
 			elif original is StandardMaterial3D:
 				assert(original.shading_mode == BaseMaterial3D.SHADING_MODE_UNSHADED)
 				material = ShaderMaterial.new()
@@ -177,7 +238,7 @@ func advance(delta: float, intensity: float, planet_reveal: float, ground_reveal
 	planet.visible = planet_reveal > 0
 	planet_material.set_shader_parameter("reveal", planet_reveal)
 	planet_material.set_shader_parameter("surface_time", age)
-	planet_lines.set_shader_parameter("effect_opacity", planet_reveal * 0.22)
+	_advance_entry_effects(camera_frame.origin, planet_reveal, ground_reveal)
 	var height: float = (ground_course.affine_inverse() * camera_frame.origin).y
 	curvature = smoothstep(CURVE_END_HEIGHT, CURVE_START_HEIGHT, height)
 	for material in ground_shaders:
@@ -189,10 +250,8 @@ func advance(delta: float, intensity: float, planet_reveal: float, ground_reveal
 	streaks.global_transform = camera_frame
 	streaks.visible = intensity > 0.001
 	streak_material.set_shader_parameter("effect_opacity", intensity)
-	for material: ShaderMaterial in [streak_material, planet_lines]:
-		if material != null:
-			material.set_shader_parameter("halo_strength", VectorArt.line_material.get_shader_parameter("halo_strength"))
-			material.set_shader_parameter("stroke_width", VectorArt.line_material.get_shader_parameter("stroke_width"))
+	streak_material.set_shader_parameter("halo_strength", VectorArt.line_material.get_shader_parameter("halo_strength"))
+	streak_material.set_shader_parameter("stroke_width", VectorArt.line_material.get_shader_parameter("stroke_width"))
 	if streaks.visible:
 		star_travel += delta * (250 + intensity * 800)
 		for i in range(star_positions.size()):
@@ -202,8 +261,6 @@ func advance(delta: float, intensity: float, planet_reveal: float, ground_reveal
 
 static func _planet_model(destination: String = "ignis") -> Node3D:
 	assert(SectorCatalog.NAMES.has(destination), "Unknown arrival planet: " + destination)
-	var icy: bool = destination == "cryo"
-	var urban: bool = destination == "vespera"
 	var key: String = destination + "_arrival_planet"
 	var cached: Node3D = VectorArt.cached_model(key)
 	if cached != null:
@@ -234,20 +291,4 @@ static func _planet_model(destination: String = "ignis") -> Node3D:
 	material.set_shader_parameter("terrain_style", SectorCatalog.NAMES.keys().find(destination))
 	surface.material_override = material
 	model.add_child(surface)
-	var grid := GeometryBatch.new()
-	for ring in range(8, RINGS, 8):
-		var points := PackedVector3Array()
-		for sector in range(SECTORS):
-			points.append(vertices[ring * (SECTORS + 1) + sector] * 1.002)
-		grid.outline(points, SectorCatalog.ACCENTS[destination].darkened(0.25))
-	for sector in range(0, SECTORS, 16):
-		var points := PackedVector3Array()
-		for ring in range(RINGS + 1):
-			points.append(vertices[ring * (SECTORS + 1) + sector] * 1.002)
-		grid.outline(points, VesperaArt.SIGNAL if urban else Color("#6aa3cb") if icy else Color("#704955"), false)
-	var outline: Node3D = grid.build()
-	var strokes: MeshInstance3D = outline.get_child(0)
-	outline.remove_child(strokes)
-	outline.free()
-	model.add_child(strokes)
 	return VectorArt.remember_model(key, model)
