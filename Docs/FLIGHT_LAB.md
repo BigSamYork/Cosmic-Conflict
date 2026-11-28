@@ -1128,6 +1128,31 @@ format. The build checks each recording's text fingerprint, independently of
 frequency settings. Editing the source file does not change a separate installed
 game's per-user file.
 
+### Adding dialogue for the GitHub build
+
+Add the line with a **new ID** to `lines.json`, `opening.json`, `arrival.json`,
+or `boarding.json` under `current_dev/assets/voice`. The GitHub Actions Build
+checks the four catalogs before export. It uses checked-in takes unchanged and
+synthesizes only new IDs that have neither a WAV nor a recording manifest entry.
+If there are no new lines, it does not install Chatterbox or download its model.
+
+Actions caches newly synthesized takes by text, speaker and rendering recipe,
+and passes the same WAVs and updated manifests to Windows, Android and macOS.
+It never commits to the repository. The run's `CosmicConflict-voices-…` artifact
+contains just the additions and updated manifests with their project paths.
+After listening to a new take, you can commit those files to keep the reviewed
+audio permanently; the Actions cache can expire. Editing the words or speaker
+for an existing ID is deliberate: use a new ID, or explicitly re-render that ID
+with the authoring tools and commit the replacement WAV and manifest together.
+An existing take with a missing or mismatched manifest fails the build rather
+than being overwritten. The local PowerShell build still validates bundled
+recordings without installing anything. To reproduce the Actions preparation
+locally with the authoring environment set up above:
+
+```powershell
+& $env:COSMIC_TTS_PYTHON tools/prepare-build-voices.py prepare --cache .tools/voice-clips --overlay .tools/voice-overlay
+```
+
 ### Building and running
 
 ```powershell

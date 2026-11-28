@@ -15,7 +15,74 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  voices:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      BUILD_SHA: ${{ github.event_name == 'workflow_dispatch' && github.sha || github.event.pull_request.merge_commit_sha }}
+    outputs:
+      overlay: ${{ steps.plan.outputs.overlay }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.base.ref || github.sha }}
+          fetch-depth: ${{ github.event.pull_request.merged && '0' || '1' }}
+          persist-credentials: false
+
+      - name: Select merged commit from main history
+        if: github.event_name == 'pull_request_target'
+        run: |
+          git merge-base --is-ancestor "$BUILD_SHA" HEAD
+          git switch --detach "$BUILD_SHA"
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      - name: Check incremental voice preparation
+        run: python -m unittest discover -s tools/tests -p 'test_build_voices.py'
+
+      - name: Plan new voice assets
+        id: plan
+        run: python tools/prepare-build-voices.py plan >> "$GITHUB_OUTPUT"
+
+      - name: Restore previously synthesized clips
+        if: steps.plan.outputs.missing != '0'
+        uses: actions/cache@v6
+        with:
+          path: ${{ runner.temp }}/cosmic-voice-clips
+          key: ${{ steps.plan.outputs.key }}
+          restore-keys: ${{ steps.plan.outputs.scope }}
+
+      - name: Check for uncached lines
+        id: probe
+        if: steps.plan.outputs.missing != '0'
+        run: python tools/prepare-build-voices.py probe --cache "$RUNNER_TEMP/cosmic-voice-clips" >> "$GITHUB_OUTPUT"
+
+      - name: Install CPU voice renderer
+        if: steps.plan.outputs.missing != '0' && steps.probe.outputs.render != '0'
+        run: |
+          python -m pip install torch==2.6.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install -r tools/chatterbox-requirements.txt
+
+      - name: Prepare missing voice clips and manifests
+        if: steps.plan.outputs.overlay == 'true'
+        env:
+          COSMIC_TTS_DEVICE: cpu
+        run: |
+          python tools/prepare-build-voices.py prepare --cache "$RUNNER_TEMP/cosmic-voice-clips" --overlay "$RUNNER_TEMP/cosmic-voice-overlay"
+
+      - name: Upload same voice assets for every platform
+        if: steps.plan.outputs.overlay == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: CosmicConflict-voices-${{ env.BUILD_SHA }}
+          path: ${{ runner.temp }}/cosmic-voice-overlay/
+          if-no-files-found: error
+
   build:
+    needs: voices
     if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
     runs-on: windows-latest
     timeout-minutes: 120
@@ -47,6 +114,12 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Merge commit $env:BUILD_SHA is not in main history." }
           git switch --detach $env:BUILD_SHA
           if ($LASTEXITCODE -ne 0) { throw "Could not check out merge commit $env:BUILD_SHA." }
+
+      - uses: actions/download-artifact@v7
+        if: needs.voices.outputs.overlay == 'true'
+        with:
+          name: CosmicConflict-voices-${{ env.BUILD_SHA }}
+          path: .
 
       - name: Read toolchain
         id: toolchain
@@ -155,17 +228,33 @@ jobs:
           if-no-files-found: error
 
   macos:
-    needs: build
+    needs: [voices, build]
     runs-on: macos-latest
     timeout-minutes: 60
     env:
       VERSION: ${{ needs.build.outputs.version }}
       GODOT_RELEASE: ${{ needs.build.outputs.godot }}
+      BUILD_SHA: ${{ needs.build.outputs.sha }}
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ needs.build.outputs.sha }}
+          # Use the trusted base branch first, as in the Windows build.
+          ref: ${{ github.event.pull_request.base.ref || github.sha }}
+          fetch-depth: ${{ github.event.pull_request.merged && '0' || '1' }}
           persist-credentials: false
+
+      - name: Select merged commit from main history
+        if: github.event_name == 'pull_request_target'
+        shell: bash
+        run: |
+          git merge-base --is-ancestor "$BUILD_SHA" HEAD
+          git switch --detach "$BUILD_SHA"
+
+      - uses: actions/download-artifact@v7
+        if: needs.voices.outputs.overlay == 'true'
+        with:
+          name: CosmicConflict-voices-${{ env.BUILD_SHA }}
+          path: .
 
       - name: Cache verified Mac toolchain
         id: cache
