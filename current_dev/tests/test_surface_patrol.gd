@@ -74,6 +74,8 @@ func verify_rescue(id: String, right_lane: bool, miss: bool) -> void:
 	var previous := Vector3.ZERO
 	var outcome := ""
 	var knocks := [0]
+	var sounds: Array[String] = []
+	run.sound_requested.connect(func(sound_id: String) -> void: sounds.append(sound_id))
 	run.knock.connect(func() -> void: knocks[0] += 1)
 	for i in 550:
 		ship.distance = 1150 + i * 2.1
@@ -88,6 +90,8 @@ func verify_rescue(id: String, right_lane: bool, miss: bool) -> void:
 		previous = at
 	var expected: String = {"ignis":"mold", "cryo":"converter", "thalassa":"cradle", "xylo":"pallet", "kharon":"relay" if right_lane else "courier"}[id]
 	check(outcome == ("backup" if miss else expected), "%s rescue resolves the player's actual route: %s" % [id, outcome])
+	var success_cues := {"ignis":"rescue_mold", "cryo":"rescue_converter", "thalassa":"rescue_tow", "xylo":"rescue_reeds", "kharon":"rescue_relay" if right_lane else "patrol_freight"}
+	check(sounds == ["patrol_failed" if miss else success_cues[id]], "%s plays the sound for its actual rescue outcome once" % id)
 	if id == "thalassa": check(knocks[0] == 3, "The maintenance compartment answers with three knocks")
 	state.rescue_method = outcome
 	var retry := state.copy()

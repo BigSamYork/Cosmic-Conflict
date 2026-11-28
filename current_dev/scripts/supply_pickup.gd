@@ -1,6 +1,8 @@
 class_name SupplyPickup
 extends Node3D
 
+signal sound_requested(id: String)
+
 const RADIUS: float = 3.2
 var kind: String = "shield"
 var active: bool = true
@@ -79,4 +81,5 @@ func advance(delta: float, previous: Vector3, pilot: Vector3, enabled: bool, cam
 			flight.ammo += int(amount)
 		"flare":
 			campaign.flares += int(amount)
+	sound_requested.emit("supply_" + kind if amount > 0 else "supply_full")
 	return _description(amount, campaign)

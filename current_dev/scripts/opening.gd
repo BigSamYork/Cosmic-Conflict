@@ -48,7 +48,7 @@ func _ready() -> void:
 	voice_on = sound_on and voice_level > 0
 	radio_bus = ComputerVoice.create_radio_bus("LarkOpening-%d" % get_instance_id())
 	dialogue.volume_db = linear_to_db(maxf(0.001, voice_level / 100.0)) - 3.0
-	hull.stream = _bulkhead_knock()
+	hull.stream = SynthAudio.cue_stream("bulkhead_knock")
 	hull.volume_db = -12
 	music_gain = AmbientMusic.MIX_GAIN * music_level / 100.0
 	drone.stream = _pulse_drone()
@@ -56,7 +56,7 @@ func _ready() -> void:
 		drone.volume_db = linear_to_db(music_gain)
 		drone.play()
 	$Overlay/Title.text = book.title
-	$Overlay/Skip.pressed.connect(_finish)
+	$Overlay/Skip.pressed.connect(_skip)
 	if OS.has_feature("android"):
 		$Overlay/Skip.text = "Skip"
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
@@ -210,7 +210,12 @@ func _show_telemetry(shot: String) -> void:
 func _input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode in [KEY_ESCAPE, KEY_ENTER, KEY_SPACE]:
 		get_viewport().set_input_as_handled()
-		_finish()
+		_skip()
+
+func _skip() -> void:
+	if sound_on and not exiting:
+		SynthAudio.play_ui(get_tree(), "ui_click")
+	_finish()
 
 func _finish() -> void:
 	if exiting:
@@ -224,22 +229,6 @@ func _finish() -> void:
 
 func _exit_tree() -> void:
 	ComputerVoice.release_radio_bus(radio_bus)
-
-static func _bulkhead_knock() -> AudioStreamWAV:
-	# Three decaying resonances give the ferry and the reply the same metal voice.
-	var pcm := PackedByteArray()
-	var rate := 22050
-	var frames := roundi(rate * 0.42)
-	pcm.resize(frames * 2)
-	for frame in frames:
-		var t := float(frame) / rate
-		var ring := 0.55 * sin(TAU * 157 * t) * exp(-22 * t) + 0.27 * sin(TAU * 437 * t) * exp(-35 * t) + 0.17 * sin(TAU * 1193 * t) * exp(-61 * t)
-		pcm.encode_s16(frame * 2, roundi(ring * minf(1.0, t * 1200) * 32000))
-	var clip := AudioStreamWAV.new()
-	clip.format = AudioStreamWAV.FORMAT_16_BITS
-	clip.mix_rate = rate
-	clip.data = pcm
-	return clip
 
 func _pulse_drone() -> AudioStreamWAV:
 	# Integer cycles close the loop cleanly under the three-ping distress signal.

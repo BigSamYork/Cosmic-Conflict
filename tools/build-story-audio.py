@@ -1,47 +1,18 @@
-"""Prepare and verify the two offline story voice banks before Godot imports them."""
-import hashlib
-import json
+"""Prepare missing dialogue for local builds; CI only verifies shared assets."""
+
 import os
 from pathlib import Path
 import subprocess
 import sys
 import venv
-import wave
+
 
 ROOT = Path(__file__).resolve().parents[1]
-ASSETS = ROOT / "current_dev" / "assets"
 TOOLS = ROOT / ".tools"
-BANKS = ("boarding", "rescues")
-REVISION = "749d1c1a46eb10492095d68fbcf55691ccf137cd"
 
 
 def executable(env):
     return env / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
-
-
-def verified(bank):
-    source = ASSETS / "voice" / (bank + ".json")
-    folder = ASSETS / bank
-    try:
-        receipt = json.loads((folder / f"generated-{bank}.json").read_bytes())
-        cues = json.loads(source.read_bytes())["cues"]
-        clips = {clip["id"]: clip for clip in receipt["clips"]}
-        if (receipt["model"] != "ResembleAI/chatterbox-turbo" or receipt["revision"] != REVISION
-                or receipt["catalog_sha256"] != hashlib.sha256(source.read_bytes()).hexdigest()
-                or len(clips) != len(cues) or not cues):
-            return False
-        for cue in cues:
-            path = folder / (cue["id"] + ".wav")
-            clip = clips[cue["id"]]
-            with wave.open(str(path), "rb") as wav:
-                if wav.getnchannels() != 1 or wav.getsampwidth() != 2 or wav.getnframes() < wav.getframerate() // 3:
-                    return False
-            if (clip["speaker"] != cue["speaker"] or clip["text_sha256"] != hashlib.sha256(cue["text"].encode()).hexdigest()
-                    or clip["audio_sha256"] != hashlib.sha256(path.read_bytes()).hexdigest()):
-                return False
-    except (OSError, EOFError, KeyError, ValueError, wave.Error):
-        return False
-    return True
 
 
 def authoring_python():
@@ -59,17 +30,18 @@ def authoring_python():
 
 
 def main():
-    pending = [bank for bank in BANKS if not verified(bank)]
-    if pending:
-        python = authoring_python()
-        for bank in pending:
-            args = [python, ASSETS / "voice/render_chatterbox.py", ASSETS / "voice" / (bank + ".json"), ASSETS / bank, "--overwrite"]
-            if not os.environ.get("COSMIC_TTS_MODEL") and (TOOLS / "turbo-model/t3_turbo_v1.safetensors").is_file():
-                args.extend(["--model", TOOLS / "turbo-model"])
-            subprocess.run(args, check=True)
-            if not verified(bank):
-                raise SystemExit(f"Invalid generated audio for {bank}; refusing to export.")
-    print("Story audio verified: boarding and rescues", flush=True)
+    command = [sys.executable, str(ROOT / "tools/prepare-build-voices.py")]
+    if os.environ.get("COSMIC_VERIFY_VOICES_ONLY") != "1":
+        plan = subprocess.check_output([*command, "probe"], text=True).strip()
+        env = os.environ.copy()
+        if plan != "render=0":
+            env["COSMIC_TTS_PYTHON"] = str(authoring_python())
+            model = TOOLS / "turbo-model"
+            if not env.get("COSMIC_TTS_MODEL") and (model / "t3_turbo_v1.safetensors").is_file():
+                env["COSMIC_TTS_MODEL"] = str(model)
+        subprocess.run([*command, "prepare"], env=env, check=True)
+    subprocess.run([*command, "verify"], check=True)
+    print("All build voice banks verified.", flush=True)
 
 
 if __name__ == "__main__":

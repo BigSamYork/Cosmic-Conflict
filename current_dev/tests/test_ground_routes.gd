@@ -59,8 +59,10 @@ func verify_supplies() -> void:
 	flight.shields = 10
 	flight.ammo = 2
 	campaign.flares = 2
+	var heard: Array[String] = []
 	for kind in ["shield", "ordnance", "flare"]:
 		var supply := SupplyPickup.new()
+		supply.sound_requested.connect(func(id: String) -> void: heard.append(id))
 		supply.kind = kind
 		root.add_child(supply)
 		check(supply.label(campaign, flight).contains("FLY THROUGH"), "Usable %s refill advertises collection" % kind)
@@ -69,9 +71,12 @@ func verify_supplies() -> void:
 		var snapshot := Vector3(flight.shields, flight.ammo, campaign.flares)
 		check(supply.advance(1.0, Vector3.BACK, Vector3.FORWARD, true, campaign, flight).is_empty() and snapshot == Vector3(flight.shields, flight.ammo, campaign.flares), "The %s supply cannot be collected twice" % kind)
 		supply.queue_free()
+	check(heard == ["supply_shield", "supply_ordnance", "supply_flare"], "Each fly-through refill sounds once and identifies the inventory it charged")
+	heard.clear()
 	check(flight.shields == 35 and flight.ammo == 3 and campaign.flares == 3 and campaign.credits == 0, "Shield, ordnance and flare pickups use separate capped inventories without bonus credits")
 	for kind in ["ordnance", "flare", "shield"]:
 		var supply := SupplyPickup.new()
+		supply.sound_requested.connect(func(id: String) -> void: heard.append(id))
 		supply.kind = kind
 		root.add_child(supply)
 		flight.shields = flight.max_shields
@@ -79,6 +84,7 @@ func verify_supplies() -> void:
 		var message: String = supply.advance(0.1, Vector3.BACK, Vector3.FORWARD, true, campaign, flight)
 		check(message.contains("FULL") and flight.ammo == 3 and campaign.flares == 3 and flight.shields == flight.max_shields, "Full %s inventory is explicitly reported, never overfilled" % kind)
 		supply.queue_free()
+	check(heard == ["supply_full", "supply_full", "supply_full"], "Full bays report a different sound from a successful refill")
 	campaign.secondary = false
 	campaign.countermeasures = false
 	campaign.flares = 0

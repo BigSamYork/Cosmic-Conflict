@@ -31,6 +31,13 @@ Thunder Crack — planetary lightning
 Monster Alien Growl Tense — canopy parasite
 Small Glass Pane Shatter — cockpit glass punctures and damage fractures
 
+Generated game sound effects
+The cockpit, flight, reward and combat cues in audio/generated_sfx were
+rendered with MOSS-SoundEffect v2.0 by the OpenMOSS team. The inference code
+and model weights are available under Apache 2.0. The game ships Ogg recordings.
+https://github.com/OpenMOSS/MOSS-TTS/tree/main/moss_soundeffect_v2
+https://huggingface.co/OpenMOSS-Team/MOSS-SoundEffect-v2.0
+
 Computer dialogue combines text supplied by the project owner with original
 additional lines. The voices of Lark and Captain Tomas Vale were rendered
 locally with Resemble AI's Chatterbox-Turbo (MIT). Both character references

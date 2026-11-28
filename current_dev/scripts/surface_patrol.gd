@@ -1,6 +1,8 @@
 class_name SurfacePatrol
 extends Node3D
 
+signal sound_requested(id: String)
+
 # Each contract occupies one short stretch of the existing course. Its pickup
 # and finish are swept against the pilot segment so frame rate cannot skip them.
 enum Job { SLALOM, RESCUE, SURVEY, COURIER, ESCORT, REPAIR, COOLANT, CEASEFIRE, RESTART, INTERCEPT }
@@ -93,7 +95,7 @@ func _begin(sector: String, flight_number: int) -> void:
 	main_model.add_child(lamp)
 	prompt = BRIEFS[current]
 
-func _finish(message: String, campaign: CampaignState, paid: bool = false) -> String:
+func _finish(message: String, campaign: CampaignState, paid: bool = false, cue: String = "") -> String:
 	if storm_hull != null:
 		storm_hull.collision_layer = 0
 		storm_hull = null
@@ -101,6 +103,8 @@ func _finish(message: String, campaign: CampaignState, paid: bool = false) -> St
 		var points: int = REWARDS[current] * 10
 		campaign.combat_score += points
 		message += " / +%d SCORE" % points
+	if not message.is_empty():
+		sound_requested.emit(cue if not cue.is_empty() else ("patrol_complete" if paid else "patrol_failed"))
 	main_model.hide()
 	main_model.queue_free()
 	current = -1
@@ -155,27 +159,29 @@ func advance(delta: float, previous: Vector3, pilot: Vector3, campaign: Campaign
 			stage += 1
 			if stage == 3:
 				return _finish("SLALOM COMPLETE", campaign, true)
+			sound_requested.emit("patrol_gate")
 			lamp.text = "GATE %d / 3" % (stage + 1)
 			return "GATE %d / 3" % stage
 		Job.RESCUE:
-			return _finish("SURVIVOR ABOARD", campaign, true)
+			return _finish("SURVIVOR ABOARD", campaign, true, "patrol_rescue")
 		Job.COOLANT:
 			if flight.heat <= 0 and flight.overheat_remaining <= 0:
-				return _finish("COOLANT SIPHON / GUNS ALREADY COLD", campaign)
+				return _finish("COOLANT SIPHON / GUNS ALREADY COLD", campaign, false, "supply_full")
 			flight.heat = 0.0
 			flight.overheat_remaining = 0.0
-			return _finish("HEAT EXCHANGER PURGED / GUNS COLD", campaign)
+			return _finish("HEAT EXCHANGER PURGED / GUNS COLD", campaign, false, "patrol_coolant")
 		Job.RESTART:
 			if flight.shields < 12.0:
 				return _finish("TRANSFER DECLINED / SHIELD RESERVE LOW", campaign)
 			flight.shields -= 12
 			flight.recharge_delay = maxf(flight.recharge_delay, FlightState.SHIELD_RECOVERY_DELAY)
-			return _finish("SKIFF RESTARTED / 12 SHIELD TRANSFERRED", campaign, true)
+			return _finish("SKIFF RESTARTED / 12 SHIELD TRANSFERRED", campaign, true, "patrol_restart")
 		Job.COURIER, Job.CEASEFIRE, Job.INTERCEPT:
 			if stage == 0:
 				checkpoint_hull = campaign.hull_damage
 				checkpoint_count = flight.shots if current == Job.CEASEFIRE else flight.interceptions
 				stage = 1
+				sound_requested.emit("patrol_freight" if current == Job.COURIER else "patrol_gate")
 				if carrier != null:
 					carrier.hide()
 				lamp.text = "DELIVER" if current == Job.COURIER else "EXIT"
@@ -209,7 +215,7 @@ func _scan(delta: float, range_m: float, campaign: CampaignState, flight: Flight
 		progress = maxf(0.0, progress - delta * 0.7)
 	lamp.text = "SCAN %d%%" % mini(100, roundi(progress / 1.35 * 100.0))
 	if progress >= 1.35:
-		return _finish("SURVEY TELEMETRY RECORDED", campaign, true)
+		return _finish("SURVEY TELEMETRY RECORDED", campaign, true, "patrol_survey")
 	return ""
 
 func _formation(delta: float, pilot: Vector3, range_m: float, campaign: CampaignState, flight: FlightState) -> String:
@@ -228,4 +234,4 @@ func _formation(delta: float, pilot: Vector3, range_m: float, campaign: Campaign
 		return _finish("FORMATION ESCORT COMPLETE", campaign, true)
 	var amount := minf(12.0, flight.max_hull - flight.hull)
 	flight.hull += amount
-	return _finish("TENDER RELEASE / %d HULL RESTORED" % roundi(amount) if amount > 0.0 else "TENDER RELEASE / HULL ALREADY SOUND", campaign)
+	return _finish("TENDER RELEASE / %d HULL RESTORED" % roundi(amount) if amount > 0.0 else "TENDER RELEASE / HULL ALREADY SOUND", campaign, false, "patrol_repair" if amount > 0 else "supply_full")

@@ -3,6 +3,7 @@
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
 import shutil
@@ -15,15 +16,29 @@ import wave
 ROOT = Path(__file__).resolve().parents[1]
 ASSETS = Path("current_dev/assets")
 CATALOGS = {"lines": ("voice", "voice"), "opening": ("opening", "opening"),
-            "arrival": ("arrival", "arrival"), "boarding": ("boarding", "boarding")}
+            "arrival": ("arrival", "arrival"), "boarding": ("boarding", "boarding"),
+            "rescues": ("rescues", "rescues")}
 MODEL = "ResembleAI/chatterbox-turbo"
+REVISION = "749d1c1a46eb10492095d68fbcf55691ccf137cd"
+STOCK = "Chatterbox-Turbo / stock"
 CASTS = {"lines": {"lark": "Chatterbox-Turbo / Lark"},
-         "boarding": {"lark": "Chatterbox-Turbo / Lark", "attendant": "Chatterbox-Turbo / stock"}}
+         "boarding": {"lark": "Chatterbox-Turbo / Lark", "attendant": STOCK}}
 STANDARD_CAST = {"lark": CASTS["lines"]["lark"], "vale": "Chatterbox-Turbo / Captain Tomas Vale"}
 
 
 def sha(data):
     return hashlib.sha256(data).hexdigest()
+
+
+def catalog_hash(path):
+    # Windows intentionally checks out text as CRLF for an unrelated music
+    # checksum. Voice receipts describe content, not checkout line endings.
+    return sha(path.read_bytes().replace(b"\r\n", b"\n"))
+
+
+def renderer_hash(root):
+    return sha(b"".join((root / path).read_bytes().replace(b"\r\n", b"\n") for path in (
+        ASSETS / "voice/render_chatterbox.py", "tools/chatterbox-requirements.txt")))
 
 
 def read_json(path):
@@ -57,6 +72,8 @@ class Catalog:
         self.index = self.folder / f"generated-{index}.json"
         self.expected_voice = self.data.get("voice", "opening cast")
         cast = CASTS.get(name, STANDARD_CAST)
+        if name == "rescues":
+            cast = {role: STANDARD_CAST.get(role, STOCK) for role in self.data["cast"]}
         if name == "lines":
             if self.expected_voice != cast["lark"]:
                 raise ValueError(f"{self.source}: unexpected voice")
@@ -65,8 +82,14 @@ class Catalog:
             if {role: value["voice"] for role, value in self.data["cast"].items()} != cast:
                 raise ValueError(f"{self.source}: unexpected cast")
             self.lines = self.data["cues"]
-        self.manifest = read_json(self.index)
-        if (self.manifest["model"] != MODEL or self.manifest["voice"] != self.expected_voice
+        if name == "rescues" and not self.index.exists():
+            # Unlike the other banks, this one starts out without committed WAVs.
+            self.manifest = dict(model=MODEL, revision=REVISION, voice=self.expected_voice,
+                                 rate=24000, channels=1, clips=[])
+        else:
+            self.manifest = read_json(self.index)
+        if (self.manifest["model"] != MODEL or self.manifest["revision"] != REVISION
+                or self.manifest["voice"] != self.expected_voice
                 or self.manifest["rate"] != 24000 or self.manifest["channels"] != 1):
             reject(self.index, "unexpected model, voice or format")
         self.existing = {clip["id"]: clip for clip in self.manifest["clips"]}
@@ -94,7 +117,7 @@ class Catalog:
         role = line.get("speaker", "lark")
         profile = self.voice / "profiles" / f"{role}.wav"
         return sha(json.dumps([self.name, role, line["text"],
-                               sha(profile.read_bytes()) if role != "attendant" else "stock"],
+                               sha(profile.read_bytes()) if role in STANDARD_CAST else "stock"],
                               ensure_ascii=False).encode("utf-8"))
 
     def cache_entry(self, cache, line):
@@ -126,7 +149,8 @@ class Catalog:
             data = ({**self.data, "sections": [{"lines": lines}]} if self.name == "lines"
                     else {**self.data, "cues": lines})
             write_json(source, data)
-            subprocess.run([sys.executable, str(self.voice / "render_chatterbox.py"),
+            subprocess.run([os.environ.get("COSMIC_TTS_PYTHON") or sys.executable,
+                            str(self.voice / "render_chatterbox.py"),
                             str(source), str(stage / "out"), "--profiles",
                             str(self.voice / "profiles")], check=True)
             records = {clip["id"]: clip for clip in read_json(stage / "out" / self.index.name)["clips"]}
@@ -146,6 +170,7 @@ class Catalog:
         if missing:
             self.render(list(missing.values()), cache)
         records = self.existing.copy()
+        self.folder.mkdir(parents=True, exist_ok=True)
         for line in self.missing:
             key = line["id"]
             wav, clip = self.cached(cache, line)
@@ -155,11 +180,13 @@ class Catalog:
                 shutil.copyfileobj(source, target)
             self.copy_to_overlay(path, overlay)
             records[key] = {**clip, "id": key, "event": line.get("event", "")}
-        write_json(self.index, {**self.manifest, "catalog_sha256": sha(self.source.read_bytes()),
+        write_json(self.index, {**self.manifest, "catalog_sha256": catalog_hash(self.source),
                                "clips": [records[line["id"]] for line in self.lines]})
         self.copy_to_overlay(self.index, overlay)
 
     def copy_to_overlay(self, path, overlay):
+        if overlay is None:
+            return
         target = overlay / path.relative_to(self.root)
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(path, target)
@@ -175,29 +202,24 @@ def main():
     root = args.root.resolve()
     catalogs = [Catalog(root, name) for name in CATALOGS]
     if args.mode == "plan":
-        engine = sha(b"".join((root / path).read_bytes() for path in (
-            ASSETS / "voice/render_chatterbox.py", "tools/chatterbox-requirements.txt",
-            "tools/prepare-build-voices.py")))
+        engine = renderer_hash(root)
         recipes = sorted({cat.recipe(line) for cat in catalogs for line in cat.missing})
         print(f"overlay={str(any(cat.dirty for cat in catalogs)).lower()}")
         print(f"missing={len(recipes)}")
-        print(f"scope=cosmic-voices-v1-{engine}-")
-        print(f"key=cosmic-voices-v1-{engine}-{sha(''.join(recipes).encode())}")
+        print(f"scope=cosmic-voices-v2-{engine}-")
+        print(f"key=cosmic-voices-v2-{engine}-{sha(''.join(recipes).encode())}")
     elif args.mode == "verify":
         for cat in catalogs:
             if cat.dirty:
                 raise ValueError(f"{cat.source}: packaged voice manifest or clips incomplete")
     else:
-        if args.cache is None:
-            parser.error("--cache is required")
+        cache = args.cache if args.cache is not None else root / ".tools" / "voice-clips" / renderer_hash(root)
         if args.mode == "probe":
-            count = sum(not cat.cached(args.cache, line) for cat in catalogs for line in cat.missing)
+            count = sum(not cat.cached(cache, line) for cat in catalogs for line in cat.missing)
             print(f"render={count}")
         else:
-            if args.overlay is None:
-                parser.error("--overlay is required")
             for cat in catalogs:
-                cat.apply(args.cache, args.overlay)
+                cat.apply(cache, args.overlay)
             for cat in catalogs:
                 if Catalog(root, cat.name).dirty:
                     raise ValueError(f"{cat.source}: voice preparation did not complete")

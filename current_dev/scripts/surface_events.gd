@@ -66,11 +66,11 @@ func advance(game, delta: float, previous: Vector3, pilot: Vector3) -> void:
 	if carried != null:
 		carried.global_position = effect.grasp_point()
 	if pilot_caught and before < CLAW.THROW_AT and age >= CLAW.THROW_AT:
+		game.sound.play_cue("claw_release")
 		game.hud.show_message("CLAW RELEASE / BRACE FOR IMPACT")
 	if age >= end_time:
 		if pilot_caught and game.flight.hull > 0:
 			if game._apply_pilot_damage("CANOPY CLAW THROW", 35.0, true):
-				game.sound.play_sound(game.sound.impact)
 				game.hud.show_message("CLAW THROW / HULL IMPACT")
 		_clear_effect()
 		delay = random.randf_range(6.5, 13.0)
