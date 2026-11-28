@@ -1,0 +1,64 @@
+{
+  "model": "ResembleAI/chatterbox-turbo",
+  "revision": "749d1c1a46eb10492095d68fbcf55691ccf137cd",
+  "voice": "Vespera boarding cast",
+  "catalog_sha256": "1d6af557baf3e761cab882215e4189d6433b1b00314452688e06363710289f01",
+  "rate": 24000,
+  "channels": 1,
+  "clips": [
+    {
+      "id": "clearance",
+      "speaker": "lark",
+      "event": "",
+      "text_sha256": "15b167c28a4a01203336e78f255d8edbae4e651bc844af7415225b83f027723e",
+      "audio_sha256": "ed0f2f55744be3fc4d633cc82000e9afdbfa654b7b22b589fb3899dee9865633",
+      "seconds": 3.189,
+      "bytes": 153124
+    },
+    {
+      "id": "refusal",
+      "speaker": "attendant",
+      "event": "",
+      "text_sha256": "5b20a07e16987b76a01c28409afb5f90f7d377b43ce5e845afc9246a6dc4a329",
+      "audio_sha256": "ee2a5c7eda8c7d47344430738c7ccac6cd878c1ee1b0d7e2ae027dffd0f68204",
+      "seconds": 3.378,
+      "bytes": 162194
+    },
+    {
+      "id": "handoff",
+      "speaker": "lark",
+      "event": "",
+      "text_sha256": "944a30591aed350e08347aa9274aed313d00307c2b340290acef21959009f1d1",
+      "audio_sha256": "0dd557c0a1b88ead29e1d670dec2c1106ee9cd91647c00a01e514e16b17aa23a",
+      "seconds": 2.742,
+      "bytes": 131638
+    },
+    {
+      "id": "crossing",
+      "speaker": "attendant",
+      "event": "",
+      "text_sha256": "d8d33e4d2b245cef4b0d727cea53a34bf23464433018b051222169657e7329b3",
+      "audio_sha256": "7f67e5831c9394678b6abe60de8b91110f381cf088dcf3da860da13321c2c251",
+      "seconds": 3.73,
+      "bytes": 179074
+    },
+    {
+      "id": "divert",
+      "speaker": "attendant",
+      "event": "",
+      "text_sha256": "81f78b30838a2d26b5e81ba1875f808e6b93769ead29d5767335b83318c5aa63",
+      "audio_sha256": "8f5ead221b5f9deab8339f189122b3e1fc7aeef78766a0d5ddef341f1d2e51d0",
+      "seconds": 4.394,
+      "bytes": 210950
+    },
+    {
+      "id": "last_car",
+      "speaker": "attendant",
+      "event": "",
+      "text_sha256": "38827d6fc6bbc0a8daacf031e701f9e6ceca7d5f71640b11a0c576bfabea40db",
+      "audio_sha256": "c87d51e23b52cbeea02ff886fc3ee0fccc5a709df802444fb7f5cddeff47de2d",
+      "seconds": 2.842,
+      "bytes": 136454
+    }
+  ]
+}
