@@ -65,9 +65,22 @@ static func play_ui(tree: SceneTree, id: String) -> void:
 		return
 	var player := tree.root.get_node_or_null("InterfaceSound") as AudioStreamPlayer
 	if player == null:
+		# A focus-loss pause can arrive while the root is adding a scene.
+		_start_ui.call_deferred(tree, id, clip)
+		return
+	_play_ui_clip(tree, player, id, clip)
+
+static func _start_ui(tree: SceneTree, id: String, clip: AudioStream) -> void:
+	if not is_instance_valid(tree) or tree.root == null:
+		return
+	var player := tree.root.get_node_or_null("InterfaceSound") as AudioStreamPlayer
+	if player == null:
 		player = AudioStreamPlayer.new()
 		player.name = "InterfaceSound"
 		tree.root.add_child(player)
+	_play_ui_clip(tree, player, id, clip)
+
+static func _play_ui_clip(tree: SceneTree, player: AudioStreamPlayer, id: String, clip: AudioStream) -> void:
 	if id == "ui_adjust" and player.playing and player.stream == clip and player.get_playback_position() < 0.065:
 		return
 	player.volume_db = -18.0 if tree.get_meta("interface_audio_ducked", false) else -13.0

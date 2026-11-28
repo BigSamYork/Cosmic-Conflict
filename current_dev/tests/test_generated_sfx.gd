@@ -59,6 +59,7 @@ func verify_playback() -> void:
 	root.add_child(hud)
 	var button := hud._add_button(hud, "Test", func() -> void: pass)
 	button.pressed.emit()
+	await process_frame
 	var ui := root.get_node_or_null("InterfaceSound") as AudioStreamPlayer
 	check(ui != null and ui.playing and ui.stream == SynthAudio.cue_stream("ui_click"), "Pressing a menu button should play its click while flight is paused")
 	if ui != null:
