@@ -9,10 +9,19 @@ var reactor_blast: AudioStreamWAV
 const ImpactSpray := preload("res://scripts/impact_spray.gd")
 const ORGANIC_RUPTURE := preload("res://assets/sfx/organic_rupture.wav")
 const TARGET_IGNITION := preload("res://assets/sfx/target_ignition.wav")
+const GENERATED_DIR := "res://audio/generated_sfx/"
+const CONTACT_CUES := {
+	ImpactSpray.Surface.HULL: "contact_hull",
+	ImpactSpray.Surface.STONE: "contact_stone",
+	ImpactSpray.Surface.FLESH: "contact_flesh",
+}
+static var cue_streams: Dictionary = {}
 var contact_thuds: Dictionary = {}
 var last_contact_usec := -100000
 var last_glass_frame := -1
 var parasite_voice := AudioStreamPlayer.new()
+var engine_voice := AudioStreamPlayer.new()
+var engine_cue := ""
 var warp: AudioStreamWAV
 var voice_index: int = 0
 var playback_enabled: bool = true
@@ -24,20 +33,54 @@ func _ready() -> void:
 	pulse = make_tone(0.12, 920.0, 160.0, 0.22)
 	hit = make_tone(0.18, 320.0, 80.0, 0.4)
 	impact = make_tone(0.3, 90.0, 22.0, 0.5)
-	for surface in ImpactSpray.Surface.values():
-		contact_thuds[surface] = make_contact_thud(surface)
+	for surface in CONTACT_CUES:
+		var contact := cue_stream(CONTACT_CUES[surface])
+		contact_thuds[surface] = contact if contact != null else make_contact_thud(surface)
 	warp = make_tone(1.6, 90.0, 1100.0, 0.25)
 	parasite_voice.stream = preload("res://assets/sfx/canopy_parasite.wav")
 	parasite_voice.volume_db = -8.0
 	add_child(parasite_voice)
+	engine_voice.volume_db = -28.0
+	add_child(engine_voice)
 	for _i in range(8):
 		var player := AudioStreamPlayer.new()
 		player.volume_db = -10.0
 		add_child(player)
 		voices.append(player)
 
-func play_sound(stream: AudioStreamWAV) -> void:
-	if not playback_enabled:
+static func cue_stream(id: String) -> AudioStream:
+	if not cue_streams.has(id):
+		var path := GENERATED_DIR + id + ".ogg"
+		cue_streams[id] = load(path) if ResourceLoader.exists(path) else null
+		if cue_streams[id] == null:
+			push_warning("Missing generated sound effect: " + path)
+	return cue_streams[id]
+
+func play_cue(id: String) -> void:
+	if playback_enabled:
+		play_sound(cue_stream(id))
+
+# Menu input must remain audible when flight voices are paused or stopped.
+# Keeping the player on the scene root lets a click finish across a scene change.
+static func play_ui(tree: SceneTree, id: String) -> void:
+	if DisplayServer.get_name() == "headless":
+		return
+	var clip := cue_stream(id)
+	if clip == null:
+		return
+	var player := tree.root.get_node_or_null("InterfaceSound") as AudioStreamPlayer
+	if player == null:
+		player = AudioStreamPlayer.new()
+		player.name = "InterfaceSound"
+		player.volume_db = -13.0
+		tree.root.add_child(player)
+	if id == "ui_adjust" and player.playing and player.stream == clip and player.get_playback_position() < 0.065:
+		return
+	player.stream = clip
+	player.play()
+
+func play_sound(stream: AudioStream) -> void:
+	if not playback_enabled or stream == null:
 		return
 	var voice: AudioStreamPlayer = voices[voice_index % voices.size()]
 	voice.stream = stream
@@ -54,6 +97,10 @@ func play_glass_break() -> void:
 		play_sound(preload("res://assets/sfx/canopy_fracture.wav"))
 
 func play_reactor_blast() -> void:
+	var generated := cue_stream("reactor_blast")
+	if generated != null:
+		play_sound(generated)
+		return
 	if reactor_blast == null:
 		const RATE := 22050
 		var rng := RandomNumberGenerator.new()
@@ -84,19 +131,38 @@ func play_contact(surface: ImpactSpray.Surface) -> void:
 func play_destruction(surface: ImpactSpray.Surface) -> void:
 	play_sound(ORGANIC_RUPTURE if surface == ImpactSpray.Surface.FLESH else TARGET_IGNITION)
 
+func update_engine(cue: String, speed: float) -> void:
+	if not playback_enabled:
+		return
+	if cue != engine_cue:
+		engine_voice.stop()
+		engine_cue = cue
+		if not cue.is_empty():
+			var stream := cue_stream(cue) as AudioStreamOggVorbis
+			if stream != null:
+				stream.loop = true
+				engine_voice.stream = stream
+				engine_voice.play()
+	if engine_voice.playing:
+		engine_voice.pitch_scale = clampf(0.78 + speed * 0.005, 0.78, 1.3)
+
 func pause_sounds(paused: bool) -> void:
 	parasite_voice.stream_paused = paused
+	engine_voice.stream_paused = paused
 	for voice in voices:
 		voice.stream_paused = paused
 
 func stop_all() -> void:
 	parasite_voice.stop()
+	engine_voice.stop()
+	engine_cue = ""
 	for voice in voices:
 		voice.stop()
 		voice.stream = null
 
 func set_ducked(active: bool) -> void:
 	parasite_voice.volume_db = -13.0 if active else -8.0
+	engine_voice.volume_db = -34.0 if active else -28.0
 	for voice in voices:
 		voice.volume_db = -15.0 if active else -10.0
 

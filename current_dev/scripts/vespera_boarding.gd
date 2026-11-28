@@ -1,6 +1,7 @@
 extends Node3D
 
 signal cue(id: String)
+signal group_boarded
 
 const ENTRY := 1940.0
 const EXIT := ENTRY + 280
@@ -73,6 +74,7 @@ func advance(distance: float, previous: Vector3, pilot: Vector3, route: GroundRo
 		while boarded < 3 and distance >= ENTRY + 65 + boarded * 96 and (not diverted or distance >= divert_mark + 62):
 			flares[boarded].hide()
 			boarded += 1
+			group_boarded.emit()
 		prompt = "%s / %d OF 3 GROUPS ABOARD" % ["COVERED RAMP" if diverted else "HOLD FIRE", boarded]
 		if boarded == 3:
 			beat = 5

@@ -970,6 +970,36 @@ and public/commercial rights, title and signing decisions remain open.
 
 ## Developer commands (PowerShell, from the project root)
 
+### Editing game sound effects
+
+Add a cue ID, an English description of the sound, and its duration in seconds
+to `current_dev/data/sfx_core.json` or `sfx_gameplay.json`. Call
+`sound.play_cue("your_id")` at the event that should produce the sound. The
+renderer writes 48 kHz mono Ogg Vorbis clips under `current_dev/audio/generated_sfx/`.
+Godot plays these files offline.
+
+Run `python tools/generate_sfx.py plan` to list missing or damaged clips.
+Run `python tools/generate_sfx.py verify` to check the library using only
+the Python standard library. Release CI restores missing clips from its cache,
+installs the renderer only for cache misses, then shares the resulting audio
+with the Windows, Android and macOS builds.
+
+For local authoring, use a separate Python 3.12 environment. These commands
+install the CPU renderer and generate missing effects. For NVIDIA GPU authoring,
+select the CUDA 12.8 wheel index (`cu128`) in the first command.
+
+```powershell
+python -m pip install torch==2.9.0 torchaudio==2.9.0 torchvision==0.24.0 --index-url https://download.pytorch.org/whl/cpu
+python -m pip install -r tools/sfx-requirements.txt
+python tools/generate_sfx.py generate
+python tools/generate_sfx.py verify
+```
+
+To replace a take, edit its prompt and remove that cue's Ogg before generating.
+Preserve its Godot `.ogg.import` file so the resource keeps its UID. Commit the
+new recording after checking it in game. The first render downloads about 11 GB
+of model weights. An intact library skips both the download and inference.
+
 ### Original soundtrack and release checks
 
 The original composition/synthesis is in

@@ -47,7 +47,9 @@ func _ready() -> void:
 	voice_on = sound_on and voice_level > 0
 	radio_bus = ComputerVoice.create_radio_bus("LarkOpening-%d" % get_instance_id())
 	dialogue.volume_db = linear_to_db(maxf(0.001, voice_level / 100.0)) - 3.0
-	hull.stream = _bulkhead_knock()
+	hull.stream = SynthAudio.cue_stream("bulkhead_knock")
+	if hull.stream == null:
+		hull.stream = _bulkhead_knock()
 	hull.volume_db = -12
 	music_gain = AmbientMusic.MIX_GAIN * music_level / 100.0
 	drone.stream = _pulse_drone()
@@ -55,7 +57,7 @@ func _ready() -> void:
 		drone.volume_db = linear_to_db(music_gain)
 		drone.play()
 	$Overlay/Title.text = book.title
-	$Overlay/Skip.pressed.connect(_finish)
+	$Overlay/Skip.pressed.connect(_skip)
 	if OS.has_feature("android"):
 		$Overlay/Skip.text = "Skip"
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
@@ -209,7 +211,12 @@ func _show_telemetry(shot: String) -> void:
 func _input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode in [KEY_ESCAPE, KEY_ENTER, KEY_SPACE]:
 		get_viewport().set_input_as_handled()
-		_finish()
+		_skip()
+
+func _skip() -> void:
+	if sound_on and not exiting:
+		SynthAudio.play_ui(get_tree(), "ui_click")
+	_finish()
 
 func _finish() -> void:
 	if exiting:
