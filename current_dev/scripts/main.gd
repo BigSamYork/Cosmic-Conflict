@@ -73,6 +73,9 @@ var waterline_rids: Array[RID] = []
 var world: Node3D
 var targets: Array[RangeTarget] = []
 var turrets: Array[GroundTurret] = []
+const ROAD_TURRET_START := 330.0
+const ROAD_TURRET_SPACING := 220.0
+var next_road_turret := 0
 var towers: Array[DestructibleTower] = []
 var explosions: Array[DestructionEffect] = []
 var director := FlightDirector.new()
@@ -520,17 +523,9 @@ func _build_world(training: bool = true) -> void:
 		targets.append(target)
 		if target is EnemyFighter:
 			target.missile_requested.connect(_launch_missile)
-	for i in range(13 if training else 16):
-		var turret := GroundTurret.new()
-		turret.sector = sector
-		turret.health_scale = 1.0 if training else campaign.health_multiplier()
-		turret.travel = 330.0 + i * 220.0
-		turret.lane.x = -18.0 if i % 2 == 0 else 18.0
-		turret.phase = float(i % 3) * 0.45
-		turret.missile_requested.connect(_launch_missile)
-		world.add_child(turret)
-		turrets.append(turret)
-		targets.append(turret)
+	next_road_turret = 0
+	for _i in range(13 if training else 16):
+		_spawn_road_turret(sector, 1.0 if training else campaign.health_multiplier())
 	targets.append_array(towers)
 	if not training:
 		if icy or sector == "kharon":
@@ -887,6 +882,8 @@ func _physics_process(delta: float) -> void:
 			_advance_rescue_flight(delta)
 	if not is_campaign or campaign.phase.begins_with("ground"):
 		_stream_ground(flight.distance)
+		if is_campaign:
+			_stream_road_turrets(flight.distance)
 	var canyon_contact := false
 	if is_campaign and campaign.phase in ["ground", "ground_boss"] and campaign.sector in ["ignis", "cryo"]:
 		canyon_contact = _limit_canyon_travel()
@@ -2469,6 +2466,35 @@ func _clear_stage() -> void:
 		world.queue_free()
 		world = null
 
+func _spawn_road_turret(sector: String, health_scale: float) -> void:
+	var i := next_road_turret
+	var turret := GroundTurret.new()
+	turret.sector = sector
+	turret.health_scale = health_scale
+	turret.travel = ROAD_TURRET_START + i * ROAD_TURRET_SPACING
+	turret.lane.x = -18.0 if i % 2 == 0 else 18.0
+	turret.phase = float(i % 3) * 0.45
+	turret.missile_requested.connect(_launch_missile)
+	world.add_child(turret)
+	turrets.append(turret)
+	targets.append(turret)
+	next_road_turret += 1
+
+func _stream_road_turrets(distance: float) -> void:
+	# The boss pursuit has no time limit. Retire passed batteries without recycling
+	# a disabled turret ahead of the pilot or restarting the approach's spacing.
+	if campaign.phase == "ground_boss":
+		next_road_turret = maxi(next_road_turret, ceili((distance - ROAD_TURRET_SPACING - ROAD_TURRET_START) / ROAD_TURRET_SPACING))
+		for i in range(turrets.size() - 1, -1, -1):
+			var turret := turrets[i]
+			if turret.travel < distance - ROAD_TURRET_SPACING:
+				turrets.remove_at(i)
+				targets.erase(turret)
+				turret.collision_layer = 0
+				turret.queue_free()
+	while ROAD_TURRET_START + next_road_turret * ROAD_TURRET_SPACING <= distance + VectorArt.VIEW_DISTANCE:
+		_spawn_road_turret(campaign.sector, campaign.health_multiplier())
+
 func _stream_ground(distance: float) -> void:
 	while not ground_chunks.is_empty() and float(ground_chunks[0].get_meta("start")) < distance - VectorArt.CHUNK_LENGTH * 3:
 		ground_chunks[0].queue_free()
@@ -2871,16 +2897,20 @@ func _enter_phase(continuous: bool) -> void:
 			gate.queue_free()
 		laser_gates.clear()
 		for target in targets:
+			if target is GroundTurret:
+				if target.get_parent() == world:
+					continue # Keep its damage and firing clock across the ground/boss boundary.
+				turrets.erase(target)
 			target.collision_layer = 0
 			target.queue_free()
 		targets.clear()
-		turrets.clear()
 		towers.clear()
 		_clear_missiles()
 		if world == null:
 			world = Node3D.new()
 			add_child(world)
 			next_ground_chunk = floorf(canyon_distance / VectorArt.CHUNK_LENGTH) * VectorArt.CHUNK_LENGTH - VectorArt.CHUNK_LENGTH
+			next_road_turret = maxi(0, ceili((canyon_distance - ROAD_TURRET_START) / ROAD_TURRET_SPACING))
 		_stream_ground(canyon_distance)
 		boss = BossEncounter.new()
 		boss.sector = campaign.sector
@@ -2889,6 +2919,8 @@ func _enter_phase(continuous: bool) -> void:
 		boss.configure_pursuit(entry, canyon_distance, director.ground_course)
 		boss.missile_requested.connect(_launch_missile)
 		targets.assign(boss.parts)
+		targets.append_array(turrets)
+		_stream_road_turrets(canyon_distance)
 	elif campaign.phase == "docking":
 		_prepare_station()
 		_begin_sequence("station_approach")
